@@ -155,7 +155,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.supabase_request("/rest/v1/uzsakymai?select=id&limit=1")
         self.assertIn(error.exception.code, (401, 403))
 
-        for table in ("atsisakymai", "turinio_pranesimai"):
+        for table in ("atsisakymai", "turinio_pranesimai", "paslaugu_uzklausos"):
             with self.subTest(table=table):
                 with self.assertRaises(urllib.error.HTTPError) as private_error:
                     self.supabase_request("/rest/v1/{0}?select=id&limit=1".format(table))
@@ -191,6 +191,34 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("/^(paštomatas|pakomāts)\\b/i", checkout)
         self.assertIn('return address + (postCode ? ", LT-" + postCode : "")', checkout)
         self.assertNotIn("terminalSelect.appendChild(option(value, value))", checkout)
+
+    def test_homepage_has_qr_and_multi_service_flows(self):
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn('href="#qr-paslauga">Pirkti QR kodą</a>', html)
+        self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
+        self.assertEqual(html.count('name="services"'), 3)
+        for service in ("zvakes", "geles", "kapu_tvarkymas"):
+            self.assertIn('value="{0}"'.format(service), html)
+        for field in ("deceased_name", "cemetery_name", "grave_location"):
+            self.assertRegex(html, r'name="{0}"[^>]*required'.format(field))
+        self.assertGreaterEqual(html.count('service-choice__price'), 3)
+
+    def test_service_request_flow_requires_auth_and_preserves_draft(self):
+        home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        self.assertIn("AtminimasAuth.accessToken()", home)
+        self.assertIn("sessionStorage.setItem(draftKey", home)
+        self.assertIn('restUrl("paslaugu_uzklausos")', home)
+        login = (ROOT / "assets" / "login.js").read_text(encoding="utf-8")
+        self.assertIn("function nextPage()", login)
+        self.assertRegex(login, r"\^\[a-z0-9-\]\+\\\.html")
+
+    def test_service_request_migration_has_rls_and_minimal_grants(self):
+        sql = (ROOT / "supabase" / "migrations" / "20260707_service_requests.sql").read_text(encoding="utf-8")
+        self.assertIn("alter table public.paslaugu_uzklausos enable row level security", sql.lower())
+        self.assertIn("revoke all on table public.paslaugu_uzklausos from public, anon, authenticated", sql.lower())
+        self.assertIn("grant select, insert, update on table public.paslaugu_uzklausos to authenticated", sql.lower())
+        self.assertIn("owner_id = (select auth.uid())", sql)
+        self.assertNotRegex(sql.lower(), r"grant\s+[^;]*\bto\s+anon\b")
 
 
 if __name__ == "__main__":

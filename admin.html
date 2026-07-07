@@ -52,6 +52,11 @@
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užsakymas / gavėjas</th><th>Paštomatas</th><th>Būsena</th><th>Sekimas</th><th>Veiksmai</th></tr></thead><tbody id="shipment-rows"></tbody></table></div>
     </section>
 
+    <section class="admin-panel" id="admin-service-requests" hidden aria-labelledby="service-requests-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Kapavietės priežiūra</p><h2 id="service-requests-title">Paslaugų užklausos</h2></div><button class="button button--ghost" id="service-requests-refresh" type="button">Atnaujinti</button></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asmuo / vieta</th><th>Paslaugos ir pageidavimai</th><th>Būsena / pastaba</th><th>Veiksmai</th></tr></thead><tbody id="service-request-rows"></tbody></table></div>
+    </section>
+
     <section class="admin-panel" id="admin-legal-requests" hidden aria-labelledby="legal-requests-title">
       <div class="admin-toolbar"><div><p class="eyebrow">Prašymai</p><h2 id="legal-requests-title">Atsisakymai ir turinio pranešimai</h2></div><button class="button button--ghost" id="legal-requests-refresh" type="button">Atnaujinti</button></div>
       <h3>Sutarties atsisakymai</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Numeris / kontaktas</th><th>Užsakymas</th><th>Būsena ir sprendimas</th><th>Veiksmai</th></tr></thead><tbody id="withdrawal-rows"></tbody></table></div>
@@ -92,7 +97,7 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/admin.js?v=20260707-1"></script>
+<script src="assets/admin.js?v=20260707-2"></script>
 </body>
 </html>
 

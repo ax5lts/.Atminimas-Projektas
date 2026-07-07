@@ -3,52 +3,157 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+<link rel="stylesheet" href="css/styles.css?v=20260707-3">
 </head>
-<body>
+<body class="home-page">
 <div class="site-shell">
-  <header class="site-header">
+  <header class="site-header home-header">
     <div class="site-header__inner">
-      <a class="brand" href="index.html" aria-label="Atminimas">
+      <a class="brand" href="#pradzia" aria-label="Atminimas – į pradžią">
         <span class="brand__mark">A</span>
         <span class="brand__name">Atminimas</span>
       </a>
       <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="prisijungti.html">Prisijungti</a>
         <a class="button site-nav__cta" href="registruotis.html">Registruotis</a>
       </nav>
     </div>
   </header>
 
-  <main class="site-main">
-    <section class="home-hero" aria-labelledby="home-title">
-      <div class="home-hero__content">
-        <p class="eyebrow">QR atminimo ženklai ir skaitmeniniai puslapiai</p>
-        <h1 id="home-title">Atminimas</h1>
-        <p>
-          Sukurkite ramų, tvarkingą atminimo puslapį su nuotraukomis, video įrašu,
-          gyvenimo datomis ir epitafija. QR ženkliukas ant kapavietės leidžia artimiesiems
-          pasiekti istoriją telefonu.
-        </p>
-        <div class="actions">
-          <a class="button" href="parduotuve.html">Užsakyti QR ženkliuką</a>
-          <a class="button button--ghost" href="prisijungti.html">Jau turiu puslapį</a>
+  <main class="site-main home-main">
+    <section class="landing-intro" id="pradzia" aria-labelledby="landing-title">
+      <div class="landing-intro__glow" aria-hidden="true"></div>
+      <div class="landing-intro__content">
+        <p class="eyebrow landing-intro__eyebrow">Prisiminimas, kuris išlieka</p>
+        <h1 class="landing-title" id="landing-title" aria-label="Atminimas">
+          <span style="--letter-index: 0">A</span><span style="--letter-index: 1">t</span><span style="--letter-index: 2">m</span><span style="--letter-index: 3">i</span><span style="--letter-index: 4">n</span><span style="--letter-index: 5">i</span><span style="--letter-index: 6">m</span><span style="--letter-index: 7">a</span><span style="--letter-index: 8">s</span>
+        </h1>
+        <p class="landing-intro__lead">Skaitmeninis atminimas ir rūpestinga kapavietės priežiūra vienoje vietoje.</p>
+        <div class="actions landing-intro__actions">
+          <a class="button" href="#qr-paslauga">Pirkti QR kodą</a>
+          <a class="button button--ghost" href="#kitos-paslaugos">Kitos paslaugos</a>
         </div>
       </div>
-      <div class="home-hero__media" aria-hidden="true">
-        <img src="assets/qr-lipdukas.png" alt="">
+      <a class="landing-scroll" href="#qr-paslauga" aria-label="Rodyti daugiau">
+        <span aria-hidden="true"></span>
+      </a>
+    </section>
+
+    <section class="home-section home-section--qr" id="qr-paslauga" aria-labelledby="qr-title">
+      <div class="home-hero">
+        <div class="home-hero__content">
+          <p class="eyebrow">QR atminimo ženklai ir skaitmeniniai puslapiai</p>
+          <h2 id="qr-title">Istorija, kurią galima aplankyti</h2>
+          <p>
+            Sukurkite ramų, tvarkingą atminimo puslapį su nuotraukomis, vaizdo įrašu,
+            gyvenimo datomis ir epitafija. QR ženkliukas ant kapavietės leidžia artimiesiems
+            pasiekti istoriją telefonu.
+          </p>
+          <div class="actions">
+            <a class="button" href="parduotuve.html">Užsakyti QR ženkliuką</a>
+            <a class="button button--ghost" href="prisijungti.html">Jau turiu puslapį</a>
+          </div>
+        </div>
+        <div class="home-hero__media">
+          <img src="assets/qr-lipdukas.png" alt="Atminimo QR ženkliuko pavyzdys">
+        </div>
+      </div>
+
+      <div class="info-grid" aria-label="QR paslaugos dalys">
+        <div class="info-box">
+          <h3>QR ženkliukas</h3>
+          <p>Patvarus ženklas nukreipia į vieną konkretų atminimo puslapį.</p>
+        </div>
+        <div class="info-box">
+          <h3>Atminimo puslapis</h3>
+          <p>Nuotraukos, gyvenimo istorija ir svarbiausi prisiminimai vienoje ramioje erdvėje.</p>
+        </div>
       </div>
     </section>
 
-    <section class="info-grid" aria-label="Paslaugos">
-      <div class="info-box">
-        <h2>QR ženkliukas</h2>
-        <p>Atskirame parduotuvės puslapyje galima pasirinkti paslaugą ir pradėti pildyti atminimo informaciją.</p>
-      </div>
-      <div class="info-box">
-        <h2>Atminimo puslapis</h2>
-        <p>Po formos pateikimo sukuriamas individualus atminimo puslapis, kurį galima pasiekti per QR kodą.</p>
-      </div>
+    <section class="home-section home-services" id="kitos-paslaugos" aria-labelledby="services-title">
+      <header class="home-section__header">
+        <p class="eyebrow">Rūpestis per atstumą</p>
+        <h2 id="services-title">Kitos paslaugos</h2>
+        <p>Galite pasirinkti vieną arba kelias paslaugas. Kainą patvirtinsime individualiai, todėl kol kas ji žymima „–“.</p>
+      </header>
+
+      <form class="service-request" id="service-request-form">
+        <fieldset class="service-picker">
+          <legend class="visually-hidden">Pasirinkite paslaugas</legend>
+          <label class="service-choice">
+            <input type="checkbox" name="services" value="zvakes">
+            <span class="service-choice__check" aria-hidden="true"></span>
+            <span class="service-choice__number">01</span>
+            <span class="service-choice__body"><strong>Žvakių uždegimas</strong><small>Uždegsime jūsų pasirinktas atminimo žvakes.</small></span>
+            <span class="service-choice__price"><small>Kaina</small>–</span>
+          </label>
+          <label class="service-choice">
+            <input type="checkbox" name="services" value="geles">
+            <span class="service-choice__check" aria-hidden="true"></span>
+            <span class="service-choice__number">02</span>
+            <span class="service-choice__body"><strong>Gėlių padėjimas</strong><small>Padėsime gėles arba puokštę jūsų vardu.</small></span>
+            <span class="service-choice__price"><small>Kaina</small>–</span>
+          </label>
+          <label class="service-choice">
+            <input type="checkbox" name="services" value="kapu_tvarkymas">
+            <span class="service-choice__check" aria-hidden="true"></span>
+            <span class="service-choice__number">03</span>
+            <span class="service-choice__body"><strong>Kapo sutvarkymas</strong><small>Bazinis kapavietės sutvarkymas pagal susitarimą.</small></span>
+            <span class="service-choice__price"><small>Kaina</small>–</span>
+          </label>
+        </fieldset>
+
+        <div class="service-details" id="service-details" hidden>
+          <div class="service-details__intro">
+            <p class="eyebrow">Užklausos duomenys</p>
+            <h3>Apie kapavietę</h3>
+            <p>Įrašykite tiek informacijos, kad galėtume tiksliai rasti vietą ir susisiekti dėl atlikimo.</p>
+          </div>
+
+          <div class="form-grid service-details__grid">
+            <label>Mirusiojo vardas ir pavardė
+              <input type="text" name="deceased_name" autocomplete="off" maxlength="180" required>
+            </label>
+            <label>Kapinių pavadinimas
+              <input type="text" name="cemetery_name" autocomplete="off" maxlength="200" required placeholder="Pvz., Antakalnio kapinės">
+            </label>
+          </div>
+          <label>Tiksli kapo vieta
+            <textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea>
+          </label>
+
+          <div class="service-extra" data-service-details="geles" hidden>
+            <label>Kokių gėlių norite?
+              <textarea name="flowers_details" rows="3" maxlength="1200" placeholder="Gėlių rūšis ir spalva, kiekis, ar norite puokštės, kiti pageidavimai"></textarea>
+            </label>
+          </div>
+          <div class="service-extra" data-service-details="zvakes" hidden>
+            <label>Kokių žvakių norite?
+              <textarea name="candles_details" rows="3" maxlength="1200" placeholder="Žvakių kiekis, spalva, dydis ar kiti pageidavimai"></textarea>
+            </label>
+          </div>
+          <div class="service-extra" data-service-details="kapu_tvarkymas" hidden>
+            <label>Ką reikėtų sutvarkyti?
+              <textarea name="cleaning_details" rows="3" maxlength="1600" placeholder="Pvz., pašalinti lapus, nuvalyti paminklą, sutvarkyti augalus"></textarea>
+            </label>
+          </div>
+
+          <label>Papildoma informacija <span class="optional">(nebūtina)</span>
+            <textarea name="extra_information" rows="4" maxlength="2000" placeholder="Pageidaujama data, kaip atpažinti kapavietę ar kita svarbi informacija"></textarea>
+          </label>
+          <label class="check-label service-consent">
+            <input type="checkbox" name="privacy_confirm" value="yes" required>
+            <span>Sutinku, kad pateikti duomenys būtų naudojami šiai paslaugos užklausai administruoti. Susipažinau su <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</span>
+          </label>
+          <div class="service-submit">
+            <button class="button" type="submit">Pateikti užklausą</button>
+            <p class="form-status" id="service-request-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </form>
     </section>
   </main>
 
@@ -60,10 +165,8 @@
     </div>
   </footer>
 </div>
+<script src="assets/supabase-config.js?v=20260707-1"></script>
+<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/home.js?v=20260707-1"></script>
 </body>
 </html>
-
-
-
-
-

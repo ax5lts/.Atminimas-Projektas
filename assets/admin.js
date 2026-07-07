@@ -13,10 +13,14 @@
   var legalRequestsRefresh = document.getElementById("legal-requests-refresh");
   var withdrawalRows = document.getElementById("withdrawal-rows");
   var contentReportRows = document.getElementById("content-report-rows");
+  var serviceRequestsPanel = document.getElementById("admin-service-requests");
+  var serviceRequestsRefresh = document.getElementById("service-requests-refresh");
+  var serviceRequestRows = document.getElementById("service-request-rows");
   var cache = [];
   var shipmentCache = [];
   var withdrawalCache = [];
   var contentReportCache = [];
+  var serviceRequestCache = [];
 
   function cfg() {
     return window.ATMINIMAS_CONFIG;
@@ -141,6 +145,41 @@
     renderShipments();
   }
 
+  function serviceName(value) {
+    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapo sutvarkymas" }[value] || value;
+  }
+
+  function renderServiceRequests() {
+    serviceRequestRows.innerHTML = serviceRequestCache.map(function (row) {
+      var services = (row.paslaugos || []).map(serviceName).join(" · ");
+      var details = [
+        row.geliu_pageidavimai ? "Gėlės: " + row.geliu_pageidavimai : "",
+        row.zvakiu_pageidavimai ? "Žvakės: " + row.zvakiu_pageidavimai : "",
+        row.tvarkymo_pageidavimai ? "Tvarkymas: " + row.tvarkymo_pageidavimai : "",
+        row.papildoma_informacija ? "Papildomai: " + row.papildoma_informacija : ""
+      ].filter(Boolean).join("\n");
+      return (
+        "<tr data-service-request-id='" + html(row.id) + "'>" +
+          "<td><strong>" + html(row.mirusiojo_vardas) + "</strong><br>" + html(row.kapiniu_pavadinimas) + "<br><span class='muted'>" + html(row.kapo_vieta) + "</span></td>" +
+          "<td><strong>" + html(services) + "</strong><br><span class='admin-preserve-lines'>" + html(details || "Papildomų pageidavimų nėra") + "</span></td>" +
+          "<td><select data-service-status>" + ["gauta", "susisiekta", "vykdoma", "atlikta", "atsaukta"].map(function (value) {
+            return "<option value='" + value + "' " + ((row.statusas || "gauta") === value ? "selected" : "") + ">" + value + "</option>";
+          }).join("") + "</select><textarea data-service-note rows='3' maxlength='3000' placeholder='Administratoriaus pastaba'>" + html(row.admin_pastaba || "") + "</textarea></td>" +
+          "<td><button class='button' type='button' data-save-service-request='" + html(row.id) + "'>Išsaugoti</button></td>" +
+        "</tr>"
+      );
+    }).join("") || "<tr><td colspan='4'>Paslaugų užklausų nėra.</td></tr>";
+  }
+
+  async function loadServiceRequests() {
+    serviceRequestCache = await supabaseJson(restUrl(
+      "paslaugu_uzklausos",
+      "select=id,owner_id,paslaugos,mirusiojo_vardas,kapiniu_pavadinimas,kapo_vieta,geliu_pageidavimai,zvakiu_pageidavimai,tvarkymo_pageidavimai,papildoma_informacija,statusas,admin_pastaba,created_at&order=created_at.desc"
+    ));
+    serviceRequestsPanel.hidden = false;
+    renderServiceRequests();
+  }
+
   function legalStatusControl(row) {
     return "<select data-legal-status>" + ["gauta", "nagrinejama", "uzbaigta", "atmesta"].map(function (value) {
       return "<option value='" + value + "' " + ((row.status || "gauta") === value ? "selected" : "") + ">" + value + "</option>";
@@ -169,6 +208,7 @@
     if (!ok) {
       panel.hidden = true;
       shipmentsPanel.hidden = true;
+      serviceRequestsPanel.hidden = true;
       legalRequestsPanel.hidden = true;
       logoutButton.hidden = !AtminimasAuth.accessToken();
       statusEl.textContent = "Prisijungta paskyra neturi admin rolės.";
@@ -183,6 +223,7 @@
       "select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ));
     await loadShipments();
+    await loadServiceRequests();
     await loadLegalRequests();
     statusEl.textContent = "Įkelta: " + cache.length;
     render();
@@ -209,6 +250,18 @@
     });
     statusEl.textContent = "Siunta atnaujinta: " + id;
     await loadShipments();
+  }
+
+  async function saveServiceRequest(id, tr) {
+    var serviceStatus = tr.querySelector("[data-service-status]").value;
+    var adminNote = tr.querySelector("[data-service-note]").value.trim();
+    await supabaseJson(restUrl("paslaugu_uzklausos", "id=eq." + encodeURIComponent(id)), {
+      method: "PATCH",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      body: JSON.stringify({ statusas: serviceStatus, admin_pastaba: adminNote || null, updated_at: new Date().toISOString() })
+    });
+    statusEl.textContent = "Paslaugos užklausa atnaujinta: " + id;
+    await loadServiceRequests();
   }
 
   async function saveLegalRequest(tr) {
@@ -267,6 +320,17 @@
     });
   });
 
+  serviceRequestRows.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-save-service-request]");
+    if (!button) return;
+    var tr = button.closest("tr");
+    button.disabled = true;
+    saveServiceRequest(button.dataset.saveServiceRequest, tr).catch(function (err) {
+      statusEl.textContent = err.message || "Nepavyko išsaugoti paslaugos užklausos.";
+      button.disabled = false;
+    });
+  });
+
   legalRequestsPanel.addEventListener("click", function (event) {
     var button = event.target.closest("[data-save-legal]");
     if (!button) return;
@@ -287,6 +351,9 @@
   shipmentsRefresh.addEventListener("click", function () {
     loadShipments().catch(function (err) { statusEl.textContent = err.message || "Nepavyko atnaujinti siuntimų."; });
   });
+  serviceRequestsRefresh.addEventListener("click", function () {
+    loadServiceRequests().catch(function (err) { statusEl.textContent = err.message || "Nepavyko atnaujinti paslaugų užklausų."; });
+  });
   legalRequestsRefresh.addEventListener("click", function () {
     loadLegalRequests().catch(function (err) { statusEl.textContent = err.message || "Nepavyko atnaujinti prašymų."; });
   });
@@ -294,6 +361,7 @@
     AtminimasAuth.signOut();
     panel.hidden = true;
     shipmentsPanel.hidden = true;
+    serviceRequestsPanel.hidden = true;
     legalRequestsPanel.hidden = true;
     logoutButton.hidden = true;
     statusEl.textContent = "Atsijungta.";
