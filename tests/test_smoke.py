@@ -243,6 +243,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("ASA 3D ženkliukas", html)
         self.assertTrue((ROOT / "assets" / "qr-asa.png").stat().st_size > 100_000)
 
+    def test_shop_explains_qr_flow_and_links_video(self):
+        html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        self.assertIn('id="kaip-veikia"', html)
+        self.assertIn("https://www.youtube.com/shorts/2WZqJ18XkEI", html)
+        self.assertIn("QR kodas ant paminklo", html)
+        self.assertIn("Nuskenuojama telefonu", html)
+        self.assertIn("Atsiveria atminimo puslapis", html)
+        self.assertEqual(html.count('class="how-step"'), 3)
+
     def test_selected_product_reaches_order_and_admin(self):
         shop = (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")

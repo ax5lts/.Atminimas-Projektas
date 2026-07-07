@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <meta name="description" content="Pasirinkite metalo arba ASA 3D spausdintą QR atminimo ženkliuką.">
 <title>QR atminimo ženkliukai - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-8">
+<link rel="stylesheet" href="css/styles.css?v=20260707-9">
 </head>
 <body>
 <div class="site-shell">
@@ -97,11 +97,77 @@
       </div>
     </section>
 
-    <section class="info-grid" id="kaip-veikia" aria-label="Papildoma informacija">
-      <div class="info-box">
-        <h2>Kaip tai veikia?</h2>
-        <p>Pasirenkamas ženkliukas, paruošiamas atminimo puslapis, o lankytojai jį pasiekia telefonu nuskenavę QR kodą.</p>
+    <section class="how-it-works" id="kaip-veikia" aria-labelledby="how-it-works-title">
+      <div class="how-it-works__heading">
+        <div>
+          <p class="eyebrow">Trys paprasti žingsniai</p>
+          <h2 id="how-it-works-title">Kaip tai veikia?</h2>
+          <p>Telefono kamera nuskenuokite QR kodą ant paminklo ir peržiūrėkite informaciją apie velionį: biografiją, nuotraukas ir vaizdo įrašus.</p>
+        </div>
+        <a class="button button--ghost how-it-works__video" href="https://www.youtube.com/shorts/2WZqJ18XkEI" target="_blank" rel="noopener noreferrer" aria-label="Žiūrėti vaizdo įrašą, kaip veikia QR kodas (atsidarys naujame lange)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.6v8.8l7-4.4-7-4.4Z"/></svg>
+          Video, kaip veikia QR kodas
+        </a>
       </div>
+
+      <div class="how-flow" role="list" aria-label="QR atminimo ženkliuko veikimo etapai">
+        <article class="how-step" role="listitem">
+          <div class="how-step__visual" aria-hidden="true">
+            <svg viewBox="0 0 180 150">
+              <path class="how-illustration__soft" d="M25 129h130v12H25z"/>
+              <path class="how-illustration__line" d="M48 128V58c0-25 19-43 42-43s42 18 42 43v70M37 128h106v13H37z"/>
+              <rect class="how-illustration__paper" x="65" y="55" width="50" height="50" rx="5"/>
+              <path class="how-illustration__ink" d="M72 62h13v13H72zm4 4v5h5v-5zm19-4h13v13H95zm4 4v5h5v-5zM72 85h13v13H72zm4 4v5h5v-5zm15-9h7v7h-7zm9 9h8v9h-8zm-11 2h7v7h-7z"/>
+            </svg>
+          </div>
+          <p class="how-step__number">01</p>
+          <h3>QR kodas ant paminklo</h3>
+          <p>Patvarus ženkliukas pritvirtinamas pasirinktoje vietoje.</p>
+        </article>
+
+        <span class="how-flow__arrow" aria-hidden="true">
+          <svg viewBox="0 0 48 24"><path d="M2 12h41m-9-8 9 8-9 8"/></svg>
+        </span>
+
+        <article class="how-step" role="listitem">
+          <div class="how-step__visual" aria-hidden="true">
+            <svg viewBox="0 0 180 150">
+              <path class="how-illustration__soft" d="M40 135c18-12 82-12 100 0-23 9-77 9-100 0Z"/>
+              <rect class="how-illustration__line how-illustration__paper" x="55" y="10" width="70" height="130" rx="13"/>
+              <path class="how-illustration__line" d="M79 20h22M85 130h10"/>
+              <rect class="how-illustration__accent" x="68" y="43" width="44" height="44" rx="5"/>
+              <path class="how-illustration__ink" d="M74 49h12v12H74zm4 4v4h4v-4zm16-4h12v12H94zm4 4v4h4v-4zM74 69h12v12H74zm4 4v4h4v-4zm13-8h6v6h-6zm9 7h6v9h-6zm-10 3h6v6h-6z"/>
+              <path class="how-illustration__line how-illustration__scan" d="M66 65h48"/>
+            </svg>
+          </div>
+          <p class="how-step__number">02</p>
+          <h3>Nuskenuojama telefonu</h3>
+          <p>Užtenka įprastos telefono kameros – papildomos programėlės nereikia.</p>
+        </article>
+
+        <span class="how-flow__arrow" aria-hidden="true">
+          <svg viewBox="0 0 48 24"><path d="M2 12h41m-9-8 9 8-9 8"/></svg>
+        </span>
+
+        <article class="how-step" role="listitem">
+          <div class="how-step__visual" aria-hidden="true">
+            <svg viewBox="0 0 180 150">
+              <rect class="how-illustration__line how-illustration__paper" x="30" y="12" width="120" height="126" rx="8"/>
+              <path class="how-illustration__accent" d="M30 20a8 8 0 0 1 8-8h104a8 8 0 0 1 8 8v20H30Z"/>
+              <circle class="how-illustration__paper" cx="90" cy="64" r="19"/>
+              <path class="how-illustration__soft" d="M70 68c3-15 37-15 40 0v10H70z"/>
+              <path class="how-illustration__line" d="M59 94h62M52 106h76M62 118h56"/>
+              <path class="how-illustration__paper" d="M40 23h30v6H40z"/>
+            </svg>
+          </div>
+          <p class="how-step__number">03</p>
+          <h3>Atsiveria atminimo puslapis</h3>
+          <p>Rodoma biografija, nuotraukos, vaizdo įrašai ir kita artimųjų pateikta informacija.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="info-grid info-grid--single" aria-label="Papildoma informacija">
       <div class="info-box">
         <h2>Užsakymo informacija</h2>
         <p>Mokėjimas: <span data-business="paymentMethods"></span>. Siuntimas: <span data-business="shippingPrice"></span>, <span data-business="shippingTerritory"></span>. Pagaminimas: <span data-business="productionTime"></span>; pristatymas: <span data-business="deliveryTime"></span>. Talpinimas: <span data-business="hostingPeriod"></span>.</p><p><a href="taisykles.html">Pirkimo, grąžinimo ir naudojimo sąlygos</a></p>
