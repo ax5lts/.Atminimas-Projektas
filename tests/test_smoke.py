@@ -437,6 +437,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
         self.assertIn('id="editor-color-wheel"', page)
         self.assertIn('id="editor-color-brightness"', page)
+        self.assertIn('type="hidden" name="fono_spalva"', page)
+        self.assertNotIn('type="color" name="fono_spalva"', page)
         self.assertIn('data-editor-section="preview"', page)
         self.assertIn("colorFromWheelPoint", editor)
         self.assertIn('colorWheel.addEventListener("pointerdown"', editor)

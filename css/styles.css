@@ -686,6 +686,21 @@ video {
   cursor: pointer;
 }
 
+.editor-color-current {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 3px solid #fff;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.editor-color-row output {
+  min-width: 7ch;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .editor-color-picker {
   min-width: 0;
   margin: 0;

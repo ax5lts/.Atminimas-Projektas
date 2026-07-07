@@ -24,6 +24,7 @@
   var colorWheel = document.getElementById("editor-color-wheel");
   var colorWheelThumb = document.getElementById("editor-color-wheel-thumb");
   var colorBrightness = document.getElementById("editor-color-brightness");
+  var colorCurrent = document.getElementById("editor-color-current");
   var photoFileList = document.getElementById("editor-photo-file-list");
   var MAX_PHOTOS = 8;
   var MAX_STORY_WORDS = 1000;
@@ -146,6 +147,7 @@
     var hex = normalizeHex(value);
     if (backgroundInput) backgroundInput.value = hex;
     if (backgroundValue) backgroundValue.textContent = hex;
+    if (colorCurrent) colorCurrent.style.backgroundColor = hex;
     stage.style.backgroundColor = hex;
     if (updatePicker) updateColorState(hex);
     if (persist) scheduleDraftSave();
