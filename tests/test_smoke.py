@@ -185,6 +185,13 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.assertGreater(len(data.get("lockers", [])), 10)
             self.assertNotIn("recipient_email", data)
 
+    def test_checkout_shortens_parcel_locker_instructions(self):
+        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+        self.assertIn("function lockerOptionText(locker)", checkout)
+        self.assertIn("/^(paštomatas|pakomāts)\\b/i", checkout)
+        self.assertIn('return address + (postCode ? ", LT-" + postCode : "")', checkout)
+        self.assertNotIn("terminalSelect.appendChild(option(value, value))", checkout)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

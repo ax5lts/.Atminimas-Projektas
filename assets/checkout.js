@@ -24,13 +24,31 @@
     return item;
   }
 
+  function lockerValue(locker) {
+    return locker.title + (locker.address ? " — " + locker.address : "");
+  }
+
+  function lockerOptionText(locker) {
+    var title = (locker.title || "").trim();
+    var address = (locker.address || "").trim();
+    var postCode = (locker.postCode || "").trim();
+    var isLocationInstruction = /^(paštomatas|pakomāts)\b/i.test(title) || title.length > 90;
+
+    if (address && isLocationInstruction) {
+      return address + (postCode ? ", LT-" + postCode : "");
+    }
+    return title + (address ? " — " + address : "");
+  }
+
   function updateTerminals(selectedValue) {
     var city = citySelect.value;
     terminalSelect.innerHTML = "";
     terminalSelect.appendChild(option("", city ? "Pasirinkite paštomatą" : "Pirmiausia pasirinkite miestą"));
     lockers.filter(function (locker) { return locker.city === city; }).forEach(function (locker) {
-      var value = locker.title + (locker.address ? " — " + locker.address : "");
-      terminalSelect.appendChild(option(value, value));
+      var value = lockerValue(locker);
+      var item = option(value, lockerOptionText(locker));
+      if (locker.title && item.textContent !== locker.title) item.title = locker.title;
+      terminalSelect.appendChild(item);
     });
     terminalSelect.disabled = !city;
     if (selectedValue) terminalSelect.value = selectedValue;
