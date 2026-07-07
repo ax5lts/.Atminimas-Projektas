@@ -301,6 +301,7 @@ create index if not exists uzsakymai_profilis_id_idx
   on public.uzsakymai (profilis_id);
 
 alter table public.uzsakymai
+  add column if not exists product_type text not null default 'metal',
   add column if not exists delivery_method text not null default 'pastomatas',
   add column if not exists carrier text,
   add column if not exists city text,
@@ -313,6 +314,13 @@ alter table public.uzsakymai
   add column if not exists shipment_created_at timestamptz,
   add column if not exists payment_provider text,
   add column if not exists payment_reference text;
+
+alter table public.uzsakymai
+  drop constraint if exists uzsakymai_product_type_check;
+
+alter table public.uzsakymai
+  add constraint uzsakymai_product_type_check
+  check (product_type in ('metal', 'asa'));
 
 create index if not exists uzsakymai_shipping_status_idx on public.uzsakymai (shipping_status);
 

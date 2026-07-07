@@ -37,6 +37,20 @@
   var DRAFT_KEY = "atminimas.editor.draft.v1";
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
+  var PRODUCT_KEY = "atminimas.selected-product.v1";
+  var productSummary = document.getElementById("editor-product-summary");
+
+  function selectedProduct() {
+    var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
+    var stored = sessionStorage.getItem(PRODUCT_KEY);
+    var value = requested === "asa" || requested === "metal" ? requested : stored;
+    value = value === "asa" ? "asa" : "metal";
+    sessionStorage.setItem(PRODUCT_KEY, value);
+    return value;
+  }
+
+  var productType = selectedProduct();
+  if (productSummary) productSummary.textContent = "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
 
   function words(value) {
     return (value || "").trim().split(/\s+/).filter(Boolean);
@@ -685,6 +699,7 @@
 
     data.tekstas_200 = limitWords(data.tekstas_200 || "", 200);
     data.apmoketa = false;
+    data.product_type = productType;
 
     statusEl.textContent = "Įkeliami failai ir saugoma į DB...";
     submit.disabled = true;
@@ -720,7 +735,7 @@
       statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite kurti puslapio.";
       form.querySelector("button[type='submit']").disabled = true;
       setTimeout(function () {
-        window.location.href = "prisijungti.html";
+        window.location.href = "prisijungti.html?next=" + encodeURIComponent("redaktorius.html?product=" + productType);
       }, 900);
       return;
     }

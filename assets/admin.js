@@ -124,7 +124,7 @@
       var destination = [order.carrier, order.city, order.parcel_terminal].filter(Boolean).join(" · ") || "--";
       return (
         "<tr data-shipment-id='" + html(order.id) + "'>" +
-          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
+          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(order.product_type === "asa" ? "ASA 3D ženkliukas" : "Metalo ženkliukas") + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
           "<td>" + html(destination) + "</td>" +
           "<td><select data-shipping-status>" + ["laukiama_duomenu", "paruošti", "išsiųsta", "pristatyta", "atšaukta"].map(function (value) {
             return "<option value='" + value + "' " + ((order.shipping_status || "laukiama_duomenu") === value ? "selected" : "") + ">" + value + "</option>";
@@ -139,7 +139,7 @@
   async function loadShipments() {
     shipmentCache = await supabaseJson(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
     ));
     shipmentsPanel.hidden = false;
     renderShipments();

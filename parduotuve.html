@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QR atminimo ženkliukas - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+<meta name="description" content="Pasirinkite metalo arba ASA 3D spausdintą QR atminimo ženkliuką.">
+<title>QR atminimo ženkliukai - parduotuvė</title>
+<link rel="stylesheet" href="css/styles.css?v=20260707-4">
 </head>
 <body>
 <div class="site-shell">
@@ -27,39 +28,69 @@
     <nav class="breadcrumbs" aria-label="Kelias">
       <a href="index.html">Pradžia</a>
       <span>Parduotuvė</span>
-      <span>QR atminimo ženkliukas</span>
+      <span>Ženkliuko pasirinkimas</span>
     </nav>
 
-    <section class="shop-layout" aria-labelledby="product-title">
-      <div class="product-gallery product-gallery--single" aria-label="Produkto nuotrauka">
+    <header class="shop-heading">
+      <p class="eyebrow">Pasirinkite medžiagą</p>
+      <h1>QR atminimo ženkliukai</h1>
+      <p>Abu variantai nukreipia į tą patį individualų atminimo puslapį. Skiriasi ženkliuko medžiaga ir išvaizda.</p>
+    </header>
+
+    <fieldset class="product-selector" id="product-selector">
+      <legend class="visually-hidden">Ženkliuko medžiaga</legend>
+      <label class="product-choice">
+        <input type="radio" name="product_type" value="metal" checked>
+        <span class="product-choice__image"><img src="assets/qr-lipdukas.png" alt="Metalo QR atminimo ženkliukas"></span>
+        <span class="product-choice__content">
+          <span><strong>Metalo ženkliukas</strong><small>Klasikinis atminimo ženkliuko variantas</small></span>
+          <span class="product-choice__price" data-metal-price>–</span>
+        </span>
+      </label>
+      <label class="product-choice">
+        <input type="radio" name="product_type" value="asa">
+        <span class="product-choice__image"><img src="assets/qr-asa.png" alt="ASA plastiko 3D spausdintas QR atminimo ženkliukas"></span>
+        <span class="product-choice__content">
+          <span><strong>ASA 3D ženkliukas</strong><small>Dvispalvis, 3D spausdintas lauko variantas</small></span>
+          <span class="product-choice__price">–</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
+      <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
         <div class="product-media">
-          <img src="assets/qr-lipdukas.png" alt="QR kodo atminimo lipdukas">
+          <img id="product-image" src="assets/qr-lipdukas.png" alt="Metalo QR atminimo ženkliukas">
         </div>
       </div>
 
       <div class="shop-side">
         <article class="product-panel">
-          <h1 id="product-title">QR atminimo ženkliukas</h1>
-          <p class="product-price" data-business="price">59,00 EUR</p>
-          <p>PVM: <strong data-business="priceVat"></strong></p>
-          <p class="product-copy">
-            Ženkliukas su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis,
-            video įrašu, gyvenimo datomis ir epitafija.
-          </p>
+          <p class="eyebrow" id="product-kind">Metalo variantas</p>
+          <h2 id="product-title">QR atminimo ženkliukas</h2>
+          <p class="product-price" id="product-price">–</p>
+          <p>PVM: <strong id="product-vat">–</strong></p>
+          <p class="product-copy" id="product-copy">Ženkliukas su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis, vaizdo įrašu, gyvenimo datomis ir epitafija.</p>
           <div class="product-divider"></div>
-          <dl class="product-facts"><dt>Gamintojas</dt><dd data-business="manufacturer"></dd><dt>Produkto ID</dt><dd data-business="productIdentifier"></dd><dt>Medžiaga ir matmenys</dt><dd><span data-business="material"></span>; <span data-business="dimensions"></span></dd><dt>Tvirtinimas</dt><dd data-business="mounting"></dd><dt>Sauga</dt><dd data-business="safetyWarnings"></dd></dl>
+          <dl class="product-facts">
+            <dt>Produkto tipas</dt><dd id="product-type-detail">Metalo QR ženkliukas</dd>
+            <dt>Medžiaga</dt><dd id="product-material">–</dd>
+            <dt>Matmenys</dt><dd id="product-dimensions">–</dd>
+            <dt>Tvirtinimas</dt><dd id="product-mounting">–</dd>
+            <dt>Sauga</dt><dd id="product-safety">–</dd>
+          </dl>
 
           <div class="option-row">
-            <label for="delivery-option">Pasirinkimai</label>
+            <label for="delivery-option">Pristatymo pasirinkimas</label>
             <select id="delivery-option" name="delivery">
               <option value="badge">Tik QR ženkliukas</option>
               <option value="badge-shipping">QR ženkliukas su siuntimu</option>
-              <option value="badge-install">Su atvykimu ir pritvirtinimu (+40.00 EUR)</option>
+              <option value="badge-install">Su atvykimu ir pritvirtinimu</option>
             </select>
           </div>
 
           <div class="actions">
-            <a class="button" href="vartotojas.html">Kurti</a>
+            <a class="button" id="product-create-link" href="vartotojas.html?product=metal">Pasirinkti ir kurti</a>
             <a class="button button--ghost" href="klientai.html">Atidaryti pagal QR kodą</a>
           </div>
         </article>
@@ -69,7 +100,7 @@
     <section class="info-grid" id="kaip-veikia" aria-label="Papildoma informacija">
       <div class="info-box">
         <h2>Kaip tai veikia?</h2>
-        <p>Užsakomas QR ženkliukas, paruošiamas atminimo puslapis, o lankytojai jį pasiekia telefonu nuskenavę kodą.</p>
+        <p>Pasirenkamas ženkliukas, paruošiamas atminimo puslapis, o lankytojai jį pasiekia telefonu nuskenavę QR kodą.</p>
       </div>
       <div class="info-box">
         <h2>Užsakymo informacija</h2>
@@ -87,11 +118,8 @@
   </footer>
 </div>
 
-<script src="assets/business-config.js"></script><script src="assets/business-details.js"></script>
+<script src="assets/business-config.js"></script>
+<script src="assets/business-details.js"></script>
+<script src="assets/shop.js?v=20260707-1"></script>
 </body>
 </html>
-
-
-
-
-

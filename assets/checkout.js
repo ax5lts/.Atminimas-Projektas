@@ -90,12 +90,12 @@
       return;
     }
     if (!orderId) throw new Error("Trūksta užsakymo numerio.");
-    var response = await fetch(rest("uzsakymai?id=eq." + encodeURIComponent(orderId) + "&select=id,profilis_id,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa&limit=1"), { headers: AtminimasAuth.headers(false) });
+    var response = await fetch(rest("uzsakymai?id=eq." + encodeURIComponent(orderId) + "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa&limit=1"), { headers: AtminimasAuth.headers(false) });
     if (!response.ok) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var rows = await response.json();
     if (!rows.length) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var order = rows[0];
-    orderEl.textContent = "Užsakymo numeris: " + order.id + ". Puslapis: " + order.profilis_id + ".";
+    orderEl.textContent = "Užsakymo numeris: " + order.id + ". Produktas: " + (order.product_type === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Puslapis: " + order.profilis_id + ".";
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
     });

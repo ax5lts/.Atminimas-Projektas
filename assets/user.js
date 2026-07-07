@@ -5,6 +5,30 @@
   var logoutButton = document.getElementById("user-logout");
   var createButton = document.getElementById("user-create");
   var guestActions = document.getElementById("user-guest-actions");
+  var productKey = "atminimas.selected-product.v1";
+
+  function selectedProduct() {
+    var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
+    var stored = sessionStorage.getItem(productKey);
+    var value = requested === "asa" || requested === "metal" ? requested : stored;
+    value = value === "asa" ? "asa" : "metal";
+    sessionStorage.setItem(productKey, value);
+    return value;
+  }
+
+  function productName(value) {
+    return value === "asa" ? "ASA 3D ženkliukas" : "Metalo ženkliukas";
+  }
+
+  var chosenProduct = selectedProduct();
+  if (createButton) createButton.href = "redaktorius.html?product=" + encodeURIComponent(chosenProduct);
+  if (guestActions) {
+    var next = "vartotojas.html?product=" + encodeURIComponent(chosenProduct);
+    var loginLink = guestActions.querySelector("a[href='prisijungti.html']");
+    var registerLink = guestActions.querySelector("a[href='registruotis.html']");
+    if (loginLink) loginLink.href = "prisijungti.html?next=" + encodeURIComponent(next);
+    if (registerLink) registerLink.href = "registruotis.html?next=" + encodeURIComponent(next);
+  }
 
   function cfg() {
     return window.ATMINIMAS_CONFIG;
@@ -74,7 +98,7 @@
 
     var orderResponse = await fetch(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
     ), { headers: AtminimasAuth.headers(false) });
     var orders = orderResponse.ok ? await orderResponse.json() : [];
     var orderByProfile = {};
@@ -88,7 +112,7 @@
       var profileQrUrl = qrUrl(publicUrl);
       var order = orderByProfile[row.id];
       var shipment = order
-        ? "<p>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + "</p>"
+        ? "<p>Produktas: <strong>" + html(productName(order.product_type)) + "</strong><br>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + "</p>"
         : "";
       return (
         "<article class='info-box' data-profile-card>" +

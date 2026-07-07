@@ -220,6 +220,30 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("owner_id = (select auth.uid())", sql)
         self.assertNotRegex(sql.lower(), r"grant\s+[^;]*\bto\s+anon\b")
 
+    def test_shop_offers_metal_and_asa_products(self):
+        html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        self.assertIn('value="metal"', html)
+        self.assertIn('value="asa"', html)
+        self.assertIn('src="assets/qr-asa.png"', html)
+        self.assertIn("ASA 3D ženkliukas", html)
+        self.assertTrue((ROOT / "assets" / "qr-asa.png").stat().st_size > 100_000)
+
+    def test_selected_product_reaches_order_and_admin(self):
+        shop = (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        self.assertIn("atminimas.selected-product.v1", shop)
+        self.assertIn("redaktorius.html?product=", user)
+        self.assertIn("data.product_type = productType", editor)
+        self.assertIn("product_type: input && input.product_type", api)
+        self.assertIn("product_type", admin)
+
+        sql = (ROOT / "supabase" / "migrations" / "20260707_order_product_type.sql").read_text(encoding="utf-8")
+        self.assertIn("product_type text not null default 'metal'", sql.lower())
+        self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
