@@ -1644,9 +1644,57 @@ video {
 
 .memorial-page {
   min-height: 100vh;
-  margin: 0 5%;
+  width: 98%;
+  margin: 1% auto 0;
   background: #E7F6F6;
+  border-top: 1px solid rgba(61, 83, 72, 0.38);
+  border-right: 1px solid rgba(61, 83, 72, 0.38);
+  border-left: 1px solid rgba(61, 83, 72, 0.38);
+  box-sizing: border-box;
   font-family: Georgia, "Times New Roman", serif;
+}
+
+.memorial-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  padding: 0.7rem 1rem;
+  background: rgba(231, 246, 246, 0.96);
+  border-bottom: 1px solid rgba(61, 83, 72, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.memorial-site-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: #233c33;
+  text-decoration: none;
+}
+
+.memorial-site-link:hover,
+.memorial-site-link:focus-visible {
+  color: #0f6d55;
+}
+
+.memorial-site-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+.memorial-site-link__title {
+  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.memorial-site-link__hint {
+  font-family: Arial, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
 }
 
 .memorial-bg {
@@ -2327,7 +2375,16 @@ video {
   }
 
   .memorial-page {
-    margin: 0;
+    width: calc(100% - 12px);
+    margin: 6px auto 0;
+  }
+
+  .memorial-site-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .memorial-site-link__hint {
+    font-size: 0.7rem;
   }
 }
 

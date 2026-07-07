@@ -244,6 +244,17 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("product_type text not null default 'metal'", sql.lower())
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
 
+    def test_public_memorial_has_home_link_and_frame(self):
+        html = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        css = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('class="memorial-site-link" href="index.html"', html)
+        self.assertIn("Atminimas – atidaryti pagrindinę svetainę", html)
+        self.assertIn("width: 98%;", css)
+        self.assertIn("border-top: 1px solid", css)
+        self.assertIn("border-right: 1px solid", css)
+        self.assertIn("border-left: 1px solid", css)
+        self.assertNotIn("border-bottom: 1px solid rgba(61, 83, 72, 0.38)", css)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
