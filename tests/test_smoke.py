@@ -259,6 +259,21 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("product_type text not null default 'metal'", sql.lower())
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
 
+    def test_editor_supports_long_story_and_described_photo_gallery(self):
+        html = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        public_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        self.assertIn("MAX_PHOTOS = 8", editor)
+        self.assertIn("MAX_STORY_WORDS = 1000", editor)
+        self.assertIn('name="photo_caption_8"', html)
+        self.assertIn('name="photo_alt_8"', html)
+        self.assertIn(".slice(0, 8)", api)
+        self.assertIn('item.caption = (input["photo_caption_" + imageIndex]', api)
+        self.assertIn("buildStorySection", public_page)
+        self.assertIn("buildStoryGallery", public_page)
+        self.assertIn("builder-photo-caption", public_page)
+
     def test_public_memorial_has_home_link_and_frame(self):
         html = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
         css = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")

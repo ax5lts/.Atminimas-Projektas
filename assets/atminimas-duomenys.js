@@ -113,7 +113,7 @@
 
   async function uploadBuilderMedia(identifier, files) {
     var media = [];
-    var photos = Array.prototype.slice.call((files && files.photos) || []).filter(Boolean).slice(0, 4);
+    var photos = Array.prototype.slice.call((files && files.photos) || []).filter(Boolean).slice(0, 8);
     var video = files && files.video ? files.video : null;
     var captions = files && files.captions ? files.captions : null;
     var ownerId = global.AtminimasAuth && global.AtminimasAuth.userId ? global.AtminimasAuth.userId() : "";
@@ -244,6 +244,7 @@
       if (item.type !== "image") return;
       imageIndex += 1;
       item.alt = (input["photo_alt_" + imageIndex] || "").trim() || ("Atminimo nuotrauka " + imageIndex);
+      item.caption = (input["photo_caption_" + imageIndex] || "").trim() || null;
     });
 
     await postJson("profiliai", {

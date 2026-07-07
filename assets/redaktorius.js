@@ -21,11 +21,21 @@
   var clearDraftButton = document.getElementById("editor-clear-draft");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
+  var photoFileList = document.getElementById("editor-photo-file-list");
+  var MAX_PHOTOS = 8;
+  var MAX_STORY_WORDS = 1000;
+  var PREVIEW_STORY_WORDS = 80;
   var photoSlots = [
     document.getElementById("editor-preview-photo-1"),
     document.getElementById("editor-preview-photo-2"),
     document.getElementById("editor-preview-photo-3"),
     document.getElementById("editor-preview-photo-4")
+  ];
+  var captionSlots = [
+    document.getElementById("editor-preview-caption-1"),
+    document.getElementById("editor-preview-caption-2"),
+    document.getElementById("editor-preview-caption-3"),
+    document.getElementById("editor-preview-caption-4")
   ];
   var transformMode = "resize";
   var selectedPiece = null;
@@ -59,6 +69,12 @@
   function limitWords(value, max) {
     var list = words(value);
     return list.length > max ? list.slice(0, max).join(" ") : value;
+  }
+
+  function storyPreview(value) {
+    var list = words(value);
+    if (list.length <= PREVIEW_STORY_WORDS) return value;
+    return list.slice(0, PREVIEW_STORY_WORDS).join(" ") + "…";
   }
 
   function formData() {
@@ -164,7 +180,7 @@
   }
 
   function draftFormData() {
-    return {
+    var state = {
       vardas: form.elements.vardas.value || "",
       pavarde: form.elements.pavarde.value || "",
       gimimo_data: form.elements.gimimo_data.value || "",
@@ -173,6 +189,11 @@
       tekstas_200: form.elements.tekstas_200.value || "",
       fono_spalva: form.elements.fono_spalva.value || "#ffffff"
     };
+    for (var i = 1; i <= MAX_PHOTOS; i++) {
+      state["photo_caption_" + i] = form.elements["photo_caption_" + i].value || "";
+      state["photo_alt_" + i] = form.elements["photo_alt_" + i].value || "";
+    }
+    return state;
   }
 
   function saveDraftNow() {
@@ -200,18 +221,30 @@
     });
   }
 
+  function renderPhotoFileList(names) {
+    if (!photoFileList) return;
+    var selected = (names || []).filter(Boolean);
+    photoFileList.textContent = selected.length
+      ? selected.map(function (name, index) { return (index + 1) + ". " + name; }).join(" · ")
+      : "Nuotraukos dar nepasirinktos.";
+  }
+
   async function restoreDraftMedia() {
-    for (var i = 0; i < 4; i++) {
+    var restoredNames = [];
+    for (var i = 0; i < MAX_PHOTOS; i++) {
       var photo = await getDraftFile("photo-" + i);
       if (!photo) continue;
       processedPhotos[i] = photo;
+      restoredNames[i] = photo.name || ("Nuotrauka " + (i + 1));
       var slot = photoSlots[i];
+      if (!slot) continue;
       var wrap = slot.closest(".editor-photo-slot");
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
       slot.src = URL.createObjectURL(photo);
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
+    renderPhotoFileList(restoredNames);
 
     var video = await getDraftFile("video");
     if (video) {
@@ -243,7 +276,7 @@
 
   function syncPreview() {
     var data = formData();
-    var text = limitWords(data.tekstas_200 || "", 200);
+    var text = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
     if (text !== data.tekstas_200) form.elements.tekstas_200.value = text;
     var count = words(text).length;
     var fullName = [data.vardas, data.pavarde].filter(Boolean).join(" ").trim();
@@ -252,13 +285,18 @@
     previewName.textContent = fullName || "Vardas Pavardė";
     previewDates.textContent = dates || "Gimimo data - Mirties data";
     previewText.textContent = data.epitafija || "Trumpa epitafija atsiras čia.";
-    previewLongText.textContent = text || "Ilgesnis tekstas atsiras čia.";
+    previewLongText.textContent = storyPreview(text) || "Gyvenimo istorijos pradžia atsiras čia. Visas tekstas bus rodomas žemiau pagrindinio vaizdo.";
+    captionSlots.forEach(function (caption, index) {
+      var value = (data["photo_caption_" + (index + 1)] || "").trim();
+      caption.textContent = value;
+      caption.hidden = !value;
+    });
     var background = data.fono_spalva || "#ffffff";
     stage.style.backgroundColor = background;
     if (backgroundValue) backgroundValue.textContent = background;
     fitName();
-    wordCountEl.textContent = count + " / 200 žodžių";
-    wordCountEl.classList.toggle("is-limit", count >= 200);
+    wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių";
+    wordCountEl.classList.toggle("is-limit", count >= MAX_STORY_WORDS);
   }
 
   function fitName() {
@@ -340,37 +378,41 @@
   }
 
   async function syncPhotos() {
-    var files = Array.prototype.slice.call(photosInput.files || []).slice(0, 4);
+    var allFiles = Array.prototype.slice.call(photosInput.files || []);
+    var files = allFiles.slice(0, MAX_PHOTOS);
     processedPhotos = [];
     cropPromises = [];
-    photoSlots.forEach(function (slot, index) {
+    photoSlots.forEach(function (slot) {
       var wrap = slot.closest(".editor-photo-slot");
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
-      var file = files[index];
-      if (!file) {
-        slot.hidden = true;
-        slot.removeAttribute("src");
-        if (empty) empty.hidden = false;
-        deleteDraftFile("photo-" + index).catch(function (err) { console.warn(err); });
-        return;
-      }
+      slot.hidden = true;
+      slot.removeAttribute("src");
+      if (empty) empty.hidden = false;
+    });
+    files.forEach(function (file, index) {
       var promise = autoCropBlackBorders(file).then(function (cropped) {
         processedPhotos[index] = cropped;
-        slot.src = URL.createObjectURL(cropped);
-        slot.hidden = false;
-        slot.onload = function () { setFrameToImageRatio(slot, slot); };
-        if (empty) empty.hidden = true;
+        var slot = photoSlots[index];
+        if (slot) {
+          var wrap = slot.closest(".editor-photo-slot");
+          var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
+          slot.src = URL.createObjectURL(cropped);
+          slot.hidden = false;
+          slot.onload = function () { setFrameToImageRatio(slot, slot); };
+          if (empty) empty.hidden = true;
+        }
         putDraftFile("photo-" + index, cropped).catch(function (err) { console.warn(err); });
         scheduleDraftSave();
       });
       cropPromises.push(promise);
     });
-    for (var i = files.length; i < 4; i++) {
+    for (var i = files.length; i < MAX_PHOTOS; i++) {
       deleteDraftFile("photo-" + i).catch(function (err) { console.warn(err); });
     }
-    if ((photosInput.files || []).length > 4) {
-      statusEl.textContent = "Bus išsaugotos tik pirmos 4 nuotraukos.";
-    }
+    renderPhotoFileList(files.map(function (file) { return file.name; }));
+    statusEl.textContent = allFiles.length > MAX_PHOTOS
+      ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
+      : (files.length ? "Pasirinkta nuotraukų: " + files.length + "." : "");
   }
 
   function pct(value, total) {
@@ -694,10 +736,10 @@
     submit.disabled = true;
     resultBox.hidden = true;
     await Promise.all(cropPromises);
-    var photos = processedPhotos.filter(Boolean).slice(0, 4);
+    var photos = processedPhotos.filter(Boolean).slice(0, MAX_PHOTOS);
     var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
 
-    data.tekstas_200 = limitWords(data.tekstas_200 || "", 200);
+    data.tekstas_200 = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
     data.apmoketa = false;
     data.product_type = productType;
 

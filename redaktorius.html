@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+<link rel="stylesheet" href="css/styles.css?v=20260707-7">
 </head>
 <body class="editor-page">
 <div class="editor-shell">
@@ -15,7 +15,7 @@
     </a>
     <div class="editor-topbar__title">
       <strong>Atminimo puslapio redaktorius</strong>
-      <span>Slug sugeneruojamas automatiškai, o išdėstymas saugomas į <code>layout_json</code></span>
+      <span>Puslapio adresas sugeneruojamas automatiškai, o pakeitimai išsaugomi kartu su puslapiu</span>
     </div>
     <nav class="editor-topbar__nav" aria-label="Redaktoriaus navigacija">
       <a href="parduotuve.html">Parduotuvė</a>
@@ -60,10 +60,10 @@
           <input type="text" name="epitafija" maxlength="180" placeholder="Trumpa frazė po datomis">
         </label>
         <label>
-          Tekstas
-          <textarea name="tekstas_200" rows="7" maxlength="1400" placeholder="Iki 200 žodžių. Galima įklijuoti tekstą iš telefono ar dokumento."></textarea>
+          Gyvenimo istorija
+          <textarea name="tekstas_200" rows="12" maxlength="10000" placeholder="Iki 1000 žodžių. Galite aprašyti gyvenimo kelią, šeimą, darbus, pomėgius ir svarbiausius prisiminimus."></textarea>
         </label>
-        <p class="editor-word-count" id="editor-word-count">0 / 200 žodžių</p>
+        <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių</p>
 
         <label>
           Puslapio fonas
@@ -74,8 +74,9 @@
         </label>
 
         <label id="editor-section-files">
-          Nuotraukos (iki 4)
+          Nuotraukos (iki 8; pirmos 4 laisvai dėliojamos, kitos rodomos galerijoje)
           <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
+          <span class="editor-file-help" id="editor-photo-file-list">Nuotraukos dar nepasirinktos.</span>
         </label>
         <label>
           Video (1 failas)
@@ -86,11 +87,18 @@
           <input type="file" name="captions" id="editor-captions" accept=".vtt,text/vtt">
         </label>
         <fieldset class="editor-alt-fields">
-          <legend>Nuotraukų aprašymai ekrano skaitytuvams</legend>
-          <label>1 nuotrauka<input type="text" name="photo_alt_1" maxlength="180" placeholder="Kas pavaizduota nuotraukoje?"></label>
-          <label>2 nuotrauka<input type="text" name="photo_alt_2" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
-          <label>3 nuotrauka<input type="text" name="photo_alt_3" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
-          <label>4 nuotrauka<input type="text" name="photo_alt_4" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
+          <legend>Nuotraukų užrašai ir apibūdinimai</legend>
+          <p class="editor-field-help">Matomas užrašas bus rodomas po nuotrauka. Vaizdo apibūdinimas padeda žmonėms, naudojantiems ekrano skaitytuvą.</p>
+          <div class="editor-photo-description-grid">
+            <article class="editor-photo-description"><h3>1 nuotrauka</h3><label>Matomas užrašas<textarea name="photo_caption_1" rows="2" maxlength="240" placeholder="Pvz., Su šeima prie Baltijos jūros, 1985 m."></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_1" maxlength="180" placeholder="Kas pavaizduota nuotraukoje?"></label></article>
+            <article class="editor-photo-description"><h3>2 nuotrauka</h3><label>Matomas užrašas<textarea name="photo_caption_2" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_2" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>3 nuotrauka</h3><label>Matomas užrašas<textarea name="photo_caption_3" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_3" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>4 nuotrauka</h3><label>Matomas užrašas<textarea name="photo_caption_4" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_4" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>5 nuotrauka <small>galerijoje</small></h3><label>Matomas užrašas<textarea name="photo_caption_5" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_5" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>6 nuotrauka <small>galerijoje</small></h3><label>Matomas užrašas<textarea name="photo_caption_6" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_6" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>7 nuotrauka <small>galerijoje</small></h3><label>Matomas užrašas<textarea name="photo_caption_7" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_7" maxlength="180"></label></article>
+            <article class="editor-photo-description"><h3>8 nuotrauka <small>galerijoje</small></h3><label>Matomas užrašas<textarea name="photo_caption_8" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_8" maxlength="180"></label></article>
+          </div>
         </fieldset>
 
         <div class="editor-transform-tools" id="editor-section-positions" aria-label="Nuotraukos keitimo režimas">
@@ -129,11 +137,12 @@
           <blockquote id="editor-preview-epitaph">Trumpa epitafija atsiras čia.</blockquote>
         </header>
         <blockquote class="editor-piece editor-preview-text" data-piece="text" id="editor-preview-text" style="left: 8%; top: 16%; width: 84%;">
-          Ilgesnis tekstas atsiras čia.
+          Gyvenimo istorijos pradžia atsiras čia. Visas tekstas bus rodomas žemiau pagrindinio vaizdo.
         </blockquote>
         <div class="editor-piece editor-photo-slot" data-piece="photo-1" data-height-pct="44" style="left: 10%; top: 44%; width: 80%;">
           <img id="editor-preview-photo-1" alt="" hidden>
           <span class="editor-empty-photo">Nuotrauka 1</span>
+          <span class="editor-photo-caption" id="editor-preview-caption-1" hidden></span>
           <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
@@ -150,6 +159,7 @@
         <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-2" data-height-pct="18" style="left: 8%; top: 60%; width: 26%;">
           <img id="editor-preview-photo-2" alt="" hidden>
           <span class="editor-empty-photo">2</span>
+          <span class="editor-photo-caption" id="editor-preview-caption-2" hidden></span>
           <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
@@ -166,6 +176,7 @@
         <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-3" data-height-pct="18" style="left: 37%; top: 60%; width: 26%;">
           <img id="editor-preview-photo-3" alt="" hidden>
           <span class="editor-empty-photo">3</span>
+          <span class="editor-photo-caption" id="editor-preview-caption-3" hidden></span>
           <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
@@ -182,6 +193,7 @@
         <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-4" data-height-pct="18" style="left: 66%; top: 60%; width: 26%;">
           <img id="editor-preview-photo-4" alt="" hidden>
           <span class="editor-empty-photo">4</span>
+          <span class="editor-photo-caption" id="editor-preview-caption-4" hidden></span>
           <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
           <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
@@ -206,14 +218,12 @@
     <aside class="editor-db-panel" aria-labelledby="db-info-title">
       <h2 id="db-info-title">Išsaugoma</h2>
       <dl>
-        <dt>Lentelė</dt>
-        <dd><code>profiliai</code></dd>
-        <dt>Tekstas</dt>
-        <dd><code>vardas</code>, <code>pavarde</code>, <code>epitafija</code>, <code>tekstas_200</code></dd>
-        <dt>Failai</dt>
-        <dd><code>media_json</code> ir Storage bucket <code>atminimas</code></dd>
-        <dt>Layout</dt>
-        <dd><code>layout_json</code> saugo kiekvieno elemento poziciją.</dd>
+        <dt>Asmens informacija</dt>
+        <dd>Vardas, gyvenimo datos, epitafija ir iki 1000 žodžių gyvenimo istorija.</dd>
+        <dt>Nuotraukos</dt>
+        <dd>Iki 8 nuotraukų su matomais užrašais ir prieinamumo apibūdinimais.</dd>
+        <dt>Išdėstymas</dt>
+        <dd>Išsaugomos jūsų pasirinktos tekstų, nuotraukų ir vaizdo įrašo vietos.</dd>
         <dt>Viešumas</dt>
         <dd>Naujas puslapis išsaugomas neviešas. Jį atskirai paskelbsite kliento zonoje.</dd>
       </dl>
@@ -231,8 +241,8 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260707-1"></script>
-<script src="assets/redaktorius.js?v=20260707-1"></script>
+<script src="assets/atminimas-duomenys.js?v=20260707-2"></script>
+<script src="assets/redaktorius.js?v=20260707-2"></script>
 </body>
 </html>
 
