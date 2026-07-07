@@ -155,7 +155,11 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.supabase_request("/rest/v1/uzsakymai?select=id&limit=1")
         self.assertIn(error.exception.code, (401, 403))
 
-        for table in ("atsisakymai", "turinio_pranesimai", "paslaugu_uzklausos"):
+        for table in (
+            "atsisakymai", "turinio_pranesimai", "paslaugu_uzklausos",
+            "payment_events", "invoice_documents", "production_jobs",
+            "automation_events", "automation_audit_log",
+        ):
             with self.subTest(table=table):
                 with self.assertRaises(urllib.error.HTTPError) as private_error:
                     self.supabase_request("/rest/v1/{0}?select=id&limit=1".format(table))
@@ -268,6 +272,22 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("product_type text not null default 'metal'", sql.lower())
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
 
+    def test_admin_has_separate_all_orders_dashboard(self):
+        html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        schema = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        self.assertIn('id="admin-overview"', html)
+        self.assertIn('id="admin-orders"', html)
+        self.assertIn('id="order-rows"', html)
+        self.assertIn("Visi užsakymai", html)
+        self.assertIn("await AtminimasAuth.isAdmin()", admin)
+        self.assertIn('"uzsakymai",', admin)
+        self.assertIn("payment_reference", admin)
+        self.assertIn("delivery_method", admin)
+        self.assertIn("orderCache.length", admin)
+        self.assertRegex(schema, r"(?s)uzsakymai for select.*?r\.role = 'admin'")
+        self.assertNotIn('href="vartotojas.html">Klientas</a>', html)
+
     def test_editor_supports_long_story_and_described_photo_gallery(self):
         html = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
@@ -319,6 +339,67 @@ class AtminimasSmokeTests(unittest.TestCase):
         for text in ("DB builderis", "saugomi į DB", "slug bus"):
             self.assertNotIn(text, editor)
         self.assertIn('<a href="klientai.html">Atidaryti puslapį</a>', editor)
+
+    def test_automation_schema_uses_rls_and_private_documents(self):
+        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        for table in ("payment_events", "invoice_documents", "production_jobs", "automation_events", "automation_audit_log"):
+            self.assertIn("alter table public.{0} enable row level security".format(table), sql.lower())
+        self.assertIn("'automation-documents', 'automation-documents', false", sql)
+        self.assertIn("grant execute on function public.create_invoice_record", sql)
+        self.assertIn("to service_role", sql)
+        self.assertNotRegex(sql.lower(), r"grant\s+(?:all|select|insert|update|delete)[^;]*public\.(?:payment_events|invoice_documents|production_jobs|automation_events|automation_audit_log)[^;]*\bto\s+anon\b")
+
+    def test_payment_flow_is_server_verified(self):
+        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+        payment = (ROOT / "supabase" / "functions" / "payment-create" / "index.ts").read_text(encoding="utf-8")
+        webhook = (ROOT / "supabase" / "functions" / "payment-webhook" / "index.ts").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn('functionUrl("payment-create")', checkout)
+        self.assertNotIn("STRIPE_SECRET_KEY", checkout)
+        self.assertIn('.select("id,profilis_id,total_cents,currency', payment)
+        self.assertIn('params.set("line_items[0][price_data][unit_amount]", String(order.total_cents))', payment)
+        self.assertIn('request.headers.get("stripe-signature")', webhook)
+        self.assertIn("crypto.subtle.sign", webhook)
+        self.assertIn('client.rpc("process_stripe_payment_event"', webhook)
+        transactional = (ROOT / "supabase" / "migrations" / "20260707164600_transactional_payment_webhook.sql").read_text(encoding="utf-8")
+        self.assertIn("where id = p_order_id for update", transactional.lower())
+        self.assertIn("p_amount_cents = ord.total_cents", transactional)
+        self.assertIn("upper(p_currency) = ord.currency", transactional)
+        self.assertRegex(config, r"(?s)\[functions\.payment-webhook\]\s*verify_jwt\s*=\s*false")
+
+    def test_customer_approval_precedes_production(self):
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        self.assertIn("approve_order_for_production", user)
+        self.assertIn("Patvirtinti gamybai", user)
+        self.assertRegex(sql, r"(?s)old\.customer_approved_at is null.*?insert into public\.production_jobs")
+        self.assertIn("production.qr_requested", sql)
+
+    def test_automation_worker_covers_required_notifications(self):
+        worker = (ROOT / "supabase" / "functions" / "automation-worker" / "index.ts").read_text(encoding="utf-8")
+        reminders = (ROOT / "supabase" / "functions" / "automation-reminders" / "index.ts").read_text(encoding="utf-8")
+        for event in ("invoice.requested", "payment.confirmed", "production.approval_requested", "shipping.sent", "shipping.delivered", "service.scheduled", "service.completed"):
+            self.assertIn(event, worker)
+        self.assertIn("order.unpaid_reminder", reminders)
+        self.assertIn("profile.unfinished_reminder", reminders)
+        self.assertIn("service.reminder", reminders)
+        self.assertNotIn('update({ reminder_sent_at: now.toISOString() })', reminders)
+
+    def test_shipping_adapter_is_server_side_and_scheduled(self):
+        shipping = (ROOT / "supabase" / "functions" / "_shared" / "shipping.ts").read_text(encoding="utf-8")
+        cron = (ROOT / "supabase" / "cron-setup.sql.example").read_text(encoding="utf-8")
+        self.assertIn('env("SHIPMENT_ADAPTER_SECRET"', shipping)
+        self.assertIn('url.protocol !== "https:"', shipping)
+        self.assertIn("label_storage_path", shipping)
+        self.assertIn("vault.decrypted_secrets", cron)
+        self.assertIn("atminimas-shipping-sync", cron)
+        self.assertNotIn("PAKEISTI_AUTOMATION_SECRET", cron)
+
+    def test_pdf_uses_pinned_static_unicode_font(self):
+        pdf = (ROOT / "supabase" / "functions" / "_shared" / "invoice-pdf.ts").read_text(encoding="utf-8")
+        self.assertIn("ffebf8c1ee449e544955a7e813c54f9b73848eac", pdf)
+        self.assertIn("NotoSans-Regular.ttf", pdf)
+        self.assertIn('"MOKĖJIMO PATVIRTINIMAS"', pdf)
 
 
 if __name__ == "__main__":

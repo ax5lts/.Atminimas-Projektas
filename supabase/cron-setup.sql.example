@@ -1,0 +1,28 @@
+-- Pirmiausia Supabase Vault sukurkite paslaptis vardais project_url ir automation_secret.
+-- Tikros reikšmės neturi būti šiame faile ar Git istorijoje.
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+
+select cron.schedule('atminimas-automation-worker', '* * * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/automation-worker',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-automation-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'automation_secret')),
+    body := '{}'::jsonb
+  );
+$$);
+
+select cron.schedule('atminimas-daily-reminders', '15 8 * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/automation-reminders',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-automation-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'automation_secret')),
+    body := '{}'::jsonb
+  );
+$$);
+
+select cron.schedule('atminimas-shipping-sync', '*/30 * * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/shipping-sync',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-automation-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'automation_secret')),
+    body := '{}'::jsonb
+  );
+$$);

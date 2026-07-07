@@ -3,15 +3,45 @@
   var statusEl = document.getElementById("delivery-status");
   var orderEl = document.getElementById("checkout-order");
   var lockerStatus = document.getElementById("locker-status");
+  var paymentButton = document.getElementById("payment-button");
+  var paymentHelp = document.getElementById("payment-help");
+  var subtotalEl = document.getElementById("checkout-subtotal");
+  var shippingEl = document.getElementById("checkout-shipping");
+  var totalEl = document.getElementById("checkout-total");
   var carrierSelect = form.elements.carrier;
   var citySelect = form.elements.city;
   var terminalSelect = form.elements.parcel_terminal;
   var lockers = [];
   var params = new URLSearchParams(window.location.search);
   var orderId = (params.get("order") || "").trim();
+  var currentOrder = null;
 
   function cfg() { return window.ATMINIMAS_CONFIG; }
   function rest(path) { return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + path; }
+  function functionUrl(name) { return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + name; }
+
+  function money(cents, currency) {
+    if (!Number.isInteger(cents)) return "–";
+    return new Intl.NumberFormat("lt-LT", { style: "currency", currency: currency || "EUR" }).format(cents / 100);
+  }
+
+  function updatePayment(order) {
+    currentOrder = order;
+    subtotalEl.textContent = money(order.subtotal_cents, order.currency);
+    shippingEl.textContent = money(order.shipping_cents, order.currency);
+    totalEl.textContent = money(order.total_cents, order.currency);
+    var ready = order.shipping_status === "paruošti" && Number.isInteger(order.total_cents) && order.total_cents > 0 && !order.apmoketa;
+    paymentButton.disabled = !ready;
+    if (order.apmoketa || order.payment_status === "paid") {
+      paymentHelp.textContent = "Mokėjimas gautas. Kliento zonoje patvirtinkite galutinį puslapį gamybai.";
+    } else if (!Number.isInteger(order.total_cents)) {
+      paymentHelp.textContent = "Dar nenustatyta produkto arba pasirinkto pristatymo kaina.";
+    } else if (order.shipping_status !== "paruošti") {
+      paymentHelp.textContent = "Pirmiausia išsaugokite pristatymo duomenis.";
+    } else {
+      paymentHelp.textContent = "Būsite nukreipti į saugų mokėjimo puslapį.";
+    }
+  }
 
   function carrierSlug(value) {
     return { "Omniva": "omniva", "LP Express": "lp-express", "DPD": "dpd" }[value] || "";
@@ -90,11 +120,12 @@
       return;
     }
     if (!orderId) throw new Error("Trūksta užsakymo numerio.");
-    var response = await fetch(rest("uzsakymai?id=eq." + encodeURIComponent(orderId) + "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa&limit=1"), { headers: AtminimasAuth.headers(false) });
+    var response = await fetch(rest("uzsakymai?id=eq." + encodeURIComponent(orderId) + "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,subtotal_cents,shipping_cents,total_cents,currency&limit=1"), { headers: AtminimasAuth.headers(false) });
     if (!response.ok) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var rows = await response.json();
     if (!rows.length) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var order = rows[0];
+    updatePayment(order);
     orderEl.textContent = "Užsakymo numeris: " + order.id + ". Produktas: " + (order.product_type === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Puslapis: " + order.profilis_id + ".";
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
@@ -104,6 +135,8 @@
       await loadLockers(order.carrier, order.city, order.parcel_terminal);
     }
     if (order.shipping_status && order.shipping_status !== "laukiama_duomenu") statusEl.textContent = "Pristatymo duomenys jau išsaugoti. Galite juos atnaujinti.";
+    if (params.get("payment") === "success" && !order.apmoketa) statusEl.textContent = "Mokėjimas priimtas. Laukiama saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.";
+    if (params.get("payment") === "cancelled") statusEl.textContent = "Mokėjimas atšauktas. Užsakymas išsaugotas, galite bandyti dar kartą.";
   }
 
   form.addEventListener("submit", async function (event) {
@@ -129,6 +162,7 @@
       });
       if (!response.ok) throw new Error("Nepavyko išsaugoti pristatymo duomenų.");
       statusEl.textContent = "Pristatymo duomenys išsaugoti. Užsakymas pateko į administratoriaus siuntimų sąrašą.";
+      await loadOrder();
     } catch (error) {
       statusEl.textContent = error.message || "Nepavyko išsaugoti pristatymo duomenų.";
     } finally {
@@ -142,6 +176,25 @@
     });
   });
   citySelect.addEventListener("change", function () { updateTerminals(""); });
+
+  paymentButton.addEventListener("click", async function () {
+    if (!currentOrder || paymentButton.disabled) return;
+    paymentButton.disabled = true;
+    paymentHelp.textContent = "Kuriamas saugus mokėjimas...";
+    try {
+      var response = await fetch(functionUrl("payment-create"), {
+        method: "POST",
+        headers: AtminimasAuth.headers(true),
+        body: JSON.stringify({ order_id: orderId })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok || !data.checkout_url) throw new Error(data.error || "Nepavyko pradėti mokėjimo.");
+      window.location.assign(data.checkout_url);
+    } catch (error) {
+      paymentHelp.textContent = error.message || "Nepavyko pradėti mokėjimo.";
+      updatePayment(currentOrder);
+    }
+  });
 
   loadOrder().catch(function (error) {
     statusEl.textContent = error.message || "Nepavyko įkelti užsakymo.";
