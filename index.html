@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-3">
+<link rel="stylesheet" href="css/styles.css?v=20260707-6">
 </head>
 <body class="home-page">
 <div class="site-shell">
@@ -126,19 +126,54 @@
           </label>
 
           <div class="service-extra" data-service-details="geles" hidden>
-            <label>Kokių gėlių norite?
-              <textarea name="flowers_details" rows="3" maxlength="1200" placeholder="Gėlių rūšis ir spalva, kiekis, ar norite puokštės, kiti pageidavimai"></textarea>
+            <fieldset class="service-variant-group">
+              <legend>Pasirinkite gėlių variantą</legend>
+              <div class="service-variant-grid">
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_1" data-service-required><span><strong>1 gėlė</strong><small data-service-price="flower_1">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_3" data-service-required><span><strong>3 gėlės</strong><small data-service-price="flower_3">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_5" data-service-required><span><strong>5 gėlės</strong><small data-service-price="flower_5">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_bouquet" data-service-required><span><strong>Puokštė</strong><small data-service-price="flower_bouquet">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_other" data-service-required><span><strong>Kitas kiekis</strong><small data-service-price="flower_other">–</small></span></label>
+              </div>
+            </fieldset>
+            <label>Gėlių rūšis ir kiti pageidavimai <span class="optional">(nebūtina)</span>
+              <textarea name="flowers_details" rows="3" maxlength="900" placeholder="Gėlių rūšis, spalva, puokštės stilius ar kiti pageidavimai"></textarea>
             </label>
           </div>
           <div class="service-extra" data-service-details="zvakes" hidden>
-            <label>Kokių žvakių norite?
-              <textarea name="candles_details" rows="3" maxlength="1200" placeholder="Žvakių kiekis, spalva, dydis ar kiti pageidavimai"></textarea>
+            <fieldset class="service-variant-group">
+              <legend>Pasirinkite žvakių kiekį</legend>
+              <div class="service-variant-grid">
+                <label class="service-variant"><input type="radio" name="candle_package" value="candle_1" data-service-required><span><strong>1 žvakė</strong><small data-service-price="candle_1">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="candle_package" value="candle_2" data-service-required><span><strong>2 žvakės</strong><small data-service-price="candle_2">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="candle_package" value="candle_5" data-service-required><span><strong>5 žvakės</strong><small data-service-price="candle_5">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="candle_package" value="candle_other" data-service-required><span><strong>Kitas kiekis</strong><small data-service-price="candle_other">–</small></span></label>
+              </div>
+            </fieldset>
+            <label>Žvakių rūšis ir kiti pageidavimai <span class="optional">(nebūtina)</span>
+              <textarea name="candles_details" rows="3" maxlength="900" placeholder="Spalva, dydis, žvakidės tipas ar kiti pageidavimai"></textarea>
             </label>
           </div>
           <div class="service-extra" data-service-details="kapu_tvarkymas" hidden>
-            <label>Ką reikėtų sutvarkyti?
-              <textarea name="cleaning_details" rows="3" maxlength="1600" placeholder="Pvz., pašalinti lapus, nuvalyti paminklą, sutvarkyti augalus"></textarea>
+            <fieldset class="service-variant-group">
+              <legend>Pasirinkite tvarkymo darbus <span class="optional">(galima kelis)</span></legend>
+              <div class="service-variant-grid service-variant-grid--cleaning">
+                <label class="service-variant service-variant--wide"><input type="checkbox" name="cleaning_tasks" value="cleaning_full" data-cleaning-full><span><strong>Pilnas sutvarkymas</strong><small data-service-price="cleaning_full">–</small></span></label>
+                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_grooves"><span><strong>Griovelių išvalymas</strong><small data-service-price="cleaning_grooves">–</small></span></label>
+                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_surface"><span><strong>Viršaus nušlavimas</strong><small data-service-price="cleaning_surface">–</small></span></label>
+                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_monument"><span><strong>Paminklo nuvalymas</strong><small data-service-price="cleaning_monument">–</small></span></label>
+                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_leaves"><span><strong>Lapų ir šiukšlių surinkimas</strong><small data-service-price="cleaning_leaves">–</small></span></label>
+              </div>
+            </fieldset>
+            <label>Kiti tvarkymo pageidavimai <span class="optional">(nebūtina)</span>
+              <textarea name="cleaning_details" rows="3" maxlength="1100" placeholder="Augalai, paminklo būklė ar kita svarbi informacija"></textarea>
             </label>
+          </div>
+
+          <div class="service-estimate" aria-live="polite">
+            <span>Preliminari pasirinkimų kaina</span>
+            <strong id="service-estimate-price">–</strong>
+            <small>Galutinę kainą patvirtinsime prieš atliekant paslaugą.</small>
           </div>
 
           <label>Papildoma informacija <span class="optional">(nebūtina)</span>
@@ -167,6 +202,7 @@
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/home.js?v=20260707-1"></script>
+<script src="assets/service-prices.js?v=20260707-1"></script>
+<script src="assets/home.js?v=20260707-2"></script>
 </body>
 </html>

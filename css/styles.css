@@ -2742,9 +2742,111 @@ html {
 }
 
 .service-extra {
+  display: grid;
+  gap: 18px;
   padding: 18px;
   border-radius: 14px;
   background: var(--accent-soft);
+}
+
+.service-variant-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.service-variant-group legend {
+  margin-bottom: 12px;
+  color: #35322d;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.service-variant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+}
+
+.service-variant-grid--cleaning {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.service-details .service-variant {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: 13px 14px 13px 42px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.service-details .service-variant:hover {
+  border-color: rgba(142, 109, 50, 0.55);
+}
+
+.service-details .service-variant:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(142, 109, 50, 0.13);
+}
+
+.service-details .service-variant input {
+  position: absolute;
+  top: 15px;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.service-variant strong,
+.service-variant small {
+  display: block;
+}
+
+.service-variant strong {
+  line-height: 1.3;
+}
+
+.service-variant small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.service-variant--wide {
+  grid-column: 1 / -1;
+}
+
+.service-estimate {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.service-estimate > span {
+  font-weight: 700;
+}
+
+.service-estimate > strong {
+  color: var(--accent-dark);
+  font-size: 1.35rem;
+}
+
+.service-estimate > small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .service-details .service-consent {
@@ -2808,6 +2910,10 @@ html {
     grid-template-columns: 1fr;
   }
 
+  .service-variant-grid--cleaning {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .service-choice {
     min-height: 190px;
   }
@@ -2837,6 +2943,10 @@ html {
 
   .service-details {
     padding: 22px 16px;
+  }
+
+  .service-variant-grid {
+    grid-template-columns: 1fr;
   }
 }
 

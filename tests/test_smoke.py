@@ -203,6 +203,21 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.assertRegex(html, r'name="{0}"[^>]*required'.format(field))
         self.assertGreaterEqual(html.count('service-choice__price'), 3)
 
+    def test_service_variants_have_separate_price_slots(self):
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        prices = (ROOT / "assets" / "service-prices.js").read_text(encoding="utf-8")
+        home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        for value in ("candle_1", "candle_2", "candle_5", "flower_1", "flower_bouquet"):
+            self.assertIn('value="{0}"'.format(value), html)
+            self.assertIn("{0}: null".format(value), prices)
+        for value in ("cleaning_full", "cleaning_grooves", "cleaning_surface", "cleaning_monument", "cleaning_leaves"):
+            self.assertIn('name="cleaning_tasks" value="{0}"'.format(value), html)
+            self.assertIn("{0}: null".format(value), prices)
+        self.assertIn('id="service-estimate-price"', html)
+        self.assertIn('selectedNamedValues("cleaning_tasks")', home)
+        self.assertIn("Preliminari kaina:", home)
+        self.assertIn("data-cleaning-full", html)
+
     def test_service_request_flow_requires_auth_and_preserves_draft(self):
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         self.assertIn("AtminimasAuth.accessToken()", home)
