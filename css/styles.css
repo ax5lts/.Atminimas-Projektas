@@ -686,6 +686,109 @@ video {
   cursor: pointer;
 }
 
+.editor-color-picker {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #69717c;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.editor-color-picker legend {
+  padding: 0 6px;
+  color: #f2f3f5;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.editor-color-picker__layout {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.editor-color-wheel {
+  position: relative;
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1;
+  justify-self: center;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.78) 25%, rgba(255, 255, 255, 0) 72%),
+    conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.editor-color-wheel:focus-visible {
+  outline: 3px solid #bce4b9;
+  outline-offset: 4px;
+}
+
+.editor-color-wheel__thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 2px #20252b, 0 2px 6px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.editor-color-picker__controls,
+.editor-color-brightness,
+.editor-color-exact {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editor-color-picker__controls {
+  gap: 14px;
+}
+
+.editor-form .editor-color-brightness input[type="range"] {
+  min-height: 44px;
+  padding: 0;
+  accent-color: #77a46f;
+  cursor: pointer;
+}
+
+.editor-color-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(34px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.editor-color-swatches button {
+  min-width: 38px;
+  min-height: 44px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.editor-color-swatches button:focus-visible {
+  outline: 3px solid #bce4b9;
+  outline-offset: 2px;
+}
+
+.editor-color-picker .editor-field-help {
+  margin: 12px 0 0;
+}
+
 .editor-form textarea {
   min-height: 120px;
   padding: 11px;
@@ -714,8 +817,10 @@ video {
 }
 
 #editor-section-text,
+#editor-section-colors,
 #editor-section-files,
-#editor-section-positions {
+#editor-section-positions,
+#editor-section-preview {
   scroll-margin-top: 18px;
 }
 
@@ -2612,6 +2717,26 @@ video {
   font-size: 2rem;
 }
 
+@media (min-width: 861px) and (max-width: 1280px) {
+  .editor-workspace {
+    grid-template-columns: 72px minmax(290px, 340px) minmax(360px, 1fr);
+  }
+
+  .editor-db-panel {
+    grid-column: 2 / -1;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 0;
+  }
+
+  .editor-color-picker__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-color-wheel {
+    width: min(180px, 70%);
+  }
+}
+
 @media (max-width: 860px) {
   .site-header__inner {
     align-items: flex-start;
@@ -2661,16 +2786,90 @@ video {
   }
 
   .editor-topbar {
+    gap: 12px;
     padding: 14px;
   }
 
+  .editor-topbar__nav {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .editor-workspace {
+    grid-template-areas:
+      "rail"
+      "canvas"
+      "panel"
+      "database";
+  }
+
   .editor-rail {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    grid-area: rail;
     grid-auto-flow: column;
+    grid-template-columns: repeat(5, minmax(88px, 1fr));
+    padding: 8px;
     overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .editor-tool {
+    min-height: 46px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .editor-panel {
+    grid-area: panel;
+    overflow: visible;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 0;
+  }
+
+  .editor-canvas {
+    grid-area: canvas;
+    min-width: 0;
+    padding: 16px;
+    overflow: visible;
+  }
+
+  .editor-db-panel {
+    grid-area: database;
+    overflow: visible;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 0;
+  }
+
+  .editor-canvas__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .editor-canvas__toolbar span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .editor-phone-preview {
+    width: min(420px, 100%);
     min-height: 620px;
+  }
+
+  .editor-form input,
+  .editor-form textarea,
+  .editor-transform-tools button {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .editor-transform-tools button {
+    padding: 8px;
   }
 
   .product-media {
@@ -2749,6 +2948,59 @@ video {
 
   .editor-photo-description-grid,
   .memorial-story-gallery__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-rail {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  #editor-section-text,
+  #editor-section-colors,
+  #editor-section-files,
+  #editor-section-positions,
+  #editor-section-preview {
+    scroll-margin-top: 112px;
+  }
+
+  .editor-topbar__title span {
+    display: none;
+  }
+
+  .editor-topbar__nav {
+    font-size: 0.85rem;
+  }
+
+  .editor-panel,
+  .editor-db-panel {
+    padding: 18px 14px;
+  }
+
+  .editor-canvas {
+    padding: 14px 8px 22px;
+  }
+
+  .editor-phone-preview {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .editor-color-picker__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-color-wheel {
+    width: min(220px, 78vw);
+    max-width: none;
+  }
+
+  .editor-color-swatches {
+    grid-template-columns: repeat(3, minmax(44px, 1fr));
+  }
+
+  .editor-transform-tools div {
     grid-template-columns: 1fr;
   }
 
@@ -2846,6 +3098,26 @@ video {
 
   .memorial-site-link__hint {
     font-size: 0.7rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .editor-resize-handle,
+  .editor-crop-handle {
+    width: 30px;
+    height: 30px;
+  }
+
+  .editor-stretch-x,
+  .editor-stretch-left {
+    width: 24px;
+    height: 46px;
+  }
+
+  .editor-stretch-y,
+  .editor-stretch-top {
+    width: 46px;
+    height: 24px;
   }
 }
 

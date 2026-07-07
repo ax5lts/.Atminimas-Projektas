@@ -431,6 +431,21 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
         self.assertIn('"image/webp", 0.82', editor)
 
+    def test_editor_is_responsive_and_has_touch_color_wheel(self):
+        page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('id="editor-color-wheel"', page)
+        self.assertIn('id="editor-color-brightness"', page)
+        self.assertIn('data-editor-section="preview"', page)
+        self.assertIn("colorFromWheelPoint", editor)
+        self.assertIn('colorWheel.addEventListener("pointerdown"', editor)
+        self.assertIn('colorWheel.addEventListener("keydown"', editor)
+        self.assertIn('target.scrollIntoView({ behavior: "smooth"', editor)
+        self.assertIn("@media (min-width: 861px) and (max-width: 1280px)", styles)
+        self.assertIn("@media (pointer: coarse)", styles)
+        self.assertIn('"canvas"', styles)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

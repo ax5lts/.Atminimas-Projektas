@@ -21,6 +21,9 @@
   var clearDraftButton = document.getElementById("editor-clear-draft");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
+  var colorWheel = document.getElementById("editor-color-wheel");
+  var colorWheelThumb = document.getElementById("editor-color-wheel-thumb");
+  var colorBrightness = document.getElementById("editor-color-brightness");
   var photoFileList = document.getElementById("editor-photo-file-list");
   var MAX_PHOTOS = 8;
   var MAX_STORY_WORDS = 1000;
@@ -49,6 +52,9 @@
   var DRAFT_STORE = "files";
   var PRODUCT_KEY = "atminimas.selected-product.v1";
   var productSummary = document.getElementById("editor-product-summary");
+  var selectedHue = 0;
+  var selectedSaturation = 0;
+  var selectedBrightness = 100;
 
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
@@ -61,6 +67,139 @@
 
   var productType = selectedProduct();
   if (productSummary) productSummary.textContent = "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function normalizeHex(value) {
+    var hex = String(value || "").trim().replace(/^#/, "");
+    if (/^[0-9a-f]{3}$/i.test(hex)) hex = hex.split("").map(function (part) { return part + part; }).join("");
+    return /^[0-9a-f]{6}$/i.test(hex) ? "#" + hex.toLowerCase() : "#ffffff";
+  }
+
+  function hsvToHex(hue, saturation, brightness) {
+    var h = ((hue % 360) + 360) % 360;
+    var s = clamp(saturation, 0, 100) / 100;
+    var v = clamp(brightness, 0, 100) / 100;
+    var chroma = v * s;
+    var section = h / 60;
+    var x = chroma * (1 - Math.abs((section % 2) - 1));
+    var rgb = section < 1 ? [chroma, x, 0]
+      : section < 2 ? [x, chroma, 0]
+      : section < 3 ? [0, chroma, x]
+      : section < 4 ? [0, x, chroma]
+      : section < 5 ? [x, 0, chroma]
+      : [chroma, 0, x];
+    var match = v - chroma;
+    return "#" + rgb.map(function (part) {
+      return Math.round((part + match) * 255).toString(16).padStart(2, "0");
+    }).join("");
+  }
+
+  function hexToHsv(value) {
+    var hex = normalizeHex(value).slice(1);
+    var red = parseInt(hex.slice(0, 2), 16) / 255;
+    var green = parseInt(hex.slice(2, 4), 16) / 255;
+    var blue = parseInt(hex.slice(4, 6), 16) / 255;
+    var max = Math.max(red, green, blue);
+    var min = Math.min(red, green, blue);
+    var delta = max - min;
+    var hue = 0;
+    if (delta) {
+      if (max === red) hue = 60 * (((green - blue) / delta) % 6);
+      else if (max === green) hue = 60 * (((blue - red) / delta) + 2);
+      else hue = 60 * (((red - green) / delta) + 4);
+    }
+    return {
+      h: (hue + 360) % 360,
+      s: max ? (delta / max) * 100 : 0,
+      v: max * 100
+    };
+  }
+
+  function positionColorThumb() {
+    if (!colorWheelThumb || !colorWheel) return;
+    var angle = selectedHue * Math.PI / 180;
+    var distance = selectedSaturation * 0.47;
+    colorWheelThumb.style.left = (50 + Math.cos(angle) * distance) + "%";
+    colorWheelThumb.style.top = (50 + Math.sin(angle) * distance) + "%";
+    colorWheel.setAttribute("aria-valuenow", String(Math.round(selectedHue)));
+    colorWheel.setAttribute("aria-valuetext", "Atspalvis " + Math.round(selectedHue) + "°, sodrumas " + Math.round(selectedSaturation) + "%");
+  }
+
+  function updateColorState(value) {
+    var hsv = hexToHsv(value);
+    selectedHue = hsv.h;
+    selectedSaturation = hsv.s;
+    selectedBrightness = Math.max(20, hsv.v);
+    if (colorBrightness) colorBrightness.value = String(Math.round(selectedBrightness));
+    positionColorThumb();
+  }
+
+  function setBackgroundColor(value, updatePicker, persist) {
+    var hex = normalizeHex(value);
+    if (backgroundInput) backgroundInput.value = hex;
+    if (backgroundValue) backgroundValue.textContent = hex;
+    stage.style.backgroundColor = hex;
+    if (updatePicker) updateColorState(hex);
+    if (persist) scheduleDraftSave();
+  }
+
+  function colorFromWheelPoint(clientX, clientY) {
+    if (!colorWheel) return;
+    var rect = colorWheel.getBoundingClientRect();
+    var radius = Math.max(1, Math.min(rect.width, rect.height) / 2);
+    var x = clientX - rect.left - rect.width / 2;
+    var y = clientY - rect.top - rect.height / 2;
+    selectedHue = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    selectedSaturation = clamp(Math.sqrt(x * x + y * y) / radius * 100, 0, 100);
+    positionColorThumb();
+    setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+  }
+
+  function setupColorPicker() {
+    if (!colorWheel || !backgroundInput) return;
+    updateColorState(backgroundInput.value);
+    colorWheel.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      colorWheel.setPointerCapture(event.pointerId);
+      colorFromWheelPoint(event.clientX, event.clientY);
+    });
+    colorWheel.addEventListener("pointermove", function (event) {
+      if (!colorWheel.hasPointerCapture(event.pointerId)) return;
+      colorFromWheelPoint(event.clientX, event.clientY);
+    });
+    colorWheel.addEventListener("keydown", function (event) {
+      var handled = true;
+      if (event.key === "ArrowLeft") selectedHue -= 3;
+      else if (event.key === "ArrowRight") selectedHue += 3;
+      else if (event.key === "ArrowUp") selectedSaturation += 3;
+      else if (event.key === "ArrowDown") selectedSaturation -= 3;
+      else handled = false;
+      if (!handled) return;
+      event.preventDefault();
+      selectedHue = (selectedHue + 360) % 360;
+      selectedSaturation = clamp(selectedSaturation, 0, 100);
+      positionColorThumb();
+      setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+    });
+    backgroundInput.addEventListener("input", function () {
+      setBackgroundColor(backgroundInput.value, true, true);
+    });
+    if (colorBrightness) {
+      colorBrightness.addEventListener("input", function () {
+        selectedBrightness = Number(colorBrightness.value) || 100;
+        setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+      });
+    }
+    document.querySelectorAll("[data-background-color]").forEach(function (button) {
+      button.style.backgroundColor = button.dataset.backgroundColor;
+      button.addEventListener("click", function () {
+        setBackgroundColor(button.dataset.backgroundColor, true, true);
+      });
+    });
+  }
 
   function words(value) {
     return (value || "").trim().split(/\s+/).filter(Boolean);
@@ -292,8 +431,7 @@
       caption.hidden = !value;
     });
     var background = data.fono_spalva || "#ffffff";
-    stage.style.backgroundColor = background;
-    if (backgroundValue) backgroundValue.textContent = background;
+    setBackgroundColor(background, true, false);
     fitName();
     wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių";
     wordCountEl.classList.toggle("is-limit", count >= MAX_STORY_WORDS);
@@ -496,7 +634,9 @@
         document.querySelectorAll("[data-editor-section]").forEach(function (item) {
           item.classList.toggle("is-active", item === button);
         });
-        if (panel) {
+        if (window.matchMedia("(max-width: 860px)").matches) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (panel) {
           panel.scrollTo({
             top: Math.max(0, target.offsetTop - panel.offsetTop - 18),
             behavior: "smooth"
@@ -712,12 +852,6 @@
     syncPreview();
     scheduleDraftSave();
   });
-  if (backgroundInput) {
-    backgroundInput.addEventListener("input", function () {
-      stage.style.backgroundColor = backgroundInput.value;
-      if (backgroundValue) backgroundValue.textContent = backgroundInput.value;
-    });
-  }
   window.addEventListener("resize", refreshProportionalHeights);
   photosInput.addEventListener("change", syncPhotos);
   videoInput.addEventListener("change", function () {
@@ -806,6 +940,7 @@
       return;
     }
     await restoreDraft();
+    setupColorPicker();
     syncPreview();
     refreshProportionalHeights();
     setupTransformModeButtons();
