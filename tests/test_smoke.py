@@ -243,9 +243,10 @@ class AtminimasSmokeTests(unittest.TestCase):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
         self.assertIn('value="asa"', html)
-        self.assertIn('src="assets/qr-asa.png"', html)
+        self.assertIn('src="assets/qr-asa-480.webp"', html)
         self.assertIn("ASA 3D ženkliukas", html)
-        self.assertTrue((ROOT / "assets" / "qr-asa.png").stat().st_size > 100_000)
+        self.assertLess((ROOT / "assets" / "qr-asa-480.webp").stat().st_size, 30_000)
+        self.assertLess((ROOT / "assets" / "qr-asa.webp").stat().st_size, 100_000)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -400,6 +401,35 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("ffebf8c1ee449e544955a7e813c54f9b73848eac", pdf)
         self.assertIn("NotoSans-Regular.ttf", pdf)
         self.assertIn('"MOKĖJIMO PATVIRTINIMAS"', pdf)
+
+    def test_mobile_pages_use_lightweight_images_and_loader(self):
+        core_pages = (
+            "index.html", "parduotuve.html", "vartotojas.html", "admin.html",
+            "apmokejimas.html", "redaktorius.html", "sablonas-viskas.html",
+            "klientai.html", "prisijungti.html", "registruotis.html",
+        )
+        for name in core_pages:
+            html = (ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
+                self.assertIn('src="assets/loading.js?v=20260707-1"', html)
+        for image in ("qr-lipdukas.webp", "qr-lipdukas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
+            with self.subTest(image=image):
+                self.assertTrue((ROOT / "assets" / image).is_file())
+                self.assertLess((ROOT / "assets" / image).stat().st_size, 100_000)
+        served = (ROOT / "index.html").read_text(encoding="utf-8") + (ROOT / "parduotuve.html").read_text(encoding="utf-8") + (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
+        self.assertNotIn("qr-lipdukas.png", served)
+        self.assertNotIn("qr-asa.png", served)
+
+    def test_memorial_media_is_mobile_optimized(self):
+        page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        self.assertIn('image.loading = "lazy"', page)
+        self.assertIn('image.decoding = "async"', page)
+        self.assertIn('player.preload = "none"', page)
+        self.assertIn("1200 / Math.max(img.naturalWidth, img.naturalHeight)", editor)
+        self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
+        self.assertIn('"image/webp", 0.82', editor)
 
 
 if __name__ == "__main__":

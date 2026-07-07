@@ -311,9 +311,16 @@
   function imageFromFile(file) {
     return new Promise(function (resolve, reject) {
       var img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      var objectUrl = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(objectUrl);
+        resolve(img);
+      };
+      img.onerror = function (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      };
+      img.src = objectUrl;
     });
   }
 
@@ -326,9 +333,10 @@
     var img = await imageFromFile(file);
     var canvas = document.createElement("canvas");
     var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
+    var analysisScale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * analysisScale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * analysisScale));
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     var data = image.data;
@@ -349,23 +357,39 @@
       }
     }
 
-    if (maxX <= minX || maxY <= minY) return file;
+    if (maxX <= minX || maxY <= minY) {
+      minX = 0;
+      minY = 0;
+      maxX = canvas.width - 1;
+      maxY = canvas.height - 1;
+    }
     var cropW = maxX - minX + 1;
     var cropH = maxY - minY + 1;
     var removed = 1 - (cropW * cropH) / (canvas.width * canvas.height);
-    if (removed < 0.03) return file;
+    if (removed < 0.03) {
+      minX = 0;
+      minY = 0;
+      cropW = canvas.width;
+      cropH = canvas.height;
+    }
+
+    var sourceX = Math.round(minX / analysisScale);
+    var sourceY = Math.round(minY / analysisScale);
+    var sourceW = Math.min(img.naturalWidth - sourceX, Math.round(cropW / analysisScale));
+    var sourceH = Math.min(img.naturalHeight - sourceY, Math.round(cropH / analysisScale));
+    var outputScale = Math.min(1, 1600 / Math.max(sourceW, sourceH));
 
     var out = document.createElement("canvas");
-    out.width = cropW;
-    out.height = cropH;
-    out.getContext("2d").drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+    out.width = Math.max(1, Math.round(sourceW * outputScale));
+    out.height = Math.max(1, Math.round(sourceH * outputScale));
+    out.getContext("2d").drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, out.width, out.height);
 
     return new Promise(function (resolve) {
       out.toBlob(function (blob) {
         if (!blob) return resolve(file);
-        var name = file.name.replace(/\.[^.]+$/, "") + "-autocrop.jpg";
-        resolve(new File([blob], name, { type: "image/jpeg" }));
-      }, "image/jpeg", 0.92);
+        var name = file.name.replace(/\.[^.]+$/, "") + "-optimized.webp";
+        resolve(new File([blob], name, { type: "image/webp" }));
+      }, "image/webp", 0.82);
     });
   }
 

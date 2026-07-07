@@ -3431,3 +3431,50 @@ html {
     transform: none;
   }
 }
+body[data-loading]::before,
+body[data-loading]::after {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  animation: page-loader-reveal 180ms ease 160ms forwards;
+  transition: opacity 220ms ease;
+}
+
+body[data-loading]::before {
+  content: "";
+  inset: 0;
+  background: #f8f4eb url("../assets/atminimas-dove.svg") center calc(50% - 28px) / 74px 74px no-repeat;
+}
+
+body[data-loading]::after {
+  content: "Atminimas\A Kraunama…";
+  white-space: pre;
+  left: 50%;
+  top: calc(50% + 32px);
+  transform: translateX(-50%);
+  color: #174f4a;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.65;
+  letter-spacing: 0.08em;
+}
+
+body[data-loading].page-loaded::before,
+body[data-loading].page-loaded::after {
+  opacity: 0;
+  animation: none;
+}
+
+@keyframes page-loader-reveal {
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-loading]::before,
+  body[data-loading]::after {
+    animation-delay: 0s;
+    transition: none;
+  }
+}

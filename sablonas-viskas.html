@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-8">
+<link rel="stylesheet" href="css/styles.css?v=20260707-11">
 </head>
-<body class="memorial-page">
+<body class="memorial-page" data-loading>
 <header class="memorial-site-header">
   <a class="memorial-site-link" href="index.html" aria-label="Atminimas – atidaryti pagrindinę svetainę">
     <img class="memorial-site-link__icon" src="assets/atminimas-dove.svg" alt="">
@@ -185,6 +185,9 @@
     var image = document.createElement("img");
     image.src = mediaItem.url;
     image.alt = mediaItem.alt || "Atminimo nuotrauka";
+    image.decoding = "async";
+    image.loading = name === "photo-1" ? "eager" : "lazy";
+    if (name === "photo-1") image.fetchPriority = "high";
     applyImageFit(image, saved);
     wrap.appendChild(image);
     if (mediaItem.caption) {
@@ -227,6 +230,8 @@
       var image = document.createElement("img");
       image.src = item.url;
       image.alt = item.alt || "Atminimo nuotrauka";
+      image.loading = "lazy";
+      image.decoding = "async";
       button.appendChild(image);
       figure.appendChild(button);
       if (item.caption) {
@@ -294,6 +299,7 @@
       var player = document.createElement("video");
       player.controls = true;
       player.playsInline = true;
+      player.preload = "none";
       player.src = video.url;
       if (captions) {
         var track = document.createElement("track");
@@ -341,6 +347,9 @@
       var image = document.createElement("img");
       image.src = item.url;
       image.alt = item.alt || ("Atminimo nuotrauka " + (index + 1));
+      image.loading = index === 0 ? "eager" : "lazy";
+      image.decoding = "async";
+      if (index === 0) image.fetchPriority = "high";
       if (item.pixel_art) image.classList.add("pixel-art");
       button.appendChild(image);
       if (item.caption) {
@@ -358,6 +367,7 @@
     if (videoItem) {
       videoBlock.hidden = false;
       var player = videoBlock.querySelector("video");
+      player.preload = "none";
       player.src = videoItem.url;
       player.querySelectorAll("track").forEach(function (track) { track.remove(); });
       if (captionsItem) {
@@ -402,6 +412,8 @@
       var image = document.createElement("img");
       image.src = item.url;
       image.alt = item.alt || ("Atminimo nuotrauka " + (index + 1));
+      image.loading = "lazy";
+      image.decoding = "async";
       figure.appendChild(image);
       if (item.caption) {
         var caption = document.createElement("figcaption");
@@ -547,6 +559,7 @@
   init();
 })();
 </script>
+<script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>
 
