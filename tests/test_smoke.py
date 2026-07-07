@@ -255,6 +255,22 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("border-left: 1px solid", css)
         self.assertNotIn("border-bottom: 1px solid rgba(61, 83, 72, 0.38)", css)
 
+    def test_public_navigation_does_not_expose_admin_link(self):
+        for page in ROOT.glob("*.html"):
+            if page.name == "admin.html":
+                continue
+            html = page.read_text(encoding="utf-8")
+            self.assertNotIn('href="admin.html"', html, page.name)
+
+    def test_customer_pages_hide_internal_implementation_terms(self):
+        clients = (ROOT / "klientai.html").read_text(encoding="utf-8")
+        editor = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        for text in ("Kaip veikia DB", "Supabase lentelės", "slug arba ID"):
+            self.assertNotIn(text, clients)
+        for text in ("DB builderis", "saugomi į DB", "slug bus"):
+            self.assertNotIn(text, editor)
+        self.assertIn('<a href="klientai.html">Atidaryti puslapį</a>', editor)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
