@@ -133,6 +133,12 @@ video {
   font-size: 1.25rem;
 }
 
+.brand__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .brand__name {
   font-size: 1.1rem;
 }
@@ -1730,6 +1736,12 @@ video {
   font-size: clamp(1.1rem, 2.2vw, 1.45rem);
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+.memorial-site-link__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
 }
 
 .memorial-site-link__hint {

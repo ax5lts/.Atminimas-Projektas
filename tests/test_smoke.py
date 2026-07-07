@@ -274,6 +274,16 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("buildStoryGallery", public_page)
         self.assertIn("builder-photo-caption", public_page)
 
+    def test_dove_brand_and_favicon_are_used_everywhere(self):
+        icon = ROOT / "assets" / "atminimas-dove.svg"
+        svg = icon.read_text(encoding="utf-8")
+        self.assertIn("Balandis su alyvmedžio šakele", svg)
+        self.assertIn("#174f4a", svg)
+        for page in ROOT.glob("*.html"):
+            html = page.read_text(encoding="utf-8")
+            self.assertIn('rel="icon" href="assets/atminimas-dove.svg"', html, page.name)
+            self.assertNotIn('<span class="brand__mark">A</span>', html, page.name)
+
     def test_public_memorial_has_home_link_and_frame(self):
         html = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
         css = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
