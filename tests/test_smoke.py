@@ -155,7 +155,11 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.supabase_request("/rest/v1/uzsakymai?select=id&limit=1")
         self.assertIn(error.exception.code, (401, 403))
 
-        for table in ("atsisakymai", "turinio_pranesimai", "paslaugu_uzklausos"):
+        for table in (
+            "atsisakymai", "turinio_pranesimai", "paslaugu_uzklausos",
+            "payment_events", "invoice_documents", "production_jobs",
+            "automation_events", "automation_audit_log",
+        ):
             with self.subTest(table=table):
                 with self.assertRaises(urllib.error.HTTPError) as private_error:
                     self.supabase_request("/rest/v1/{0}?select=id&limit=1".format(table))
@@ -239,9 +243,10 @@ class AtminimasSmokeTests(unittest.TestCase):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
         self.assertIn('value="asa"', html)
-        self.assertIn('src="assets/qr-asa.png"', html)
+        self.assertIn('src="assets/qr-asa-480.webp"', html)
         self.assertIn("ASA 3D ženkliukas", html)
-        self.assertTrue((ROOT / "assets" / "qr-asa.png").stat().st_size > 100_000)
+        self.assertLess((ROOT / "assets" / "qr-asa-480.webp").stat().st_size, 30_000)
+        self.assertLess((ROOT / "assets" / "qr-asa.webp").stat().st_size, 100_000)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -267,6 +272,22 @@ class AtminimasSmokeTests(unittest.TestCase):
         sql = (ROOT / "supabase" / "migrations" / "20260707_order_product_type.sql").read_text(encoding="utf-8")
         self.assertIn("product_type text not null default 'metal'", sql.lower())
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
+
+    def test_admin_has_separate_all_orders_dashboard(self):
+        html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        schema = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        self.assertIn('id="admin-overview"', html)
+        self.assertIn('id="admin-orders"', html)
+        self.assertIn('id="order-rows"', html)
+        self.assertIn("Visi užsakymai", html)
+        self.assertIn("await AtminimasAuth.isAdmin()", admin)
+        self.assertIn('"uzsakymai",', admin)
+        self.assertIn("payment_reference", admin)
+        self.assertIn("delivery_method", admin)
+        self.assertIn("orderCache.length", admin)
+        self.assertRegex(schema, r"(?s)uzsakymai for select.*?r\.role = 'admin'")
+        self.assertNotIn('href="vartotojas.html">Klientas</a>', html)
 
     def test_editor_supports_long_story_and_described_photo_gallery(self):
         html = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
@@ -319,6 +340,141 @@ class AtminimasSmokeTests(unittest.TestCase):
         for text in ("DB builderis", "saugomi į DB", "slug bus"):
             self.assertNotIn(text, editor)
         self.assertIn('<a href="klientai.html">Atidaryti puslapį</a>', editor)
+
+    def test_automation_schema_uses_rls_and_private_documents(self):
+        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        for table in ("payment_events", "invoice_documents", "production_jobs", "automation_events", "automation_audit_log"):
+            self.assertIn("alter table public.{0} enable row level security".format(table), sql.lower())
+        self.assertIn("'automation-documents', 'automation-documents', false", sql)
+        self.assertIn("grant execute on function public.create_invoice_record", sql)
+        self.assertIn("to service_role", sql)
+        self.assertNotRegex(sql.lower(), r"grant\s+(?:all|select|insert|update|delete)[^;]*public\.(?:payment_events|invoice_documents|production_jobs|automation_events|automation_audit_log)[^;]*\bto\s+anon\b")
+
+    def test_payment_flow_is_server_verified(self):
+        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+        payment = (ROOT / "supabase" / "functions" / "payment-create" / "index.ts").read_text(encoding="utf-8")
+        webhook = (ROOT / "supabase" / "functions" / "payment-webhook" / "index.ts").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn('functionUrl("payment-create")', checkout)
+        self.assertNotIn("STRIPE_SECRET_KEY", checkout)
+        self.assertIn('.select("id,profilis_id,total_cents,currency', payment)
+        self.assertIn('params.set("line_items[0][price_data][unit_amount]", String(order.total_cents))', payment)
+        self.assertIn('request.headers.get("stripe-signature")', webhook)
+        self.assertIn("crypto.subtle.sign", webhook)
+        self.assertIn('client.rpc("process_stripe_payment_event"', webhook)
+        transactional = (ROOT / "supabase" / "migrations" / "20260707164600_transactional_payment_webhook.sql").read_text(encoding="utf-8")
+        self.assertIn("where id = p_order_id for update", transactional.lower())
+        self.assertIn("p_amount_cents = ord.total_cents", transactional)
+        self.assertIn("upper(p_currency) = ord.currency", transactional)
+        self.assertRegex(config, r"(?s)\[functions\.payment-webhook\]\s*verify_jwt\s*=\s*false")
+
+    def test_customer_approval_precedes_production(self):
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        self.assertIn("approve_order_for_production", user)
+        self.assertIn("Patvirtinti gamybai", user)
+        self.assertRegex(sql, r"(?s)old\.customer_approved_at is null.*?insert into public\.production_jobs")
+        self.assertIn("production.qr_requested", sql)
+
+    def test_automation_worker_covers_required_notifications(self):
+        worker = (ROOT / "supabase" / "functions" / "automation-worker" / "index.ts").read_text(encoding="utf-8")
+        reminders = (ROOT / "supabase" / "functions" / "automation-reminders" / "index.ts").read_text(encoding="utf-8")
+        for event in ("invoice.requested", "payment.confirmed", "production.approval_requested", "shipping.sent", "shipping.delivered", "service.scheduled", "service.completed"):
+            self.assertIn(event, worker)
+        self.assertIn("order.unpaid_reminder", reminders)
+        self.assertIn("profile.unfinished_reminder", reminders)
+        self.assertIn("service.reminder", reminders)
+        self.assertNotIn('update({ reminder_sent_at: now.toISOString() })', reminders)
+
+    def test_shipping_adapter_is_server_side_and_scheduled(self):
+        shipping = (ROOT / "supabase" / "functions" / "_shared" / "shipping.ts").read_text(encoding="utf-8")
+        cron = (ROOT / "supabase" / "cron-setup.sql.example").read_text(encoding="utf-8")
+        self.assertIn('env("SHIPMENT_ADAPTER_SECRET"', shipping)
+        self.assertIn('url.protocol !== "https:"', shipping)
+        self.assertIn("label_storage_path", shipping)
+        self.assertIn("vault.decrypted_secrets", cron)
+        self.assertIn("atminimas-shipping-sync", cron)
+        self.assertNotIn("PAKEISTI_AUTOMATION_SECRET", cron)
+
+    def test_pdf_uses_pinned_static_unicode_font(self):
+        pdf = (ROOT / "supabase" / "functions" / "_shared" / "invoice-pdf.ts").read_text(encoding="utf-8")
+        self.assertIn("ffebf8c1ee449e544955a7e813c54f9b73848eac", pdf)
+        self.assertIn("NotoSans-Regular.ttf", pdf)
+        self.assertIn('"MOKĖJIMO PATVIRTINIMAS"', pdf)
+
+    def test_mobile_pages_use_lightweight_images_and_loader(self):
+        core_pages = (
+            "index.html", "parduotuve.html", "vartotojas.html", "admin.html",
+            "apmokejimas.html", "redaktorius.html", "sablonas-viskas.html",
+            "klientai.html", "prisijungti.html", "registruotis.html",
+        )
+        for name in core_pages:
+            html = (ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
+                self.assertIn('src="assets/loading.js?v=20260707-1"', html)
+        for image in ("qr-lipdukas.webp", "qr-lipdukas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
+            with self.subTest(image=image):
+                self.assertTrue((ROOT / "assets" / image).is_file())
+                self.assertLess((ROOT / "assets" / image).stat().st_size, 100_000)
+        served = (ROOT / "index.html").read_text(encoding="utf-8") + (ROOT / "parduotuve.html").read_text(encoding="utf-8") + (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
+        self.assertNotIn("qr-lipdukas.png", served)
+        self.assertNotIn("qr-asa.png", served)
+
+    def test_memorial_media_is_mobile_optimized(self):
+        page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        self.assertIn('image.loading = "lazy"', page)
+        self.assertIn('image.decoding = "async"', page)
+        self.assertIn('player.preload = "none"', page)
+        self.assertIn("1200 / Math.max(img.naturalWidth, img.naturalHeight)", editor)
+        self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
+        self.assertIn('"image/webp", 0.82', editor)
+
+    def test_editor_is_responsive_and_has_touch_color_wheel(self):
+        page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('id="editor-color-wheel"', page)
+        self.assertIn('id="editor-color-brightness"', page)
+        self.assertIn('type="hidden" name="fono_spalva"', page)
+        self.assertNotIn('type="color" name="fono_spalva"', page)
+        self.assertIn('data-editor-section="preview"', page)
+        self.assertIn("colorFromWheelPoint", editor)
+        self.assertIn('colorWheel.addEventListener("pointerdown"', editor)
+        self.assertIn('colorWheel.addEventListener("keydown"', editor)
+        self.assertIn('target.scrollIntoView({ behavior: "smooth"', editor)
+        self.assertIn("@media (min-width: 861px) and (max-width: 1280px)", styles)
+        self.assertIn("@media (pointer: coarse)", styles)
+        self.assertIn('"canvas"', styles)
+
+    def test_owner_can_edit_and_safely_delete_memorial_page(self):
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        function = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260707205626_profile_edit_delete.sql").read_text(encoding="utf-8")
+
+        self.assertIn("redaktorius.html?edit=", user)
+        self.assertIn("button--danger", user)
+        self.assertIn("data-delete-profile", user)
+        self.assertIn("window.confirm", user)
+        self.assertIn(".button--danger", styles)
+        self.assertIn('get("edit")', editor)
+        self.assertIn("loadProfileForEditing", editor)
+        self.assertIn("AtminimasApi.updateAtminimas", editor)
+        self.assertIn("updateAtminimas: updateAtminimas", api)
+        self.assertIn("deleteAtminimas: deleteAtminimas", api)
+
+        self.assertIn("profile.owner_id !== user.id", function)
+        self.assertIn('.storage.from("atminimas").remove', function)
+        self.assertIn('action === "delete"', function)
+        self.assertIn("retained_order", function)
+        self.assertIn("add column if not exists deleted_at", migration.lower())
+        self.assertIn("aktyvus = true and deleted_at is null", migration.lower())
+        self.assertIn("revoke delete on table public.profiliai from anon, authenticated", migration.lower())
+        self.assertIn("owner_id = (select auth.uid())::text", migration)
 
 
 if __name__ == "__main__":

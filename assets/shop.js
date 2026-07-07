@@ -8,7 +8,8 @@
     metal: {
       kind: "Metalo variantas",
       title: "QR atminimo ženkliukas",
-      image: "assets/qr-lipdukas.png",
+      image: "assets/qr-lipdukas-480.webp",
+      imageSet: "assets/qr-lipdukas-480.webp 480w, assets/qr-lipdukas.webp 1086w",
       alt: "Metalo QR atminimo ženkliukas",
       price: business.price || "–",
       vat: business.priceVat || "–",
@@ -22,7 +23,8 @@
     asa: {
       kind: "3D spausdintas variantas",
       title: "ASA QR atminimo ženkliukas",
-      image: "assets/qr-asa.png",
+      image: "assets/qr-asa-480.webp",
+      imageSet: "assets/qr-asa-480.webp 480w, assets/qr-asa.webp 1086w",
       alt: "ASA plastiko 3D spausdintas QR atminimo ženkliukas",
       price: "–",
       vat: "–",
@@ -58,6 +60,7 @@
     fields.kind.textContent = product.kind;
     fields.title.textContent = product.title;
     fields.image.src = product.image;
+    fields.image.srcset = product.imageSet;
     fields.image.alt = product.alt;
     fields.price.textContent = product.price;
     fields.vat.textContent = product.vat;

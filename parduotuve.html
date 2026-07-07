@@ -6,9 +6,9 @@
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <meta name="description" content="Pasirinkite metalo arba ASA 3D spausdintą QR atminimo ženkliuką.">
 <title>QR atminimo ženkliukai - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-9">
+<link rel="stylesheet" href="css/styles.css?v=20260707-11">
 </head>
-<body>
+<body data-loading>
 <div class="site-shell">
   <header class="site-header">
     <div class="site-header__inner">
@@ -41,7 +41,7 @@
       <legend class="visually-hidden">Ženkliuko medžiaga</legend>
       <label class="product-choice">
         <input type="radio" name="product_type" value="metal" checked>
-        <span class="product-choice__image"><img src="assets/qr-lipdukas.png" alt="Metalo QR atminimo ženkliukas"></span>
+        <span class="product-choice__image"><img src="assets/qr-lipdukas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Metalo QR atminimo ženkliukas"></span>
         <span class="product-choice__content">
           <span><strong>Metalo ženkliukas</strong><small>Klasikinis atminimo ženkliuko variantas</small></span>
           <span class="product-choice__price" data-metal-price>–</span>
@@ -49,7 +49,7 @@
       </label>
       <label class="product-choice">
         <input type="radio" name="product_type" value="asa">
-        <span class="product-choice__image"><img src="assets/qr-asa.png" alt="ASA plastiko 3D spausdintas QR atminimo ženkliukas"></span>
+        <span class="product-choice__image"><img src="assets/qr-asa-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="ASA plastiko 3D spausdintas QR atminimo ženkliukas"></span>
         <span class="product-choice__content">
           <span><strong>ASA 3D ženkliukas</strong><small>Dvispalvis, 3D spausdintas lauko variantas</small></span>
           <span class="product-choice__price">–</span>
@@ -60,7 +60,7 @@
     <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
       <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
         <div class="product-media">
-          <img id="product-image" src="assets/qr-lipdukas.png" alt="Metalo QR atminimo ženkliukas">
+          <img id="product-image" src="assets/qr-lipdukas-480.webp" srcset="assets/qr-lipdukas-480.webp 480w, assets/qr-lipdukas.webp 1086w" sizes="(max-width: 760px) 92vw, 540px" width="1086" height="1448" decoding="async" fetchpriority="high" alt="Metalo QR atminimo ženkliukas">
         </div>
       </div>
 
@@ -187,5 +187,6 @@
 <script src="assets/business-config.js"></script>
 <script src="assets/business-details.js"></script>
 <script src="assets/shop.js?v=20260707-1"></script>
+<script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>

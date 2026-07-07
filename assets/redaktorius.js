@@ -21,6 +21,10 @@
   var clearDraftButton = document.getElementById("editor-clear-draft");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
+  var colorWheel = document.getElementById("editor-color-wheel");
+  var colorWheelThumb = document.getElementById("editor-color-wheel-thumb");
+  var colorBrightness = document.getElementById("editor-color-brightness");
+  var colorCurrent = document.getElementById("editor-color-current");
   var photoFileList = document.getElementById("editor-photo-file-list");
   var MAX_PHOTOS = 8;
   var MAX_STORY_WORDS = 1000;
@@ -42,13 +46,19 @@
   var processedPhotos = [];
   var cropPromises = [];
   var savedVideoFile = null;
+  var editingMedia = [];
   var isRestoringDraft = false;
   var draftSaveTimer = null;
-  var DRAFT_KEY = "atminimas.editor.draft.v1";
+  var editId = (new URLSearchParams(window.location.search).get("edit") || "").trim();
+  var DRAFT_KEY = editId ? "atminimas.editor.edit." + editId + ".v1" : "atminimas.editor.draft.v1";
+  var DRAFT_FILE_PREFIX = editId ? "edit-" + editId + "-" : "create-";
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
   var PRODUCT_KEY = "atminimas.selected-product.v1";
   var productSummary = document.getElementById("editor-product-summary");
+  var selectedHue = 0;
+  var selectedSaturation = 0;
+  var selectedBrightness = 100;
 
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
@@ -60,7 +70,143 @@
   }
 
   var productType = selectedProduct();
-  if (productSummary) productSummary.textContent = "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
+  if (productSummary) productSummary.textContent = editId
+    ? "Redaguojamas jūsų atminimo puslapis."
+    : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function normalizeHex(value) {
+    var hex = String(value || "").trim().replace(/^#/, "");
+    if (/^[0-9a-f]{3}$/i.test(hex)) hex = hex.split("").map(function (part) { return part + part; }).join("");
+    return /^[0-9a-f]{6}$/i.test(hex) ? "#" + hex.toLowerCase() : "#ffffff";
+  }
+
+  function hsvToHex(hue, saturation, brightness) {
+    var h = ((hue % 360) + 360) % 360;
+    var s = clamp(saturation, 0, 100) / 100;
+    var v = clamp(brightness, 0, 100) / 100;
+    var chroma = v * s;
+    var section = h / 60;
+    var x = chroma * (1 - Math.abs((section % 2) - 1));
+    var rgb = section < 1 ? [chroma, x, 0]
+      : section < 2 ? [x, chroma, 0]
+      : section < 3 ? [0, chroma, x]
+      : section < 4 ? [0, x, chroma]
+      : section < 5 ? [x, 0, chroma]
+      : [chroma, 0, x];
+    var match = v - chroma;
+    return "#" + rgb.map(function (part) {
+      return Math.round((part + match) * 255).toString(16).padStart(2, "0");
+    }).join("");
+  }
+
+  function hexToHsv(value) {
+    var hex = normalizeHex(value).slice(1);
+    var red = parseInt(hex.slice(0, 2), 16) / 255;
+    var green = parseInt(hex.slice(2, 4), 16) / 255;
+    var blue = parseInt(hex.slice(4, 6), 16) / 255;
+    var max = Math.max(red, green, blue);
+    var min = Math.min(red, green, blue);
+    var delta = max - min;
+    var hue = 0;
+    if (delta) {
+      if (max === red) hue = 60 * (((green - blue) / delta) % 6);
+      else if (max === green) hue = 60 * (((blue - red) / delta) + 2);
+      else hue = 60 * (((red - green) / delta) + 4);
+    }
+    return {
+      h: (hue + 360) % 360,
+      s: max ? (delta / max) * 100 : 0,
+      v: max * 100
+    };
+  }
+
+  function positionColorThumb() {
+    if (!colorWheelThumb || !colorWheel) return;
+    var angle = selectedHue * Math.PI / 180;
+    var distance = selectedSaturation * 0.47;
+    colorWheelThumb.style.left = (50 + Math.cos(angle) * distance) + "%";
+    colorWheelThumb.style.top = (50 + Math.sin(angle) * distance) + "%";
+    colorWheel.setAttribute("aria-valuenow", String(Math.round(selectedHue)));
+    colorWheel.setAttribute("aria-valuetext", "Atspalvis " + Math.round(selectedHue) + "°, sodrumas " + Math.round(selectedSaturation) + "%");
+  }
+
+  function updateColorState(value) {
+    var hsv = hexToHsv(value);
+    selectedHue = hsv.h;
+    selectedSaturation = hsv.s;
+    selectedBrightness = Math.max(20, hsv.v);
+    if (colorBrightness) colorBrightness.value = String(Math.round(selectedBrightness));
+    positionColorThumb();
+  }
+
+  function setBackgroundColor(value, updatePicker, persist) {
+    var hex = normalizeHex(value);
+    if (backgroundInput) backgroundInput.value = hex;
+    if (backgroundValue) backgroundValue.textContent = hex;
+    if (colorCurrent) colorCurrent.style.backgroundColor = hex;
+    stage.style.backgroundColor = hex;
+    if (updatePicker) updateColorState(hex);
+    if (persist) scheduleDraftSave();
+  }
+
+  function colorFromWheelPoint(clientX, clientY) {
+    if (!colorWheel) return;
+    var rect = colorWheel.getBoundingClientRect();
+    var radius = Math.max(1, Math.min(rect.width, rect.height) / 2);
+    var x = clientX - rect.left - rect.width / 2;
+    var y = clientY - rect.top - rect.height / 2;
+    selectedHue = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    selectedSaturation = clamp(Math.sqrt(x * x + y * y) / radius * 100, 0, 100);
+    positionColorThumb();
+    setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+  }
+
+  function setupColorPicker() {
+    if (!colorWheel || !backgroundInput) return;
+    updateColorState(backgroundInput.value);
+    colorWheel.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      colorWheel.setPointerCapture(event.pointerId);
+      colorFromWheelPoint(event.clientX, event.clientY);
+    });
+    colorWheel.addEventListener("pointermove", function (event) {
+      if (!colorWheel.hasPointerCapture(event.pointerId)) return;
+      colorFromWheelPoint(event.clientX, event.clientY);
+    });
+    colorWheel.addEventListener("keydown", function (event) {
+      var handled = true;
+      if (event.key === "ArrowLeft") selectedHue -= 3;
+      else if (event.key === "ArrowRight") selectedHue += 3;
+      else if (event.key === "ArrowUp") selectedSaturation += 3;
+      else if (event.key === "ArrowDown") selectedSaturation -= 3;
+      else handled = false;
+      if (!handled) return;
+      event.preventDefault();
+      selectedHue = (selectedHue + 360) % 360;
+      selectedSaturation = clamp(selectedSaturation, 0, 100);
+      positionColorThumb();
+      setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+    });
+    backgroundInput.addEventListener("input", function () {
+      setBackgroundColor(backgroundInput.value, true, true);
+    });
+    if (colorBrightness) {
+      colorBrightness.addEventListener("input", function () {
+        selectedBrightness = Number(colorBrightness.value) || 100;
+        setBackgroundColor(hsvToHex(selectedHue, selectedSaturation, selectedBrightness), false, true);
+      });
+    }
+    document.querySelectorAll("[data-background-color]").forEach(function (button) {
+      button.style.backgroundColor = button.dataset.backgroundColor;
+      button.addEventListener("click", function () {
+        setBackgroundColor(button.dataset.backgroundColor, true, true);
+      });
+    });
+  }
 
   function words(value) {
     return (value || "").trim().split(/\s+/).filter(Boolean);
@@ -93,6 +239,10 @@
     });
   }
 
+  function draftFileKey(key) {
+    return DRAFT_FILE_PREFIX + key;
+  }
+
   async function putDraftFile(key, file) {
     if (!file) return;
     var db = await openDraftDb();
@@ -100,7 +250,7 @@
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
       tx.objectStore(DRAFT_STORE).put({
-        key: key,
+        key: draftFileKey(key),
         file: file,
         name: file.name,
         type: file.type,
@@ -116,7 +266,7 @@
     if (!db) return;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).delete(key);
+      tx.objectStore(DRAFT_STORE).delete(draftFileKey(key));
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -127,7 +277,7 @@
     if (!db) return null;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readonly");
-      var request = tx.objectStore(DRAFT_STORE).get(key);
+      var request = tx.objectStore(DRAFT_STORE).get(draftFileKey(key));
       request.onsuccess = function () {
         var item = request.result;
         if (!item || !item.file) return resolve(null);
@@ -146,7 +296,9 @@
     if (!db) return;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).clear();
+      var store = tx.objectStore(DRAFT_STORE);
+      for (var i = 0; i < MAX_PHOTOS; i++) store.delete(draftFileKey("photo-" + i));
+      store.delete(draftFileKey("video"));
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -156,6 +308,11 @@
     localStorage.removeItem(DRAFT_KEY);
     await clearDraftFiles();
     window.location.reload();
+  }
+
+  async function discardCurrentDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    await clearDraftFiles();
   }
 
   function applyLayout(layout) {
@@ -244,7 +401,7 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    renderPhotoFileList(restoredNames);
+    if (restoredNames.some(Boolean) || !editId) renderPhotoFileList(restoredNames);
 
     var video = await getDraftFile("video");
     if (video) {
@@ -274,6 +431,53 @@
     }
   }
 
+  function showExistingMedia(media) {
+    editingMedia = Array.isArray(media) ? media.slice() : [];
+    var images = editingMedia.filter(function (item) { return item.type === "image"; })
+      .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); });
+    images.forEach(function (item, index) {
+      var captionField = form.elements["photo_caption_" + (index + 1)];
+      var altField = form.elements["photo_alt_" + (index + 1)];
+      if (captionField) captionField.value = item.caption || "";
+      if (altField) altField.value = item.alt || "";
+      var slot = photoSlots[index];
+      if (!slot) return;
+      var wrap = slot.closest(".editor-photo-slot");
+      var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
+      slot.src = item.url;
+      slot.hidden = false;
+      if (empty) empty.hidden = true;
+    });
+    if (images.length) photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+
+    var video = editingMedia.find(function (item) { return item.type === "video"; });
+    if (video) {
+      var videoWrap = previewVideo.closest(".editor-video-slot");
+      var videoEmpty = videoWrap ? videoWrap.querySelector(".editor-empty-photo") : null;
+      previewVideo.src = video.url;
+      previewVideo.hidden = false;
+      if (videoEmpty) videoEmpty.hidden = true;
+    }
+  }
+
+  async function loadProfileForEditing() {
+    if (!editId) return;
+    var loaded = await AtminimasApi.loadAtminimasBySlug(editId);
+    var profile = loaded.atminimas || {};
+    ["vardas", "pavarde", "gimimo_data", "mirties_data", "epitafija", "tekstas_200"].forEach(function (name) {
+      if (form.elements[name]) form.elements[name].value = profile[name] || "";
+    });
+    showExistingMedia(profile.media_json);
+    applyLayout(profile.layout_json || {});
+    var heading = document.getElementById("editor-panel-title");
+    if (heading) heading.textContent = "Redaguokite puslapį";
+    var submit = form.querySelector("button[type='submit']");
+    if (submit) submit.textContent = "Išsaugoti pakeitimus";
+    if (checkoutLink) checkoutLink.hidden = true;
+    previewCode.textContent = "puslapis: " + editId;
+    document.title = "Redaguoti atminimo puslapį - Atminimas";
+  }
+
   function syncPreview() {
     var data = formData();
     var text = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
@@ -292,8 +496,7 @@
       caption.hidden = !value;
     });
     var background = data.fono_spalva || "#ffffff";
-    stage.style.backgroundColor = background;
-    if (backgroundValue) backgroundValue.textContent = background;
+    setBackgroundColor(background, true, false);
     fitName();
     wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių";
     wordCountEl.classList.toggle("is-limit", count >= MAX_STORY_WORDS);
@@ -311,9 +514,16 @@
   function imageFromFile(file) {
     return new Promise(function (resolve, reject) {
       var img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      var objectUrl = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(objectUrl);
+        resolve(img);
+      };
+      img.onerror = function (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      };
+      img.src = objectUrl;
     });
   }
 
@@ -326,9 +536,10 @@
     var img = await imageFromFile(file);
     var canvas = document.createElement("canvas");
     var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
+    var analysisScale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * analysisScale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * analysisScale));
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
     var data = image.data;
@@ -349,23 +560,39 @@
       }
     }
 
-    if (maxX <= minX || maxY <= minY) return file;
+    if (maxX <= minX || maxY <= minY) {
+      minX = 0;
+      minY = 0;
+      maxX = canvas.width - 1;
+      maxY = canvas.height - 1;
+    }
     var cropW = maxX - minX + 1;
     var cropH = maxY - minY + 1;
     var removed = 1 - (cropW * cropH) / (canvas.width * canvas.height);
-    if (removed < 0.03) return file;
+    if (removed < 0.03) {
+      minX = 0;
+      minY = 0;
+      cropW = canvas.width;
+      cropH = canvas.height;
+    }
+
+    var sourceX = Math.round(minX / analysisScale);
+    var sourceY = Math.round(minY / analysisScale);
+    var sourceW = Math.min(img.naturalWidth - sourceX, Math.round(cropW / analysisScale));
+    var sourceH = Math.min(img.naturalHeight - sourceY, Math.round(cropH / analysisScale));
+    var outputScale = Math.min(1, 1600 / Math.max(sourceW, sourceH));
 
     var out = document.createElement("canvas");
-    out.width = cropW;
-    out.height = cropH;
-    out.getContext("2d").drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+    out.width = Math.max(1, Math.round(sourceW * outputScale));
+    out.height = Math.max(1, Math.round(sourceH * outputScale));
+    out.getContext("2d").drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, out.width, out.height);
 
     return new Promise(function (resolve) {
       out.toBlob(function (blob) {
         if (!blob) return resolve(file);
-        var name = file.name.replace(/\.[^.]+$/, "") + "-autocrop.jpg";
-        resolve(new File([blob], name, { type: "image/jpeg" }));
-      }, "image/jpeg", 0.92);
+        var name = file.name.replace(/\.[^.]+$/, "") + "-optimized.webp";
+        resolve(new File([blob], name, { type: "image/webp" }));
+      }, "image/webp", 0.82);
     });
   }
 
@@ -472,7 +699,9 @@
         document.querySelectorAll("[data-editor-section]").forEach(function (item) {
           item.classList.toggle("is-active", item === button);
         });
-        if (panel) {
+        if (window.matchMedia("(max-width: 860px)").matches) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else if (panel) {
           panel.scrollTo({
             top: Math.max(0, target.offsetTop - panel.offsetTop - 18),
             behavior: "smooth"
@@ -688,12 +917,6 @@
     syncPreview();
     scheduleDraftSave();
   });
-  if (backgroundInput) {
-    backgroundInput.addEventListener("input", function () {
-      stage.style.backgroundColor = backgroundInput.value;
-      if (backgroundValue) backgroundValue.textContent = backgroundInput.value;
-    });
-  }
   window.addEventListener("resize", refreshProportionalHeights);
   photosInput.addEventListener("change", syncPhotos);
   videoInput.addEventListener("change", function () {
@@ -749,10 +972,33 @@
 
     try {
       var captions = captionsInput && captionsInput.files ? captionsInput.files[0] : null;
-      var result = await AtminimasApi.createAtminimas(data, {
-        files: { photos: photos, video: video, captions: captions },
-        layout: collectLayout()
-      });
+      var result = editId
+        ? await AtminimasApi.updateAtminimas(editId, data, {
+            existingMedia: editingMedia,
+            files: { photos: photos, video: video, captions: captions },
+            layout: collectLayout()
+          })
+        : await AtminimasApi.createAtminimas(data, {
+            files: { photos: photos, video: video, captions: captions },
+            layout: collectLayout()
+          });
+      if (editId) {
+        editingMedia = result.media || editingMedia;
+        await discardCurrentDraft();
+        var editPageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(editId);
+        statusEl.textContent = "Pakeitimai išsaugoti.";
+        previewCode.textContent = "puslapis: " + editId;
+        openLink.href = editPageUrl;
+        checkoutLink.hidden = true;
+        clientLink.href = "vartotojas.html";
+        clientLink.textContent = "Grįžti į kliento zoną";
+        qrLink.href = AtminimasApi.qrImageUrl(new URL(editPageUrl, window.location.href).href);
+        orderCode.textContent = "";
+        var resultHeading = resultBox.querySelector("h3");
+        if (resultHeading) resultHeading.textContent = "Pakeitimai išsaugoti";
+        resultBox.hidden = false;
+        return;
+      }
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "klientai.html?slug=" + encodeURIComponent(result.identifier);
@@ -766,7 +1012,7 @@
       resultBox.hidden = false;
     } catch (err) {
       console.error(err);
-      statusEl.textContent = "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
+      statusEl.textContent = err.message || "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
     } finally {
       submit.disabled = false;
     }
@@ -774,14 +1020,17 @@
 
   async function initEditor() {
     if (window.AtminimasAuth && !AtminimasAuth.accessToken()) {
-      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite kurti puslapio.";
+      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite " + (editId ? "redaguoti" : "kurti") + " puslapio.";
       form.querySelector("button[type='submit']").disabled = true;
       setTimeout(function () {
-        window.location.href = "prisijungti.html?next=" + encodeURIComponent("redaktorius.html?product=" + productType);
+        var next = editId ? "redaktorius.html?edit=" + encodeURIComponent(editId) : "redaktorius.html?product=" + productType;
+        window.location.href = "prisijungti.html?next=" + encodeURIComponent(next);
       }, 900);
       return;
     }
+    await loadProfileForEditing();
     await restoreDraft();
+    setupColorPicker();
     syncPreview();
     refreshProportionalHeights();
     setupTransformModeButtons();

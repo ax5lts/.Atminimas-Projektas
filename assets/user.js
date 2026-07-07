@@ -53,6 +53,53 @@
     return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute);
   }
 
+  function safeUrl(value) {
+    try {
+      var parsed = new URL(String(value || ""));
+      return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : "#";
+    } catch (_error) { return "#"; }
+  }
+
+  function fulfillmentName(value) {
+    return {
+      awaiting_payment: "laukiama mokėjimo",
+      awaiting_customer_approval: "laukiama jūsų patvirtinimo",
+      ready_for_production: "paruošta gamybai",
+      in_production: "gaminama",
+      ready_to_ship: "paruošta siųsti",
+      shipped: "išsiųsta",
+      delivered: "pristatyta",
+      cancelled: "atšaukta"
+    }[value] || value || "laukiama";
+  }
+
+  async function approveProduction(orderId) {
+    var res = await fetch(rpcUrl("approve_order_for_production"), {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      body: JSON.stringify({ p_order_id: orderId })
+    });
+    if (!res.ok) {
+      var message = await res.text();
+      throw new Error(message || "Nepavyko patvirtinti gamybos.");
+    }
+  }
+
+  async function downloadDocument(orderId, type) {
+    var url = cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/document-download?order=" + encodeURIComponent(orderId) + "&type=" + encodeURIComponent(type);
+    var response = await fetch(url, { headers: AtminimasAuth.headers(false) });
+    if (!response.ok) throw new Error(await response.text());
+    var blob = await response.blob();
+    var objectUrl = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = type + "-" + orderId.slice(0, 8) + (blob.type === "application/pdf" ? ".pdf" : ".svg");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   async function setVisibility(profileId, active) {
     var res = await fetch(rpcUrl("set_my_profile_visibility"), {
       method: "POST",
@@ -60,6 +107,18 @@
       body: JSON.stringify({ profile_id: profileId, is_active: active })
     });
     if (!res.ok) throw new Error("Nepavyko pakeisti puslapio viešumo.");
+  }
+
+  async function deleteProfile(profileId) {
+    var url = cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/profile-manage";
+    var res = await fetch(url, {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { "Content-Type": "application/json" }),
+      body: JSON.stringify({ action: "delete", profile_id: profileId })
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || "Nepavyko ištrinti puslapio.");
+    return data;
   }
 
   async function fetchMyPages() {
@@ -80,7 +139,7 @@
 
     var res = await fetch(restUrl(
       "profiliai",
-      "owner_id=eq." + encodeURIComponent(me.id) + "&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ), {
       headers: AtminimasAuth.headers(false)
     });
@@ -98,9 +157,17 @@
 
     var orderResponse = await fetch(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,tracking_url,apmoketa,payment_status,fulfillment_status,customer_approved_at,total_cents,currency,created_at&order=created_at.desc"
     ), { headers: AtminimasAuth.headers(false) });
     var orders = orderResponse.ok ? await orderResponse.json() : [];
+    var relatedResponses = await Promise.all([
+      fetch(restUrl("production_jobs", "select=order_id,status,qr_svg_path,qr_pdf_path&order=created_at.desc"), { headers: AtminimasAuth.headers(false) }),
+      fetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) })
+    ]);
+    var productionJobs = relatedResponses[0].ok ? await relatedResponses[0].json() : [];
+    var invoices = relatedResponses[1].ok ? await relatedResponses[1].json() : [];
+    var productionByOrder = Object.fromEntries(productionJobs.map(function (item) { return [item.order_id, item]; }));
+    var invoiceByOrder = Object.fromEntries(invoices.map(function (item) { return [item.order_id, item]; }));
     var orderByProfile = {};
     orders.forEach(function (order) {
       if (!orderByProfile[order.profilis_id]) orderByProfile[order.profilis_id] = order;
@@ -111,8 +178,10 @@
       var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
       var profileQrUrl = qrUrl(publicUrl);
       var order = orderByProfile[row.id];
+      var production = order ? productionByOrder[order.id] : null;
+      var invoice = order ? invoiceByOrder[order.id] : null;
       var shipment = order
-        ? "<p>Produktas: <strong>" + html(productName(order.product_type)) + "</strong><br>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + "</p>"
+        ? "<p>Produktas: <strong>" + html(productName(order.product_type)) + "</strong><br>Užsakymas: <strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><br>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + (order.tracking_url ? " · <a href='" + html(safeUrl(order.tracking_url)) + "' target='_blank' rel='noopener'>Sekti siuntą</a>" : "") + "</p>"
         : "";
       return (
         "<article class='info-box' data-profile-card>" +
@@ -121,15 +190,62 @@
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
           "<p>Apmokėta: <strong>" + (row.apmoketa ? "taip" : "ne") + "</strong> · Vieša: <strong>" + (row.aktyvus ? "taip" : "ne") + "</strong></p>" +
           shipment +
-          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
-          (order ? "<a class='button button--ghost' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas</a>" : "") +
-          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button></div>" +
+          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
+          (order && !order.apmoketa ? "<a class='button button--ghost' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas ir mokėjimas</a>" : "") +
+          (order && order.apmoketa && !order.customer_approved_at ? "<button class='button' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>" : "") +
+          (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
+          (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
+          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button>" +
+          "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti</button></div>" +
         "</article>"
       );
     }).join("");
   }
 
   listEl.addEventListener("click", async function (event) {
+    var deleteButton = event.target.closest("button[data-delete-profile]");
+    if (deleteButton) {
+      var profileName = deleteButton.dataset.profileName || "šį puslapį";
+      if (!window.confirm("Ar tikrai norite ištrinti „" + profileName + "“? Atminimo puslapis ir jo nuotraukos bus pašalinti. Šio veiksmo atšaukti negalima.")) return;
+      deleteButton.disabled = true;
+      statusEl.textContent = "Puslapis trinamas...";
+      try {
+        await deleteProfile(deleteButton.dataset.deleteProfile);
+        await fetchMyPages();
+        statusEl.textContent = "Puslapis ištrintas.";
+      } catch (error) {
+        statusEl.textContent = error.message || "Nepavyko ištrinti puslapio.";
+        deleteButton.disabled = false;
+      }
+      return;
+    }
+    var approvalButton = event.target.closest("button[data-approve-order]");
+    if (approvalButton) {
+      if (!window.confirm("Patvirtinate, kad atminimo puslapio informacija ir QR nuoroda teisingi ir ženkliuką galima gaminti?")) return;
+      approvalButton.disabled = true;
+      statusEl.textContent = "Patvirtinimas saugomas...";
+      try {
+        await approveProduction(approvalButton.dataset.approveOrder);
+        await fetchMyPages();
+        statusEl.textContent = "Patvirtinta. Užsakymas perduotas į gamybos eilę.";
+      } catch (error) {
+        statusEl.textContent = error.message || "Nepavyko patvirtinti gamybos.";
+        approvalButton.disabled = false;
+      }
+      return;
+    }
+    var documentButton = event.target.closest("button[data-document-order]");
+    if (documentButton) {
+      documentButton.disabled = true;
+      try {
+        await downloadDocument(documentButton.dataset.documentOrder, documentButton.dataset.documentType);
+      } catch (error) {
+        statusEl.textContent = error.message || "Nepavyko atsisiųsti dokumento.";
+      } finally {
+        documentButton.disabled = false;
+      }
+      return;
+    }
     var button = event.target.closest("button[data-profile-id]");
     if (!button) return;
     var nextActive = button.dataset.nextActive === "true";

@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-8">
+<link rel="stylesheet" href="css/styles.css?v=20260707-14">
 </head>
-<body class="editor-page">
+<body class="editor-page" data-loading>
 <div class="editor-shell">
   <header class="editor-topbar">
     <a class="brand editor-brand" href="index.html" aria-label="Atminimas">
@@ -29,8 +29,10 @@
   <main class="editor-workspace">
     <aside class="editor-rail" aria-label="Įrankiai">
       <button type="button" class="editor-tool is-active" data-editor-section="text">Tekstas</button>
+      <button type="button" class="editor-tool" data-editor-section="colors">Spalvos</button>
       <button type="button" class="editor-tool" data-editor-section="files">Failai</button>
       <button type="button" class="editor-tool" data-editor-section="positions">Pozicijos</button>
+      <button type="button" class="editor-tool" data-editor-section="preview">Peržiūra</button>
     </aside>
 
     <section class="editor-panel" aria-labelledby="editor-panel-title">
@@ -66,13 +68,47 @@
         </label>
         <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių</p>
 
-        <label>
-          Puslapio fonas
-          <span class="editor-color-row">
-            <input type="color" name="fono_spalva" id="editor-background" value="#ffffff">
-            <span id="editor-background-value">#ffffff</span>
-          </span>
-        </label>
+        <fieldset class="editor-color-picker" id="editor-section-colors">
+          <legend>Puslapio fonas</legend>
+          <div class="editor-color-picker__layout">
+            <button
+              class="editor-color-wheel"
+              id="editor-color-wheel"
+              type="button"
+              role="slider"
+              aria-label="Fono atspalvis ir sodrumas"
+              aria-valuemin="0"
+              aria-valuemax="360"
+              aria-valuenow="0"
+              aria-valuetext="Balta"
+            >
+              <span class="editor-color-wheel__thumb" id="editor-color-wheel-thumb" aria-hidden="true"></span>
+            </button>
+            <div class="editor-color-picker__controls">
+              <label class="editor-color-brightness">
+                Šviesumas
+                <input type="range" id="editor-color-brightness" min="20" max="100" value="100">
+              </label>
+              <div class="editor-color-exact">
+                <span>Pasirinkta spalva</span>
+                <span class="editor-color-row">
+                  <span class="editor-color-current" id="editor-color-current" aria-hidden="true"></span>
+                  <input type="hidden" name="fono_spalva" id="editor-background" value="#ffffff">
+                  <output id="editor-background-value" for="editor-background">#ffffff</output>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="editor-color-swatches" aria-label="Greitos fono spalvos">
+            <button type="button" data-background-color="#ffffff" aria-label="Balta" title="Balta"></button>
+            <button type="button" data-background-color="#f5f0e8" aria-label="Šilta balta" title="Šilta balta"></button>
+            <button type="button" data-background-color="#e8efe9" aria-label="Švelni žalia" title="Švelni žalia"></button>
+            <button type="button" data-background-color="#e8eef5" aria-label="Švelni mėlyna" title="Švelni mėlyna"></button>
+            <button type="button" data-background-color="#efe8f5" aria-label="Švelni violetinė" title="Švelni violetinė"></button>
+            <button type="button" data-background-color="#2d3436" aria-label="Tamsiai pilka" title="Tamsiai pilka"></button>
+          </div>
+          <p class="editor-field-help">Braukite pirštu per ratą. Rodyklių klavišais taip pat galima keisti atspalvį ir sodrumą.</p>
+        </fieldset>
 
         <label id="editor-section-files">
           Nuotraukos (iki 8; pirmos 4 laisvai dėliojamos, kitos rodomos galerijoje)
@@ -105,10 +141,10 @@
         <div class="editor-transform-tools" id="editor-section-positions" aria-label="Nuotraukos keitimo režimas">
           <span>Pasirinkta nuotrauka</span>
           <div>
-            <button type="button" class="is-active" data-transform-mode="resize">Resize</button>
-            <button type="button" data-transform-mode="scale">Scale</button>
-            <button type="button" data-transform-mode="stretch">Stretch</button>
-            <button type="button" data-transform-mode="crop">Crop</button>
+            <button type="button" class="is-active" data-transform-mode="resize">Keisti dydį</button>
+            <button type="button" data-transform-mode="scale">Proporcingai</button>
+            <button type="button" data-transform-mode="stretch">Ištempti</button>
+            <button type="button" data-transform-mode="crop">Apkirpti</button>
           </div>
         </div>
 
@@ -126,7 +162,7 @@
       </form>
     </section>
 
-    <section class="editor-canvas" aria-labelledby="canvas-title">
+    <section class="editor-canvas" id="editor-section-preview" aria-labelledby="canvas-title">
       <div class="editor-canvas__toolbar">
         <h2 id="canvas-title">Gyva peržiūra</h2>
         <span id="editor-preview-code">puslapio adresas bus sugeneruotas automatiškai</span>
@@ -242,8 +278,9 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260707-2"></script>
-<script src="assets/redaktorius.js?v=20260707-2"></script>
+<script src="assets/atminimas-duomenys.js?v=20260707-3"></script>
+<script src="assets/redaktorius.js?v=20260707-5"></script>
+<script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>
 

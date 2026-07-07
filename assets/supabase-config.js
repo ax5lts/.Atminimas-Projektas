@@ -8,9 +8,9 @@ window.ATMINIMAS_CONFIG = {
 
   CLOUDINARY_CLOUD_NAME: "ax5lts",
 
-  CLOUDINARY_BG_TRANSFORM: "c_fill,g_auto,w_1920,h_1080,q_auto",
-  CLOUDINARY_THUMB_TRANSFORM: "c_limit,w_560,h_700,q_auto",
-  CLOUDINARY_GALLERY_TRANSFORM: "c_limit,w_1920,h_1080,q_auto",
+  CLOUDINARY_BG_TRANSFORM: "c_fill,g_auto,w_1600,h_1000,f_auto,q_auto",
+  CLOUDINARY_THUMB_TRANSFORM: "c_limit,w_560,h_700,f_auto,q_auto",
+  CLOUDINARY_GALLERY_TRANSFORM: "c_limit,w_1600,h_1200,f_auto,q_auto",
   CLOUDINARY_VIDEO_TRANSFORM: "q_auto"
 };
 

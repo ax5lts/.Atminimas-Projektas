@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Admin - Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-8">
+<link rel="stylesheet" href="css/styles.css?v=20260707-11">
 </head>
-<body>
+<body data-loading>
 <div class="site-shell">
   <header class="site-header">
     <div class="site-header__inner">
@@ -18,7 +18,7 @@
       <nav class="site-nav" aria-label="Pagrindinė navigacija">
         <a href="index.html">Pradžia</a>
         <a href="parduotuve.html">Parduotuvė</a>
-        <a href="vartotojas.html">Klientas</a>
+        <a href="admin.html" aria-current="page">Administravimas</a>
       </nav>
     </div>
   </header>
@@ -26,9 +26,9 @@
   <main class="site-main">
     <section class="client-access" aria-labelledby="admin-title">
       <div class="client-access__intro">
-        <p class="eyebrow">Admin panelė</p>
-        <h1 id="admin-title">Atminimo puslapių valdymas</h1>
-        <p>Admin mato sukurtus puslapius, užsakymus, būsenas, apmokėjimą ir gali įjungti arba paslėpti viešą rodymą.</p>
+        <p class="eyebrow">Administratoriaus erdvė</p>
+        <h1 id="admin-title">Svetainės administravimas</h1>
+        <p>Čia matomi visi klientų užsakymai, atminimo puslapiai, siuntos, paslaugų užklausos ir teisiniai prašymai.</p>
       </div>
 
       <form class="auth-form" id="admin-auth-form">
@@ -42,10 +42,73 @@
         </div>
         <div class="actions">
           <button class="button" type="submit">Prisijungti kaip admin</button>
-          <button class="button button--ghost" type="button" id="admin-logout" hidden>Atsijungti</button>
         </div>
         <p class="form-status" id="admin-status" role="status" aria-live="polite"></p>
       </form>
+
+      <div class="admin-session" id="admin-session" hidden>
+        <div><span>Prisijungta kaip administratorius</span><strong id="admin-email"></strong></div>
+        <button class="button button--ghost" type="button" id="admin-logout">Atsijungti</button>
+        <p class="form-status" id="admin-session-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="admin-overview" id="admin-overview" hidden aria-label="Administravimo suvestinė">
+      <article><span>Visi užsakymai</span><strong id="admin-total-orders">0</strong><small id="admin-unpaid-orders">0 neapmokėta</small></article>
+      <article><span>Atminimo puslapiai</span><strong id="admin-total-profiles">0</strong><small>Visų klientų puslapiai</small></article>
+      <article><span>Aktyvios siuntos</span><strong id="admin-active-shipments">0</strong><small>Laukia pristatymo</small></article>
+      <article><span>Paslaugų užklausos</span><strong id="admin-service-count">0</strong><small id="admin-open-services">0 neužbaigta</small></article>
+      <article><span>Gamybos eilė</span><strong id="admin-production-count">0</strong><small id="admin-production-ready">0 paruošta siųsti</small></article>
+    </section>
+
+    <section class="admin-panel" id="admin-business-settings" hidden aria-labelledby="business-settings-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Automatikos paruošimas</p><h2 id="business-settings-title">Rekvizitai ir kainos</h2></div></div>
+      <form class="admin-settings-form" id="business-settings-form">
+        <div class="form-grid">
+          <label>Veiklos vykdytojas / įmonė<input name="legal_name" maxlength="200"></label>
+          <label>Veiklos forma<input name="activity_form" maxlength="160" placeholder="Individuali veikla, MB, UAB..."></label>
+          <label>Įmonės arba veiklos kodas<input name="registration_code" maxlength="80"></label>
+          <label>PVM kodas<input name="vat_code" maxlength="80"></label>
+          <label>Adresas<input name="address" maxlength="300"></label>
+          <label>El. paštas<input type="email" name="email" maxlength="254"></label>
+          <label>Telefonas<input name="phone" maxlength="40"></label>
+          <label>Dokumento tipas<select name="invoice_document_type"><option value="payment_confirmation">Mokėjimo patvirtinimas</option><option value="invoice">Sąskaita faktūra</option><option value="vat_invoice">PVM sąskaita faktūra</option></select></label>
+          <label>Metalo ženkliukas, EUR<input type="number" name="metal_price" min="0" step="0.01"></label>
+          <label>ASA ženkliukas, EUR<input type="number" name="asa_price" min="0" step="0.01"></label>
+          <label>Omniva siuntimas, EUR<input type="number" name="omniva_price" min="0" step="0.01"></label>
+          <label>LP Express siuntimas, EUR<input type="number" name="lp_express_price" min="0" step="0.01"></label>
+          <label>DPD siuntimas, EUR<input type="number" name="dpd_price" min="0" step="0.01"></label>
+        </div>
+        <label class="check-label"><input type="checkbox" name="ready_for_invoicing"> Patvirtinu, kad rekvizitai ir pasirinktas dokumento tipas teisingi.</label>
+        <div class="actions"><button class="button" type="submit">Išsaugoti nustatymus</button></div>
+        <p class="form-status" id="business-settings-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="admin-panel" id="admin-production" hidden aria-labelledby="production-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Gamyba</p><h2 id="production-title">Reikia pagaminti</h2></div><button class="button button--ghost" id="production-refresh" type="button">Atnaujinti</button></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užsakymas</th><th>Būsena</th><th>Suplanuota</th><th>QR failas</th><th>Pastaba</th><th>Veiksmai</th></tr></thead><tbody id="production-rows"></tbody></table></div>
+    </section>
+
+    <section class="admin-panel" id="admin-automation" hidden aria-labelledby="automation-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Automatika</p><h2 id="automation-title">Reikia administratoriaus dėmesio</h2></div><button class="button button--ghost" id="automation-refresh" type="button">Atnaujinti</button></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užduotis</th><th>Būsena</th><th>Bandymų sk.</th><th>Klaida / ko trūksta</th><th>Veiksmai</th></tr></thead><tbody id="automation-rows"></tbody></table></div>
+    </section>
+
+    <section class="admin-panel" id="admin-orders" hidden aria-labelledby="orders-title">
+      <div class="admin-toolbar">
+        <div><p class="eyebrow">Pardavimai</p><h2 id="orders-title">Visi užsakymai</h2></div>
+        <div class="admin-toolbar__actions">
+          <label>Paieška<input type="search" id="admin-order-search" placeholder="numeris, klientas, produktas"></label>
+          <button class="button button--ghost" id="orders-refresh" type="button">Atnaujinti</button>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table admin-orders-table">
+          <thead><tr><th>Užsakymas / klientas</th><th>Produktas</th><th>Sukurta</th><th>Apmokėjimas</th><th>Pristatymas</th><th>Veiksmai</th></tr></thead>
+          <tbody id="order-rows"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="admin-panel" id="admin-shipments" hidden aria-labelledby="shipments-title">
@@ -55,7 +118,7 @@
 
     <section class="admin-panel" id="admin-service-requests" hidden aria-labelledby="service-requests-title">
       <div class="admin-toolbar"><div><p class="eyebrow">Kapavietės priežiūra</p><h2 id="service-requests-title">Paslaugų užklausos</h2></div><button class="button button--ghost" id="service-requests-refresh" type="button">Atnaujinti</button></div>
-      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asmuo / vieta</th><th>Paslaugos ir pageidavimai</th><th>Būsena / pastaba</th><th>Veiksmai</th></tr></thead><tbody id="service-request-rows"></tbody></table></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asmuo / vieta</th><th>Paslaugos ir pageidavimai</th><th>Atlikimo laikas</th><th>Būsena / pastaba</th><th>Veiksmai</th></tr></thead><tbody id="service-request-rows"></tbody></table></div>
     </section>
 
     <section class="admin-panel" id="admin-legal-requests" hidden aria-labelledby="legal-requests-title">
@@ -64,12 +127,13 @@
       <h3>Turinio pranešimai</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Numeris / kontaktas</th><th>Turinys ir pagrindas</th><th>Būsena ir sprendimas</th><th>Veiksmai</th></tr></thead><tbody id="content-report-rows"></tbody></table></div>
     </section>
 
-    <section class="admin-panel" id="admin-panel" hidden>
+    <section class="admin-panel" id="admin-panel" hidden aria-labelledby="profiles-title">
       <div class="admin-toolbar">
-        <label>Filtras
-          <input type="search" id="admin-search" placeholder="vardas, pavardė, slug, būsena">
-        </label>
-        <button class="button button--ghost" id="admin-refresh" type="button">Atnaujinti</button>
+        <div><p class="eyebrow">Turinys</p><h2 id="profiles-title">Visi atminimo puslapiai</h2></div>
+        <div class="admin-toolbar__actions">
+          <label>Paieška<input type="search" id="admin-search" placeholder="vardas, pavardė, slug, būsena"></label>
+          <button class="button button--ghost" id="admin-refresh" type="button">Atnaujinti</button>
+        </div>
       </div>
       <div class="admin-table-wrap">
         <table class="admin-table">
@@ -98,7 +162,8 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/admin.js?v=20260707-3"></script>
+<script src="assets/admin.js?v=20260707-5"></script>
+<script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>
 

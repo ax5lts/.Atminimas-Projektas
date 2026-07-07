@@ -128,6 +128,7 @@ alter table public.profiliai
   add column if not exists apmoketa boolean not null default false,
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists owner_id uuid default auth.uid(),
+  add column if not exists deleted_at timestamptz,
   add column if not exists statusas text not null default 'laukiama'
     check (statusas in ('laukiama', 'patvirtinta', 'apmoketa', 'atlikta', 'atsaukta'));
 
@@ -155,15 +156,14 @@ drop policy if exists "Viesas skaitymas profiliu" on public.profiliai;
 create policy "Viesas skaitymas profiliu"
   on public.profiliai for select
   to anon
-  using (aktyvus = true);
+  using (aktyvus = true and deleted_at is null);
 
 drop policy if exists "Savininkas skaito savo profilius" on public.profiliai;
 create policy "Savininkas skaito savo profilius"
   on public.profiliai for select
   to authenticated
   using (
-    aktyvus = true
-    or owner_id = (select auth.uid())
+    (deleted_at is null and (aktyvus = true or owner_id = (select auth.uid())))
     or exists (
       select 1 from public.user_roles r
       where r.user_id = (select auth.uid())
@@ -219,6 +219,31 @@ create policy "Viesas atminimas failu ikelimas"
   with check (
     bucket_id = 'atminimas'
     and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "Savininkas atnaujina atminimo failus" on storage.objects;
+create policy "Savininkas atnaujina atminimo failus"
+  on storage.objects for update
+  to authenticated
+  using (
+    bucket_id = 'atminimas'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and owner_id = (select auth.uid())::text
+  )
+  with check (
+    bucket_id = 'atminimas'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and owner_id = (select auth.uid())::text
+  );
+
+drop policy if exists "Savininkas salina atminimo failus" on storage.objects;
+create policy "Savininkas salina atminimo failus"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'atminimas'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and owner_id = (select auth.uid())::text
   );
 
 alter table public.profiliai alter column aktyvus set default false;
