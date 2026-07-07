@@ -4,7 +4,7 @@ window.ATMINIMAS_CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_ggZi5ZJfYAUBWLQXhzTSzg_zE9G14A4",
 
   // Viešas produkcinės svetainės adresas, pvz. https://atminimas.lt
-  PUBLIC_SITE_URL: "",
+  PUBLIC_SITE_URL: "https://ax5lts.github.io/.Atminimas-Projektas/",
 
   CLOUDINARY_CLOUD_NAME: "ax5lts",
 
