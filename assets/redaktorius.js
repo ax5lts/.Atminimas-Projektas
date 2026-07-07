@@ -45,9 +45,12 @@
   var processedPhotos = [];
   var cropPromises = [];
   var savedVideoFile = null;
+  var editingMedia = [];
   var isRestoringDraft = false;
   var draftSaveTimer = null;
-  var DRAFT_KEY = "atminimas.editor.draft.v1";
+  var editId = (new URLSearchParams(window.location.search).get("edit") || "").trim();
+  var DRAFT_KEY = editId ? "atminimas.editor.edit." + editId + ".v1" : "atminimas.editor.draft.v1";
+  var DRAFT_FILE_PREFIX = editId ? "edit-" + editId + "-" : "create-";
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
   var PRODUCT_KEY = "atminimas.selected-product.v1";
@@ -66,7 +69,9 @@
   }
 
   var productType = selectedProduct();
-  if (productSummary) productSummary.textContent = "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
+  if (productSummary) productSummary.textContent = editId
+    ? "Redaguojamas jūsų atminimo puslapis."
+    : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -232,6 +237,10 @@
     });
   }
 
+  function draftFileKey(key) {
+    return DRAFT_FILE_PREFIX + key;
+  }
+
   async function putDraftFile(key, file) {
     if (!file) return;
     var db = await openDraftDb();
@@ -239,7 +248,7 @@
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
       tx.objectStore(DRAFT_STORE).put({
-        key: key,
+        key: draftFileKey(key),
         file: file,
         name: file.name,
         type: file.type,
@@ -255,7 +264,7 @@
     if (!db) return;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).delete(key);
+      tx.objectStore(DRAFT_STORE).delete(draftFileKey(key));
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -266,7 +275,7 @@
     if (!db) return null;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readonly");
-      var request = tx.objectStore(DRAFT_STORE).get(key);
+      var request = tx.objectStore(DRAFT_STORE).get(draftFileKey(key));
       request.onsuccess = function () {
         var item = request.result;
         if (!item || !item.file) return resolve(null);
@@ -285,7 +294,9 @@
     if (!db) return;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).clear();
+      var store = tx.objectStore(DRAFT_STORE);
+      for (var i = 0; i < MAX_PHOTOS; i++) store.delete(draftFileKey("photo-" + i));
+      store.delete(draftFileKey("video"));
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -295,6 +306,11 @@
     localStorage.removeItem(DRAFT_KEY);
     await clearDraftFiles();
     window.location.reload();
+  }
+
+  async function discardCurrentDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    await clearDraftFiles();
   }
 
   function applyLayout(layout) {
@@ -383,7 +399,7 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    renderPhotoFileList(restoredNames);
+    if (restoredNames.some(Boolean) || !editId) renderPhotoFileList(restoredNames);
 
     var video = await getDraftFile("video");
     if (video) {
@@ -411,6 +427,53 @@
     } finally {
       isRestoringDraft = false;
     }
+  }
+
+  function showExistingMedia(media) {
+    editingMedia = Array.isArray(media) ? media.slice() : [];
+    var images = editingMedia.filter(function (item) { return item.type === "image"; })
+      .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); });
+    images.forEach(function (item, index) {
+      var captionField = form.elements["photo_caption_" + (index + 1)];
+      var altField = form.elements["photo_alt_" + (index + 1)];
+      if (captionField) captionField.value = item.caption || "";
+      if (altField) altField.value = item.alt || "";
+      var slot = photoSlots[index];
+      if (!slot) return;
+      var wrap = slot.closest(".editor-photo-slot");
+      var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
+      slot.src = item.url;
+      slot.hidden = false;
+      if (empty) empty.hidden = true;
+    });
+    if (images.length) photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+
+    var video = editingMedia.find(function (item) { return item.type === "video"; });
+    if (video) {
+      var videoWrap = previewVideo.closest(".editor-video-slot");
+      var videoEmpty = videoWrap ? videoWrap.querySelector(".editor-empty-photo") : null;
+      previewVideo.src = video.url;
+      previewVideo.hidden = false;
+      if (videoEmpty) videoEmpty.hidden = true;
+    }
+  }
+
+  async function loadProfileForEditing() {
+    if (!editId) return;
+    var loaded = await AtminimasApi.loadAtminimasBySlug(editId);
+    var profile = loaded.atminimas || {};
+    ["vardas", "pavarde", "gimimo_data", "mirties_data", "epitafija", "tekstas_200"].forEach(function (name) {
+      if (form.elements[name]) form.elements[name].value = profile[name] || "";
+    });
+    showExistingMedia(profile.media_json);
+    applyLayout(profile.layout_json || {});
+    var heading = document.getElementById("editor-panel-title");
+    if (heading) heading.textContent = "Redaguokite puslapį";
+    var submit = form.querySelector("button[type='submit']");
+    if (submit) submit.textContent = "Išsaugoti pakeitimus";
+    if (checkoutLink) checkoutLink.hidden = true;
+    previewCode.textContent = "puslapis: " + editId;
+    document.title = "Redaguoti atminimo puslapį - Atminimas";
   }
 
   function syncPreview() {
@@ -907,10 +970,33 @@
 
     try {
       var captions = captionsInput && captionsInput.files ? captionsInput.files[0] : null;
-      var result = await AtminimasApi.createAtminimas(data, {
-        files: { photos: photos, video: video, captions: captions },
-        layout: collectLayout()
-      });
+      var result = editId
+        ? await AtminimasApi.updateAtminimas(editId, data, {
+            existingMedia: editingMedia,
+            files: { photos: photos, video: video, captions: captions },
+            layout: collectLayout()
+          })
+        : await AtminimasApi.createAtminimas(data, {
+            files: { photos: photos, video: video, captions: captions },
+            layout: collectLayout()
+          });
+      if (editId) {
+        editingMedia = result.media || editingMedia;
+        await discardCurrentDraft();
+        var editPageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(editId);
+        statusEl.textContent = "Pakeitimai išsaugoti.";
+        previewCode.textContent = "puslapis: " + editId;
+        openLink.href = editPageUrl;
+        checkoutLink.hidden = true;
+        clientLink.href = "vartotojas.html";
+        clientLink.textContent = "Grįžti į kliento zoną";
+        qrLink.href = AtminimasApi.qrImageUrl(new URL(editPageUrl, window.location.href).href);
+        orderCode.textContent = "";
+        var resultHeading = resultBox.querySelector("h3");
+        if (resultHeading) resultHeading.textContent = "Pakeitimai išsaugoti";
+        resultBox.hidden = false;
+        return;
+      }
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "klientai.html?slug=" + encodeURIComponent(result.identifier);
@@ -924,7 +1010,7 @@
       resultBox.hidden = false;
     } catch (err) {
       console.error(err);
-      statusEl.textContent = "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
+      statusEl.textContent = err.message || "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
     } finally {
       submit.disabled = false;
     }
@@ -932,13 +1018,15 @@
 
   async function initEditor() {
     if (window.AtminimasAuth && !AtminimasAuth.accessToken()) {
-      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite kurti puslapio.";
+      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite " + (editId ? "redaguoti" : "kurti") + " puslapio.";
       form.querySelector("button[type='submit']").disabled = true;
       setTimeout(function () {
-        window.location.href = "prisijungti.html?next=" + encodeURIComponent("redaktorius.html?product=" + productType);
+        var next = editId ? "redaktorius.html?edit=" + encodeURIComponent(editId) : "redaktorius.html?product=" + productType;
+        window.location.href = "prisijungti.html?next=" + encodeURIComponent(next);
       }, 900);
       return;
     }
+    await loadProfileForEditing();
     await restoreDraft();
     setupColorPicker();
     syncPreview();

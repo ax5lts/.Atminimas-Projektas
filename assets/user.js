@@ -109,6 +109,18 @@
     if (!res.ok) throw new Error("Nepavyko pakeisti puslapio viešumo.");
   }
 
+  async function deleteProfile(profileId) {
+    var url = cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/profile-manage";
+    var res = await fetch(url, {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { "Content-Type": "application/json" }),
+      body: JSON.stringify({ action: "delete", profile_id: profileId })
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || "Nepavyko ištrinti puslapio.");
+    return data;
+  }
+
   async function fetchMyPages() {
     var me = await AtminimasAuth.user();
     if (!me) {
@@ -127,7 +139,7 @@
 
     var res = await fetch(restUrl(
       "profiliai",
-      "owner_id=eq." + encodeURIComponent(me.id) + "&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ), {
       headers: AtminimasAuth.headers(false)
     });
@@ -178,18 +190,35 @@
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
           "<p>Apmokėta: <strong>" + (row.apmoketa ? "taip" : "ne") + "</strong> · Vieša: <strong>" + (row.aktyvus ? "taip" : "ne") + "</strong></p>" +
           shipment +
-          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
+          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
           (order && !order.apmoketa ? "<a class='button button--ghost' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas ir mokėjimas</a>" : "") +
           (order && order.apmoketa && !order.customer_approved_at ? "<button class='button' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>" : "") +
           (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
           (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
-          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button></div>" +
+          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button>" +
+          "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti</button></div>" +
         "</article>"
       );
     }).join("");
   }
 
   listEl.addEventListener("click", async function (event) {
+    var deleteButton = event.target.closest("button[data-delete-profile]");
+    if (deleteButton) {
+      var profileName = deleteButton.dataset.profileName || "šį puslapį";
+      if (!window.confirm("Ar tikrai norite ištrinti „" + profileName + "“? Atminimo puslapis ir jo nuotraukos bus pašalinti. Šio veiksmo atšaukti negalima.")) return;
+      deleteButton.disabled = true;
+      statusEl.textContent = "Puslapis trinamas...";
+      try {
+        await deleteProfile(deleteButton.dataset.deleteProfile);
+        await fetchMyPages();
+        statusEl.textContent = "Puslapis ištrintas.";
+      } catch (error) {
+        statusEl.textContent = error.message || "Nepavyko ištrinti puslapio.";
+        deleteButton.disabled = false;
+      }
+      return;
+    }
     var approvalButton = event.target.closest("button[data-approve-order]");
     if (approvalButton) {
       if (!window.confirm("Patvirtinate, kad atminimo puslapio informacija ir QR nuoroda teisingi ir ženkliuką galima gaminti?")) return;

@@ -1440,6 +1440,22 @@ video {
   background: var(--accent-soft);
 }
 
+.button--danger {
+  color: #fff;
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.button--danger:hover {
+  background: #8f1b13;
+  border-color: #8f1b13;
+}
+
+.button--danger:focus-visible {
+  outline: 3px solid rgba(180, 35, 24, 0.3);
+  outline-offset: 3px;
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

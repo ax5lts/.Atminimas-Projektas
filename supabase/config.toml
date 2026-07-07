@@ -22,6 +22,9 @@ verify_jwt = false
 [functions.qr-code]
 verify_jwt = false
 
+[functions.profile-manage]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

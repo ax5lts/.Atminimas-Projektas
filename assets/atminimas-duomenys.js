@@ -95,12 +95,12 @@
     return ext && ext !== name ? ext.replace(/[^a-z0-9]/g, "") : "bin";
   }
 
-  async function uploadOneFile(bucket, path, file) {
+  async function uploadOneFile(bucket, path, file, upsert) {
     var res = await fetch(storageObjectUrl(bucket, path), {
       method: "POST",
       headers: Object.assign({}, headers(), {
         "Content-Type": file.type || "application/octet-stream",
-        "x-upsert": "false"
+        "x-upsert": upsert ? "true" : "false"
       }),
       body: file
     });
@@ -111,7 +111,7 @@
     return publicStorageUrl(bucket, path);
   }
 
-  async function uploadBuilderMedia(identifier, files) {
+  async function uploadBuilderMedia(identifier, files, upsert) {
     var media = [];
     var photos = Array.prototype.slice.call((files && files.photos) || []).filter(Boolean).slice(0, 8);
     var video = files && files.video ? files.video : null;
@@ -124,7 +124,7 @@
       var photoPath = ownerPath + "/photo-" + (i + 1) + "." + fileExt(photos[i]);
       media.push({
         type: "image",
-        url: await uploadOneFile("atminimas", photoPath, photos[i]),
+        url: await uploadOneFile("atminimas", photoPath, photos[i], upsert),
         path: photoPath,
         order: i + 1
       });
@@ -134,7 +134,7 @@
       var videoPath = ownerPath + "/video." + fileExt(video);
       media.push({
         type: "video",
-        url: await uploadOneFile("atminimas", videoPath, video),
+        url: await uploadOneFile("atminimas", videoPath, video, upsert),
         path: videoPath,
         order: 1
       });
@@ -144,7 +144,7 @@
       var captionsPath = ownerPath + "/captions." + fileExt(captions);
       media.push({
         type: "captions",
-        url: await uploadOneFile("atminimas", captionsPath, captions),
+        url: await uploadOneFile("atminimas", captionsPath, captions, upsert),
         path: captionsPath,
         language: "lt",
         order: 1
@@ -283,10 +283,73 @@
     };
   }
 
+  function functionUrl(name) {
+    return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
+  }
+
+  async function manageProfile(payload) {
+    var res = await fetch(functionUrl("profile-manage"), {
+      method: "POST",
+      headers: Object.assign({}, headers(), { "Content-Type": "application/json" }),
+      body: JSON.stringify(payload)
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || "Nepavyko pakeisti puslapio.");
+    return data;
+  }
+
+  async function updateAtminimas(identifier, input, options) {
+    var existing = Array.isArray(options && options.existingMedia) ? options.existingMedia.slice() : [];
+    var files = options && options.files ? options.files : {};
+    var hasPhotos = !!(files.photos && files.photos.length);
+    var hasVideo = !!files.video;
+    var hasCaptions = !!files.captions;
+    var uploaded = (hasPhotos || hasVideo || hasCaptions)
+      ? await uploadBuilderMedia(identifier, files, true)
+      : [];
+    var media = existing.filter(function (item) {
+      if (item.type === "image" && hasPhotos) return false;
+      if (item.type === "video" && hasVideo) return false;
+      if (item.type === "captions" && hasCaptions) return false;
+      return true;
+    }).concat(uploaded);
+
+    var imageIndex = 0;
+    media.forEach(function (item) {
+      if (item.type !== "image") return;
+      imageIndex += 1;
+      item.order = imageIndex;
+      item.alt = (input["photo_alt_" + imageIndex] || "").trim() || (item.alt || "Atminimo nuotrauka " + imageIndex);
+      item.caption = (input["photo_caption_" + imageIndex] || "").trim() || null;
+    });
+
+    await manageProfile({
+      action: "update",
+      profile_id: identifier,
+      profile: {
+        vardas: input.vardas,
+        pavarde: input.pavarde,
+        gimimo_data: input.gimimo_data,
+        mirties_data: input.mirties_data,
+        epitafija: input.epitafija,
+        tekstas_200: input.tekstas_200
+      },
+      layout: options && options.layout ? options.layout : {},
+      media: media
+    });
+    return { identifier: identifier, table: "profiliai", media: media };
+  }
+
+  async function deleteAtminimas(identifier) {
+    return manageProfile({ action: "delete", profile_id: identifier });
+  }
+
   global.AtminimasApi = {
     getPageSlug: getPageSlug,
     loadAtminimasBySlug: loadAtminimasBySlug,
     createAtminimas: createAtminimas,
+    updateAtminimas: updateAtminimas,
+    deleteAtminimas: deleteAtminimas,
     createUzsakymas: createUzsakymas,
     uploadBuilderMedia: uploadBuilderMedia,
     qrImageUrl: qrImageUrl

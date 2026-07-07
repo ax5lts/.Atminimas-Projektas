@@ -446,6 +446,34 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("@media (pointer: coarse)", styles)
         self.assertIn('"canvas"', styles)
 
+    def test_owner_can_edit_and_safely_delete_memorial_page(self):
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        function = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260707205626_profile_edit_delete.sql").read_text(encoding="utf-8")
+
+        self.assertIn("redaktorius.html?edit=", user)
+        self.assertIn("button--danger", user)
+        self.assertIn("data-delete-profile", user)
+        self.assertIn("window.confirm", user)
+        self.assertIn(".button--danger", styles)
+        self.assertIn('get("edit")', editor)
+        self.assertIn("loadProfileForEditing", editor)
+        self.assertIn("AtminimasApi.updateAtminimas", editor)
+        self.assertIn("updateAtminimas: updateAtminimas", api)
+        self.assertIn("deleteAtminimas: deleteAtminimas", api)
+
+        self.assertIn("profile.owner_id !== user.id", function)
+        self.assertIn('.storage.from("atminimas").remove', function)
+        self.assertIn('action === "delete"', function)
+        self.assertIn("retained_order", function)
+        self.assertIn("add column if not exists deleted_at", migration.lower())
+        self.assertIn("aktyvus = true and deleted_at is null", migration.lower())
+        self.assertIn("revoke delete on table public.profiliai from anon, authenticated", migration.lower())
+        self.assertIn("owner_id = (select auth.uid())::text", migration)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
