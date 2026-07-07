@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Atminimas užsakymo pristatymo ir apmokėjimo duomenys"><title>Pristatymas ir apmokėjimas - Atminimas</title><link rel="stylesheet" href="css/styles.css?v=20260707-1"></head>
+<body><div class="site-shell">
+<header class="site-header"><div class="site-header__inner"><a class="brand" href="index.html"><span class="brand__mark">A</span><span class="brand__name">Atminimas</span></a><nav class="site-nav" aria-label="Pagrindinė navigacija"><a href="vartotojas.html">Kliento zona</a><a href="taisykles.html">Taisyklės</a></nav></div></header>
+<main class="site-main checkout-page">
+  <header class="legal-page__header"><p class="eyebrow">Užsakymas</p><h1>Pristatymas ir apmokėjimas</h1><p>Pirmiausia pasirinkite paštomatą. Mokėjimo mygtukas bus aktyvuotas prijungus mokėjimų teikėją.</p></header>
+  <section class="checkout-grid">
+    <form class="legal-form checkout-form" id="delivery-form">
+      <h2>1. Pristatymas į paštomatą</h2>
+      <label>Vežėjas<select name="carrier" required><option value="">Pasirinkite</option><option value="Omniva">Omniva</option><option value="LP Express">LP Express</option><option value="DPD">DPD</option></select></label>
+      <label>Miestas / savivaldybė<select name="city" required disabled><option value="">Pirmiausia pasirinkite vežėją</option></select></label>
+      <label>Paštomatas<select name="parcel_terminal" required disabled><option value="">Pirmiausia pasirinkite miestą</option></select></label>
+      <p class="editor-note" id="locker-status" role="status" aria-live="polite"></p>
+      <h2>2. Gavėjas</h2>
+      <label>Vardas ir pavardė<input name="recipient_name" autocomplete="name" required maxlength="160"></label>
+      <label>Telefonas<input type="tel" name="recipient_phone" autocomplete="tel" required maxlength="40" placeholder="+370..."></label>
+      <label>El. paštas<input type="email" name="recipient_email" autocomplete="email" required maxlength="254"></label>
+      <label class="check-label"><input type="checkbox" name="delivery_confirm" value="yes" required> Patvirtinu, kad pasirinktas paštomatas ir gavėjo duomenys teisingi.</label>
+      <button class="button" type="submit">Išsaugoti pristatymą</button><p class="form-status" id="delivery-status" role="status" aria-live="polite"></p>
+    </form>
+    <aside class="checkout-summary">
+      <h2>3. Apmokėjimas</h2><p id="checkout-order">Užsakymas kraunamas...</p><p>Kaina: <strong data-business="price"></strong></p><p>Pristatymas: <span data-business="shippingPrice"></span></p>
+      <button class="button" type="button" disabled aria-describedby="payment-help">Apmokėti</button><p id="payment-help" class="editor-note">Mokėjimas dar neprijungtas. Pasirinkus „Stripe“, „Paysera“ arba „Montonio“, čia bus saugus nukreipimas į mokėjimą.</p>
+      <p><a href="taisykles.html">Pirkimo ir grąžinimo sąlygos</a></p>
+    </aside>
+  </section>
+</main>
+<footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><nav class="legal-links"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a></nav></div></footer>
+</div><script src="assets/supabase-config.js"></script><script src="assets/business-config.js"></script><script src="assets/auth.js?v=20260707-1"></script><script src="assets/business-details.js"></script><script src="assets/checkout.js?v=20260707-1"></script></body></html>

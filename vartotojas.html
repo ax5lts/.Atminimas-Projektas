@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kliento zona - Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="Atminimas">
+        <span class="brand__mark">A</span>
+        <span class="brand__name">Atminimas</span>
+      </a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="index.html">Pradžia</a>
+        <a href="parduotuve.html">Parduotuvė</a>
+        <a href="klientai.html">Atidaryti puslapį</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <section class="client-access" aria-labelledby="user-title">
+      <div class="client-access__intro">
+        <p class="eyebrow">Kliento zona</p>
+        <h1 id="user-title">Mano atminimo puslapiai</h1>
+        <p>Čia matysite savo sukurtus atminimo puslapius, jų būseną ir QR nuorodas.</p>
+      </div>
+      <div class="actions" id="user-guest-actions">
+        <a class="button" href="prisijungti.html">Prisijungti</a>
+        <a class="button button--ghost" href="registruotis.html">Registruotis</a>
+      </div>
+      <div class="actions">
+        <a class="button" href="redaktorius.html" id="user-create" hidden>Kurti naują puslapį</a>
+        <button class="button button--ghost" type="button" id="user-logout" hidden>Atsijungti</button>
+      </div>
+      <p class="form-status" id="user-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="info-grid" id="user-pages" aria-label="Mano puslapiai"></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>Atminimas</span>
+      <span class="site-footer__support">Jei puslapis neveikia arba reikia pagalbos, susisiekite su mumis.</span>
+      <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a></nav>
+    </div>
+  </footer>
+</div>
+
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/user.js?v=20260706-1"></script>
+</body>
+</html>
+
+
+
+
+

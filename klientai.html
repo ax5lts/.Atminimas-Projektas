@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klientams - Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="Atminimas">
+        <span class="brand__mark">A</span>
+        <span class="brand__name">Atminimas</span>
+      </a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="index.html">Pradžia</a>
+        <a href="parduotuve.html">Parduotuvė</a>
+        <a href="vartotojas.html">Kliento zona</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <nav class="breadcrumbs" aria-label="Kelias">
+      <a href="index.html">Pradžia</a>
+      <span>Klientams</span>
+    </nav>
+
+    <section class="client-access" aria-labelledby="client-title">
+      <div class="client-access__intro">
+        <p class="eyebrow">Jau turite atminimo puslapį?</p>
+        <h1 id="client-title">Atidaryti pagal slug arba ID</h1>
+        <p>
+          Įveskite klientui priskirtą puslapio kodą. Tai gali būti trumpas slug
+          arba unikalus ID iš Supabase lentelės.
+        </p>
+      </div>
+
+      <form class="client-access__form" id="client-access-form">
+        <label for="client-identifier">Slug arba ID</label>
+        <div class="client-access__row">
+          <input
+            id="client-identifier"
+            name="identifier"
+            type="text"
+            autocomplete="off"
+            placeholder="pvz. jonas-kazlauskas arba 123..."
+            required
+          >
+          <button class="button" type="submit">Atidaryti</button>
+        </div>
+        <p class="form-status" id="client-access-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="db-requirements">
+        <h2>Kaip veikia DB</h2>
+        <ul>
+          <li><code>profiliai.id</code> - pagrindinis kliento puslapio kodas.</li>
+          <li><code>atminimai.slug</code> - palaikomas kaip senesnis atsarginis variantas.</li>
+          <li><code>sablonas-viskas.html?slug=...</code> - galutinis atminimo puslapio adresas.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>Atminimas</span>
+      <span class="site-footer__support">Jei puslapis neveikia arba reikia pagalbos, susisiekite su mumis.</span>
+      <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="pranesti.html">Pranešti apie turinį</a></nav>
+    </div>
+  </footer>
+</div>
+
+<script>
+function cleanIdentifier(value) {
+  return (value || "").trim().replace(/^#/, "");
+}
+
+function openMemorial(identifier) {
+  window.location.href = "sablonas-viskas.html?slug=" + encodeURIComponent(identifier);
+}
+
+var params = new URLSearchParams(window.location.search);
+var initialIdentifier = cleanIdentifier(params.get("slug") || params.get("id") || params.get("s"));
+var form = document.getElementById("client-access-form");
+var input = document.getElementById("client-identifier");
+var status = document.getElementById("client-access-status");
+
+if (initialIdentifier) {
+  input.value = initialIdentifier;
+  status.textContent = "Atidaromas atminimo puslapis...";
+  openMemorial(initialIdentifier);
+}
+
+form.addEventListener("submit", function (event) {
+  event.preventDefault();
+  var identifier = cleanIdentifier(input.value);
+  if (!identifier) {
+    status.textContent = "Įveskite slug arba ID.";
+    return;
+  }
+  status.textContent = "Atidaromas atminimo puslapis...";
+  openMemorial(identifier);
+});
+</script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atminimo puslapis</title>
+<link rel="stylesheet" href="css/styles.css?v=20260702-4">
+</head>
+<body class="memorial-page">
+<div class="memorial-bg">
+  <p class="kraunama" id="kraunama">Kraunamas atminimo puslapis...</p>
+  <p class="duomenu-busena" id="duomenu-busena" hidden></p>
+  <p class="klaida" id="klaida" hidden></p>
+
+  <main id="turinys" hidden>
+    <section class="antmastis" id="antmastis" aria-label="Atminimo informacija">
+      <h1 id="atminimo-vardas">Vardas Pavardė</h1>
+      <h4 id="atminimo-datos">Gimimo data - Mirties data</h4>
+      <h5 id="atminimo-epitafija">Epitafija</h5>
+      <blockquote class="memorial-long-text" id="atminimo-tekstas" hidden></blockquote>
+    </section>
+
+    <section class="nuotraukos-krenta" id="nuotraukos" aria-label="Nuotraukos"></section>
+
+    <section class="turinys-video" id="video-blokas" hidden>
+      <div class="video-fs-wrap">
+        <video playsinline controls></video>
+        <button type="button" class="video-fs-play" aria-label="Rodyti visame ekrane">▶</button>
+        <button type="button" class="video-fs-close" hidden aria-label="Išeiti iš viso ekrano">×</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="gallery" id="gallery" role="dialog" aria-modal="true" aria-label="Nuotraukų galerija" aria-hidden="true" tabindex="-1">
+  <button type="button" class="gallery-close" id="gallery-close" aria-label="Uždaryti">×</button>
+  <button type="button" class="gallery-nav gallery-prev" id="gallery-prev" aria-label="Ankstesnė nuotrauka">‹</button>
+  <button type="button" class="gallery-nav gallery-next" id="gallery-next" aria-label="Kita nuotrauka">›</button>
+  <div class="gallery-inner" id="gallery-inner"></div>
+</div>
+
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/auth.js?v=20260706-1"></script>
+<script src="assets/cloudinary.js?v=20260618"></script>
+<script src="assets/atminimas-duomenys.js?v=20260618"></script>
+<script>
+(function () {
+  var LOCAL_ATMINIMAS = {
+    id: "demo",
+    vardas: "Romualdas",
+    pavarde: "Rimaitis",
+    gimimo_data: "1954-08-05",
+    mirties_data: "2025-02-23",
+    epitafija: "Išėjai ten, kur tyla ir ramybė, bet Tavo šviesa liko mūsų širdyse.",
+    tekstas_200: "Mylime ir prisimename.",
+    aktyvus: true
+  };
+
+  var LOCAL_MEDIA = [
+    { type: "image", url: "Nuotraukos/S_pirma.jpg", order: 1 },
+    { type: "image", url: "Nuotraukos/S_antra.jpg", order: 2 },
+    { type: "image", url: "Nuotraukos/S_trecia.jpg", order: 3 }
+  ];
+
+  var DEFAULT_LAYOUT = {
+    header: { left: "8%", top: "3%", width: "84%" },
+    text: { left: "8%", top: "16%", width: "84%" },
+    "photo-1": { left: "10%", top: "44%", width: "80%", heightPct: "44" },
+    "photo-2": { left: "8%", top: "60%", width: "26%", heightPct: "18" },
+    "photo-3": { left: "37%", top: "60%", width: "26%", heightPct: "18" },
+    "photo-4": { left: "66%", top: "60%", width: "26%", heightPct: "18" },
+    video: { left: "8%", top: "75%", width: "84%", heightPct: "47" }
+  };
+
+  var galleryIndex = 0;
+  var galleryReturnFocus = null;
+  var gallerySwipeStartX = null;
+  var gallerySwipeStartY = null;
+
+  function parseJson(value, fallback) {
+    if (!value) return fallback;
+    if (typeof value === "object") return value;
+    try { return JSON.parse(value); } catch (err) { return fallback; }
+  }
+
+  function formatDate(value) {
+    if (!value) return "";
+    return String(value).slice(0, 10);
+  }
+
+  function formatDates(start, end) {
+    return [formatDate(start), formatDate(end)].filter(Boolean).join(" - ");
+  }
+
+  function imageUrl(row) {
+    if (row.url) return row.url;
+    if (row.nuotraukos_url) return row.nuotraukos_url;
+    if (row.cloudinary_public_id && window.CloudinaryHelper) {
+      return CloudinaryHelper.galleryImageUrl(row.cloudinary_public_id);
+    }
+    return "";
+  }
+
+  function normalizeMedia(atminimas, nuotraukos) {
+    var saved = parseJson(atminimas.media_json, []);
+    if (Array.isArray(saved) && saved.length) return saved;
+
+    var media = (nuotraukos || []).map(function (row, index) {
+      return {
+        type: "image",
+        url: imageUrl(row),
+        order: row.eile_nr || index + 1,
+        pixel_art: !!row.pixel_art
+      };
+    }).filter(function (row) { return row.url; });
+
+    var videoUrl = atminimas.video_url || "";
+    if (!videoUrl && atminimas.video_cloudinary_id && window.CloudinaryHelper) {
+      videoUrl = CloudinaryHelper.videoUrl(atminimas.video_cloudinary_id);
+    }
+    if (videoUrl) media.push({ type: "video", url: videoUrl, order: 1 });
+    return media;
+  }
+
+  function mergedPiece(layout, name) {
+    return Object.assign({}, DEFAULT_LAYOUT[name] || {}, layout[name] || {});
+  }
+
+  function applyPieceStyle(element, saved) {
+    if (!saved) return;
+    if (saved.left) element.style.left = saved.left;
+    if (saved.top) element.style.top = saved.top;
+    if (saved.width) element.style.width = saved.width;
+    if (saved.heightPct) element.dataset.heightPct = saved.heightPct;
+    else if (saved.height) element.style.height = saved.height;
+    if (saved.fit) element.dataset.fit = saved.fit;
+  }
+
+  function applyImageFit(image, saved) {
+    if (!saved) return;
+    image.style.objectFit = saved.fit === "crop" ? "cover" : "contain";
+    if (saved.objectPosition) image.style.objectPosition = saved.objectPosition;
+  }
+
+  function applyResponsiveBuilderHeights(view) {
+    var width = view.getBoundingClientRect().width || 560;
+    view.querySelectorAll(".builder-piece[data-height-pct]").forEach(function (element) {
+      var percent = parseFloat(element.dataset.heightPct || "0");
+      if (percent > 0) element.style.height = Math.round(width * percent / 100) + "px";
+    });
+  }
+
+  function fitBuilderName(title) {
+    var size = 58;
+    title.style.fontSize = size + "px";
+    while (size > 20 && title.scrollWidth > title.clientWidth) {
+      size -= 2;
+      title.style.fontSize = size + "px";
+    }
+  }
+
+  function buildImagePiece(mediaItem, name, layout, className) {
+    var saved = mergedPiece(layout, name);
+    var wrap = document.createElement("button");
+    wrap.type = "button";
+    wrap.className = "builder-piece builder-photo " + (className || "");
+    wrap.dataset.piece = name;
+    wrap.dataset.galleryUrl = mediaItem.url;
+    wrap.setAttribute("aria-label", "Atidaryti: " + (mediaItem.alt || "atminimo nuotrauka"));
+    applyPieceStyle(wrap, saved);
+
+    var image = document.createElement("img");
+    image.src = mediaItem.url;
+    image.alt = mediaItem.alt || "Atminimo nuotrauka";
+    applyImageFit(image, saved);
+    wrap.appendChild(image);
+    return wrap;
+  }
+
+  function renderBuilderLayout(atminimas, media, layout) {
+    document.getElementById("antmastis").hidden = true;
+    document.getElementById("nuotraukos").hidden = true;
+    document.getElementById("video-blokas").hidden = true;
+
+    var view = document.createElement("section");
+    view.id = "builder-view";
+    view.className = "builder-view";
+    view.style.backgroundColor = (layout.__stage && layout.__stage.background) || "#ffffff";
+
+    var headerSaved = mergedPiece(layout, "header");
+    var header = document.createElement("header");
+    header.className = "builder-piece builder-header builder-header-card";
+    header.dataset.piece = "header";
+    applyPieceStyle(header, headerSaved);
+
+    var title = document.createElement("h1");
+    title.textContent = [atminimas.vardas, atminimas.pavarde].filter(Boolean).join(" ") || "Atminimas";
+    var dates = document.createElement("p");
+    dates.textContent = formatDates(atminimas.gimimo_data, atminimas.mirties_data);
+    var epitaph = document.createElement("blockquote");
+    epitaph.className = "builder-epitaph";
+    epitaph.textContent = atminimas.epitafija || "";
+    header.appendChild(title);
+    header.appendChild(dates);
+    if (epitaph.textContent) header.appendChild(epitaph);
+    view.appendChild(header);
+
+    var text = document.createElement("blockquote");
+    text.className = "builder-piece builder-text";
+    text.dataset.piece = "text";
+    text.textContent = atminimas.tekstas_200 || "";
+    applyPieceStyle(text, mergedPiece(layout, "text"));
+    view.appendChild(text);
+
+    var images = media.filter(function (item) { return item.type === "image" && item.url; }).slice(0, 4);
+    images.forEach(function (item, index) {
+      var name = "photo-" + (index + 1);
+      view.appendChild(buildImagePiece(item, name, layout, index ? "builder-photo-small" : ""));
+    });
+
+    var video = media.find(function (item) { return item.type === "video" && item.url; });
+    var captions = media.find(function (item) { return item.type === "captions" && item.url; });
+    if (video) {
+      var videoWrap = document.createElement("div");
+      videoWrap.className = "builder-piece builder-video";
+      videoWrap.dataset.piece = "video";
+      applyPieceStyle(videoWrap, mergedPiece(layout, "video"));
+      var player = document.createElement("video");
+      player.controls = true;
+      player.playsInline = true;
+      player.src = video.url;
+      if (captions) {
+        var track = document.createElement("track");
+        track.kind = "captions";
+        track.label = "Lietuvių";
+        track.srclang = captions.language || "lt";
+        track.src = captions.url;
+        track.default = true;
+        player.appendChild(track);
+      }
+      videoWrap.appendChild(player);
+      view.appendChild(videoWrap);
+    }
+
+    document.getElementById("turinys").appendChild(view);
+    fitBuilderName(title);
+    applyResponsiveBuilderHeights(view);
+    window.addEventListener("resize", function () { applyResponsiveBuilderHeights(view); });
+    bindBuilderGallery(view, images);
+  }
+
+  function renderLegacy(atminimas, media) {
+    document.getElementById("atminimo-vardas").textContent =
+      [atminimas.vardas, atminimas.pavarde].filter(Boolean).join(" ") || "Atminimas";
+    document.getElementById("atminimo-datos").textContent =
+      formatDates(atminimas.gimimo_data, atminimas.mirties_data);
+    document.getElementById("atminimo-epitafija").textContent = atminimas.epitafija || "";
+
+    var longText = document.getElementById("atminimo-tekstas");
+    longText.textContent = atminimas.tekstas_200 || "";
+    longText.hidden = !longText.textContent;
+
+    var images = media.filter(function (item) { return item.type === "image" && item.url; });
+    var photos = document.getElementById("nuotraukos");
+    photos.innerHTML = "";
+    images.forEach(function (item, index) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "nuotrauka-kortele";
+      button.setAttribute("aria-label", "Atidaryti: " + (item.alt || ("atminimo nuotrauka " + (index + 1))));
+      button.addEventListener("click", function () { openGallery(index, images); });
+      var image = document.createElement("img");
+      image.src = item.url;
+      image.alt = item.alt || ("Atminimo nuotrauka " + (index + 1));
+      if (item.pixel_art) image.classList.add("pixel-art");
+      button.appendChild(image);
+      photos.appendChild(button);
+    });
+
+    var videoItem = media.find(function (item) { return item.type === "video" && item.url; });
+    var captionsItem = media.find(function (item) { return item.type === "captions" && item.url; });
+    var videoBlock = document.getElementById("video-blokas");
+    if (videoItem) {
+      videoBlock.hidden = false;
+      var player = videoBlock.querySelector("video");
+      player.src = videoItem.url;
+      player.querySelectorAll("track").forEach(function (track) { track.remove(); });
+      if (captionsItem) {
+        var captionsTrack = document.createElement("track");
+        captionsTrack.kind = "captions";
+        captionsTrack.label = "Lietuvių";
+        captionsTrack.srclang = captionsItem.language || "lt";
+        captionsTrack.src = captionsItem.url;
+        captionsTrack.default = true;
+        player.appendChild(captionsTrack);
+      }
+      player.load();
+    } else {
+      videoBlock.hidden = true;
+    }
+    initVideoFullscreenControls();
+  }
+
+  function renderPage(payload, message) {
+    var atminimas = payload.atminimas || payload;
+    var media = normalizeMedia(atminimas, payload.nuotraukos || []);
+    var layout = parseJson(atminimas.layout_json, {});
+    var hasBuilderData = Object.keys(layout).length > 0 || parseJson(atminimas.media_json, []).length > 0;
+
+    if (hasBuilderData) renderBuilderLayout(atminimas, media, layout);
+    else renderLegacy(atminimas, media);
+
+    if (message) {
+      var status = document.getElementById("duomenu-busena");
+      status.textContent = message;
+      status.hidden = false;
+    }
+    document.getElementById("kraunama").hidden = true;
+    document.getElementById("turinys").hidden = false;
+  }
+
+  function fillGallery(images) {
+    var inner = document.getElementById("gallery-inner");
+    inner.innerHTML = "";
+    images.forEach(function (item, index) {
+      var image = document.createElement("img");
+      image.src = item.url;
+      image.alt = item.alt || ("Atminimo nuotrauka " + (index + 1));
+      inner.appendChild(image);
+    });
+  }
+
+  function openGallery(index, images) {
+    if (!images.length) return;
+    fillGallery(images);
+    galleryIndex = Math.max(0, Math.min(index, images.length - 1));
+    var gallery = document.getElementById("gallery");
+    galleryReturnFocus = document.activeElement;
+    gallery.style.display = "block";
+    gallery.setAttribute("aria-hidden", "false");
+    document.getElementById("gallery-close").focus();
+    requestAnimationFrame(function () { galleryScroll(true); });
+  }
+
+  function closeGallery() {
+    var gallery = document.getElementById("gallery");
+    gallery.style.display = "none";
+    gallery.setAttribute("aria-hidden", "true");
+    if (galleryReturnFocus && galleryReturnFocus.focus) galleryReturnFocus.focus();
+  }
+
+  function galleryCount() {
+    return document.getElementById("gallery-inner").querySelectorAll("img").length;
+  }
+
+  function galleryScroll(instant) {
+    var inner = document.getElementById("gallery-inner");
+    inner.scrollTo({ left: galleryIndex * inner.clientWidth, behavior: instant ? "auto" : "smooth" });
+    document.getElementById("gallery-prev").disabled = galleryIndex <= 0;
+    document.getElementById("gallery-next").disabled = galleryIndex >= galleryCount() - 1;
+  }
+
+  function bindBuilderGallery(view, images) {
+    view.querySelectorAll(".builder-photo").forEach(function (button, index) {
+      button.addEventListener("click", function () { openGallery(index, images); });
+    });
+  }
+
+  function initGallery() {
+    document.getElementById("gallery-close").addEventListener("click", closeGallery);
+    document.getElementById("gallery-prev").addEventListener("click", function () {
+      if (galleryIndex > 0) { galleryIndex--; galleryScroll(false); }
+    });
+    document.getElementById("gallery-next").addEventListener("click", function () {
+      if (galleryIndex < galleryCount() - 1) { galleryIndex++; galleryScroll(false); }
+    });
+    var inner = document.getElementById("gallery-inner");
+    inner.addEventListener("pointerdown", function (event) {
+      gallerySwipeStartX = event.clientX;
+      gallerySwipeStartY = event.clientY;
+    });
+    inner.addEventListener("pointerup", function (event) {
+      if (gallerySwipeStartX == null) return;
+      var dx = event.clientX - gallerySwipeStartX;
+      var dy = event.clientY - gallerySwipeStartY;
+      gallerySwipeStartX = null;
+      gallerySwipeStartY = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0 && galleryIndex < galleryCount() - 1) galleryIndex++;
+      if (dx > 0 && galleryIndex > 0) galleryIndex--;
+      galleryScroll(false);
+    });
+    document.addEventListener("keydown", function (event) {
+      var gallery = document.getElementById("gallery");
+      if (gallery.style.display !== "block") return;
+      if (event.key === "Tab") {
+        var controls = Array.from(gallery.querySelectorAll("button:not([hidden]):not([disabled])"));
+        if (controls.length) {
+          var current = controls.indexOf(document.activeElement);
+          var next = event.shiftKey ? current - 1 : current + 1;
+          if (current < 0) next = 0;
+          if (next < 0) next = controls.length - 1;
+          if (next >= controls.length) next = 0;
+          event.preventDefault();
+          controls[next].focus();
+        }
+      }
+      if (event.key === "Escape") closeGallery();
+      if (event.key === "ArrowLeft" && galleryIndex > 0) { galleryIndex--; galleryScroll(false); }
+      if (event.key === "ArrowRight" && galleryIndex < galleryCount() - 1) { galleryIndex++; galleryScroll(false); }
+    });
+  }
+
+  function initVideoFullscreenControls() {
+    document.querySelectorAll(".video-fs-wrap").forEach(function (wrap) {
+      if (wrap.dataset.videoFsInit === "1") return;
+      wrap.dataset.videoFsInit = "1";
+      var play = wrap.querySelector(".video-fs-play");
+      var close = wrap.querySelector(".video-fs-close");
+      var video = wrap.querySelector("video");
+      if (!play || !close || !video) return;
+
+      play.addEventListener("click", function () {
+        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+        if (request) {
+          var result = request.call(wrap);
+          if (result && result.catch) result.catch(function () { wrap.classList.add("fs-fake"); });
+        } else {
+          wrap.classList.add("fs-fake");
+        }
+        close.hidden = false;
+        play.hidden = true;
+        video.play().catch(function () {});
+      });
+
+      close.addEventListener("click", function () {
+        if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+        wrap.classList.remove("fs-fake");
+        close.hidden = true;
+        play.hidden = false;
+      });
+    });
+  }
+
+  async function init() {
+    initGallery();
+    var params = new URLSearchParams(window.location.search);
+    var identifier = (params.get("id") || params.get("slug") || params.get("s") || "").trim();
+    if (!identifier || identifier === "demo") {
+      window.location.replace("index.html");
+      return;
+    }
+
+    try {
+      var payload = await AtminimasApi.loadAtminimasBySlug(identifier);
+      renderPage(payload, "");
+    } catch (err) {
+      console.warn(err);
+      document.getElementById("kraunama").hidden = true;
+      document.getElementById("klaida").textContent = "Atminimo puslapio nepavyko rasti.";
+      document.getElementById("klaida").hidden = false;
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
+
+
+
+
+

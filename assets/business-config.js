@@ -1,0 +1,28 @@
+// Užpildykite tik tikrais registruotos veiklos ir produkto duomenimis.
+window.ATMINIMAS_BUSINESS = Object.freeze({
+  legalName: "",
+  activityForm: "",
+  registrationCode: "",
+  registry: "",
+  address: "",
+  email: "",
+  phone: "",
+  vatStatus: "",
+  price: "59,00 EUR",
+  priceVat: "",
+  shippingPrice: "",
+  shippingTerritory: "",
+  productionTime: "",
+  deliveryTime: "",
+  paymentMethods: "",
+  paymentProvider: "",
+  emailProvider: "",
+  hostingProvider: "",
+  hostingPeriod: "",
+  manufacturer: "",
+  productIdentifier: "",
+  material: "",
+  dimensions: "",
+  mounting: "",
+  safetyWarnings: ""
+});

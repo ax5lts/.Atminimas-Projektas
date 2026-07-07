@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prisijungti - Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html"><span class="brand__mark">A</span><span class="brand__name">Atminimas</span></a>
+      <nav class="site-nav"><a href="registruotis.html">Registruotis</a></nav>
+    </div>
+  </header>
+  <main class="site-main">
+    <section class="client-access auth-page" aria-labelledby="login-title">
+      <div class="client-access__intro">
+        <p class="eyebrow">Kliento zona</p>
+        <h1 id="login-title">Prisijungti</h1>
+        <p>Prisijunkite, kad galėtumėte kurti ir valdyti savo atminimo puslapius.</p>
+      </div>
+      <form class="auth-form" id="login-form">
+        <label>El. paštas<input type="email" name="email" autocomplete="email" required></label>
+        <label>Slaptažodis<input type="password" name="password" autocomplete="current-password" minlength="6" required></label>
+        <button class="button" type="submit">Prisijungti</button>
+        <p class="form-status" id="login-status" role="status" aria-live="polite"></p>
+      </form>
+      <p class="auth-switch">Dar neturite paskyros? <a href="registruotis.html">Registruokitės</a></p>
+      <p class="auth-privacy">Prisijungdami patvirtinate, kad susipažinote su <a href="privatumas.html">privatumo ir slapukų politika</a>.</p>
+    </section>
+  </main>
+</div>
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/login.js?v=20260702"></script>
+</body>
+</html>
+

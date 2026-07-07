@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atminimo puslapio redaktorius</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body class="editor-page">
+<div class="editor-shell">
+  <header class="editor-topbar">
+    <a class="brand editor-brand" href="index.html" aria-label="Atminimas">
+      <span class="brand__mark">A</span>
+      <span class="brand__name">Atminimas</span>
+    </a>
+    <div class="editor-topbar__title">
+      <strong>Atminimo puslapio redaktorius</strong>
+      <span>Slug sugeneruojamas automatiškai, o išdėstymas saugomas į <code>layout_json</code></span>
+    </div>
+    <nav class="editor-topbar__nav" aria-label="Redaktoriaus navigacija">
+      <a href="parduotuve.html">Parduotuvė</a>
+      <a href="klientai.html">Klientams</a>
+      <a href="vartotojas.html">Kliento zona</a>
+      <a href="privatumas.html">Privatumas</a>
+    </nav>
+  </header>
+
+  <main class="editor-workspace">
+    <aside class="editor-rail" aria-label="Įrankiai">
+      <button type="button" class="editor-tool is-active" data-editor-section="text">Tekstas</button>
+      <button type="button" class="editor-tool" data-editor-section="files">Failai</button>
+      <button type="button" class="editor-tool" data-editor-section="positions">Pozicijos</button>
+    </aside>
+
+    <section class="editor-panel" aria-labelledby="editor-panel-title">
+      <p class="eyebrow">DB builderis</p>
+      <h1 id="editor-panel-title">Sukurkite puslapį</h1>
+      <form id="editor-form" class="editor-form">
+        <label id="editor-section-text">
+          Vardas
+          <input type="text" name="vardas" required>
+        </label>
+        <label>
+          Pavardė
+          <input type="text" name="pavarde">
+        </label>
+        <div class="form-grid">
+          <label>
+            Gimimo data
+            <input type="date" name="gimimo_data">
+          </label>
+          <label>
+            Mirties data
+            <input type="date" name="mirties_data">
+          </label>
+        </div>
+        <label>
+          Epitafija
+          <input type="text" name="epitafija" maxlength="180" placeholder="Trumpa frazė po datomis">
+        </label>
+        <label>
+          Tekstas
+          <textarea name="tekstas_200" rows="7" maxlength="1400" placeholder="Iki 200 žodžių. Galima įklijuoti tekstą iš telefono ar dokumento."></textarea>
+        </label>
+        <p class="editor-word-count" id="editor-word-count">0 / 200 žodžių</p>
+
+        <label>
+          Puslapio fonas
+          <span class="editor-color-row">
+            <input type="color" name="fono_spalva" id="editor-background" value="#ffffff">
+            <span id="editor-background-value">#ffffff</span>
+          </span>
+        </label>
+
+        <label id="editor-section-files">
+          Nuotraukos (iki 4)
+          <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
+        </label>
+        <label>
+          Video (1 failas)
+          <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*">
+        </label>
+        <label>
+          Video subtitrai (WebVTT; privaloma, jei vaizdo įraše yra kalba ar svarbūs garsai)
+          <input type="file" name="captions" id="editor-captions" accept=".vtt,text/vtt">
+        </label>
+        <fieldset class="editor-alt-fields">
+          <legend>Nuotraukų aprašymai ekrano skaitytuvams</legend>
+          <label>1 nuotrauka<input type="text" name="photo_alt_1" maxlength="180" placeholder="Kas pavaizduota nuotraukoje?"></label>
+          <label>2 nuotrauka<input type="text" name="photo_alt_2" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
+          <label>3 nuotrauka<input type="text" name="photo_alt_3" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
+          <label>4 nuotrauka<input type="text" name="photo_alt_4" maxlength="180" placeholder="Trumpas nuotraukos aprašymas"></label>
+        </fieldset>
+
+        <div class="editor-transform-tools" id="editor-section-positions" aria-label="Nuotraukos keitimo režimas">
+          <span>Pasirinkta nuotrauka</span>
+          <div>
+            <button type="button" class="is-active" data-transform-mode="resize">Resize</button>
+            <button type="button" data-transform-mode="scale">Scale</button>
+            <button type="button" data-transform-mode="stretch">Stretch</button>
+            <button type="button" data-transform-mode="crop">Crop</button>
+          </div>
+        </div>
+
+        <p class="editor-note">Paspausk nuotrauką, tada tempk rankenėles. Pozicijos, dydžiai ir iškraipymai bus saugomi į DB.</p>
+        <fieldset class="legal-confirmations">
+          <legend>Privalomi patvirtinimai</legend>
+          <label><input type="checkbox" name="rights_confirm" value="yes" required> Patvirtinu, kad turiu teisę skelbti pateiktus tekstus, nuotraukas ir vaizdo įrašus, įskaitant mirusio asmens atvaizdą.</label>
+          <label><input type="checkbox" name="terms_confirm" value="yes" required> Susipažinau su <a href="taisykles.html" target="_blank" rel="noopener">naudojimo ir pirkimo taisyklėmis</a> bei <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</label>
+          <label><input type="checkbox" name="early_service_confirm" value="yes" required> Prašau pradėti skaitmeninės paslaugos teikimą nepasibaigus 14 dienų terminui ir suprantu, kad visiškai suteikus paslaugą teisė atsisakyti suteiktos paslaugos dalies gali pasibaigti.</label>
+          <label><input type="checkbox" name="custom_product_confirm" value="yes" required> Suprantu, kad pagal mano nurodymus individualiai pagamintam QR ženkliukui gali būti netaikoma 14 dienų sutarties atsisakymo teisė; tai neriboja teisių dėl nekokybiškos prekės.</label>
+        </fieldset>
+        <button class="button" type="submit">Sukurti ir išsaugoti</button>
+        <button class="button button--ghost" type="button" id="editor-clear-draft">Isvalyti juodrasti</button>
+        <p class="form-status" id="editor-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="editor-canvas" aria-labelledby="canvas-title">
+      <div class="editor-canvas__toolbar">
+        <h2 id="canvas-title">Gyva peržiūra</h2>
+        <span id="editor-preview-code">slug bus sugeneruotas automatiškai</span>
+      </div>
+      <article class="editor-phone-preview" id="editor-preview-stage">
+        <header class="editor-piece editor-header-card" data-piece="header" style="left: 8%; top: 3%; width: 84%;">
+          <h3 id="editor-preview-name">Vardas Pavardė</h3>
+          <p id="editor-preview-dates">Gimimo data - Mirties data</p>
+          <blockquote id="editor-preview-epitaph">Trumpa epitafija atsiras čia.</blockquote>
+        </header>
+        <blockquote class="editor-piece editor-preview-text" data-piece="text" id="editor-preview-text" style="left: 8%; top: 16%; width: 84%;">
+          Ilgesnis tekstas atsiras čia.
+        </blockquote>
+        <div class="editor-piece editor-photo-slot" data-piece="photo-1" data-height-pct="44" style="left: 10%; top: 44%; width: 80%;">
+          <img id="editor-preview-photo-1" alt="" hidden>
+          <span class="editor-empty-photo">Nuotrauka 1</span>
+          <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-right" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-x" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-left" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-y" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-top" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-se" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-sw" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-ne" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-nw" aria-hidden="true"></span>
+        </div>
+        <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-2" data-height-pct="18" style="left: 8%; top: 60%; width: 26%;">
+          <img id="editor-preview-photo-2" alt="" hidden>
+          <span class="editor-empty-photo">2</span>
+          <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-right" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-x" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-left" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-y" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-top" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-se" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-sw" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-ne" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-nw" aria-hidden="true"></span>
+        </div>
+        <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-3" data-height-pct="18" style="left: 37%; top: 60%; width: 26%;">
+          <img id="editor-preview-photo-3" alt="" hidden>
+          <span class="editor-empty-photo">3</span>
+          <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-right" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-x" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-left" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-y" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-top" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-se" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-sw" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-ne" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-nw" aria-hidden="true"></span>
+        </div>
+        <div class="editor-piece editor-photo-slot editor-photo-small" data-piece="photo-4" data-height-pct="18" style="left: 66%; top: 60%; width: 26%;">
+          <img id="editor-preview-photo-4" alt="" hidden>
+          <span class="editor-empty-photo">4</span>
+          <span class="editor-crop-handle editor-crop-up" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-down" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-left" aria-hidden="true"></span>
+          <span class="editor-crop-handle editor-crop-right" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-x" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-left" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-y" aria-hidden="true"></span>
+          <span class="editor-stretch-handle editor-stretch-top" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-se" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-sw" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-ne" aria-hidden="true"></span>
+          <span class="editor-resize-handle editor-resize-nw" aria-hidden="true"></span>
+        </div>
+        <div class="editor-piece editor-video-slot" data-piece="video" data-height-pct="47" style="left: 8%; top: 75%; width: 84%;">
+          <video id="editor-preview-video" controls playsinline hidden></video>
+          <span class="editor-empty-photo">Video</span>
+          <span class="editor-resize-handle" aria-hidden="true"></span>
+        </div>
+      </article>
+    </section>
+
+    <aside class="editor-db-panel" aria-labelledby="db-info-title">
+      <h2 id="db-info-title">Išsaugoma</h2>
+      <dl>
+        <dt>Lentelė</dt>
+        <dd><code>profiliai</code></dd>
+        <dt>Tekstas</dt>
+        <dd><code>vardas</code>, <code>pavarde</code>, <code>epitafija</code>, <code>tekstas_200</code></dd>
+        <dt>Failai</dt>
+        <dd><code>media_json</code> ir Storage bucket <code>atminimas</code></dd>
+        <dt>Layout</dt>
+        <dd><code>layout_json</code> saugo kiekvieno elemento poziciją.</dd>
+        <dt>Viešumas</dt>
+        <dd>Naujas puslapis išsaugomas neviešas. Jį atskirai paskelbsite kliento zonoje.</dd>
+      </dl>
+      <div class="editor-result" id="editor-result" hidden>
+        <h3>Sukurta kaip privatus puslapis</h3>
+        <a id="editor-open-link" class="button" href="#">Peržiūrėti prisijungus</a>
+        <a id="editor-checkout-link" class="button" href="#">Tęsti į pristatymą ir apmokėjimą</a>
+        <a id="editor-client-link" class="button button--ghost" href="#">Kliento nuoroda</a>
+        <a id="editor-qr-link" class="button button--ghost" href="#" download="atminimas-qr.png">Atsisiųsti QR</a>
+        <p class="editor-order-code" id="editor-order-code"></p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/atminimas-duomenys.js?v=20260618"></script>
+<script src="assets/redaktorius.js?v=20260702-5"></script>
+</body>
+</html>
+
+
+
+
+

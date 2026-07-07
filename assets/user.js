@@ -1,0 +1,139 @@
+(function () {
+  var form = document.getElementById("user-auth-form");
+  var statusEl = document.getElementById("user-status");
+  var listEl = document.getElementById("user-pages");
+  var logoutButton = document.getElementById("user-logout");
+  var createButton = document.getElementById("user-create");
+  var guestActions = document.getElementById("user-guest-actions");
+
+  function cfg() {
+    return window.ATMINIMAS_CONFIG;
+  }
+
+  function restUrl(table, query) {
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + encodeURIComponent(table) + "?" + query;
+  }
+
+  function rpcUrl(name) {
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/" + encodeURIComponent(name);
+  }
+
+  function html(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function qrUrl(publicUrl) {
+    var absolute = new URL(publicUrl, cfg().PUBLIC_SITE_URL || window.location.href).href;
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute);
+  }
+
+  async function setVisibility(profileId, active) {
+    var res = await fetch(rpcUrl("set_my_profile_visibility"), {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      body: JSON.stringify({ profile_id: profileId, is_active: active })
+    });
+    if (!res.ok) throw new Error("Nepavyko pakeisti puslapio viešumo.");
+  }
+
+  async function fetchMyPages() {
+    var me = await AtminimasAuth.user();
+    if (!me) {
+      listEl.innerHTML = "";
+      logoutButton.hidden = true;
+      if (createButton) createButton.hidden = true;
+      if (guestActions) guestActions.hidden = false;
+      statusEl.textContent = "Prisijunkite, kad atidarytumėte savo kliento zoną.";
+      return;
+    }
+
+    logoutButton.hidden = false;
+    if (createButton) createButton.hidden = false;
+    if (guestActions) guestActions.hidden = true;
+    statusEl.textContent = "Prisijungta: " + me.email;
+
+    var res = await fetch(restUrl(
+      "profiliai",
+      "owner_id=eq." + encodeURIComponent(me.id) + "&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+    ), {
+      headers: AtminimasAuth.headers(false)
+    });
+
+    if (!res.ok) {
+      listEl.innerHTML = "<div class='info-box'><h2>Nepavyko įkelti</h2><p>Patikrinkite, ar Supabase schema atnaujinta ir ar veikia RLS taisyklės.</p></div>";
+      return;
+    }
+
+    var rows = await res.json();
+    if (!rows.length) {
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo QR ženkliuko užsakymo arba redaktoriaus.</p><a class='button' href='parduotuve.html'>Užsakyti</a></div>";
+      return;
+    }
+
+    var orderResponse = await fetch(restUrl(
+      "uzsakymai",
+      "select=id,profilis_id,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
+    ), { headers: AtminimasAuth.headers(false) });
+    var orders = orderResponse.ok ? await orderResponse.json() : [];
+    var orderByProfile = {};
+    orders.forEach(function (order) {
+      if (!orderByProfile[order.profilis_id]) orderByProfile[order.profilis_id] = order;
+    });
+
+    listEl.innerHTML = rows.map(function (row) {
+      var name = [row.vardas, row.pavarde].filter(Boolean).join(" ") || row.id;
+      var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
+      var profileQrUrl = qrUrl(publicUrl);
+      var order = orderByProfile[row.id];
+      var shipment = order
+        ? "<p>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + "</p>"
+        : "";
+      return (
+        "<article class='info-box' data-profile-card>" +
+          "<p class='eyebrow'>" + html(row.statusas || "sukurta") + "</p>" +
+          "<h2>" + html(name) + "</h2>" +
+          "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
+          "<p>Apmokėta: <strong>" + (row.apmoketa ? "taip" : "ne") + "</strong> · Vieša: <strong>" + (row.aktyvus ? "taip" : "ne") + "</strong></p>" +
+          shipment +
+          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
+          (order ? "<a class='button button--ghost' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas</a>" : "") +
+          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button></div>" +
+        "</article>"
+      );
+    }).join("");
+  }
+
+  listEl.addEventListener("click", async function (event) {
+    var button = event.target.closest("button[data-profile-id]");
+    if (!button) return;
+    var nextActive = button.dataset.nextActive === "true";
+    if (nextActive && !window.confirm("Paskelbus puslapį, jo turinį galės matyti visi, turintys nuorodą arba QR kodą. Paskelbti?")) return;
+    button.disabled = true;
+    statusEl.textContent = nextActive ? "Puslapis skelbiamas..." : "Puslapis slepiamas...";
+    try {
+      await setVisibility(button.dataset.profileId, nextActive);
+      await fetchMyPages();
+      statusEl.textContent = nextActive ? "Puslapis paskelbtas viešai." : "Puslapis nebėra viešas.";
+    } catch (error) {
+      statusEl.textContent = error.message || "Nepavyko pakeisti puslapio viešumo.";
+      button.disabled = false;
+    }
+  });
+
+  logoutButton.addEventListener("click", function () {
+    AtminimasAuth.signOut();
+    statusEl.textContent = "Atsijungta.";
+    listEl.innerHTML = "";
+    logoutButton.hidden = true;
+    if (createButton) createButton.hidden = true;
+    if (guestActions) guestActions.hidden = false;
+  });
+
+  fetchMyPages().catch(function (err) {
+    statusEl.textContent = err.message || "Nepavyko patikrinti sesijos.";
+  });
+})();
+
+

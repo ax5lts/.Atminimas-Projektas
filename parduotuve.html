@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR atminimo ženkliukas - parduotuvė</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="Atminimas">
+        <span class="brand__mark">A</span>
+        <span class="brand__name">Atminimas</span>
+      </a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="index.html">Pradžia</a>
+        <a href="vartotojas.html">Klientas</a>
+        <a href="admin.html">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <aside class="legal-notice shop-legal-notice" data-business-warning><strong>Užsakymų priėmimas dar neparuoštas</strong><p>Trūksta veiklos vykdytojo, pristatymo, PVM ir produkto saugos duomenų. Kol jie neužpildyti, svetainė neturėtų priimti realių apmokėjimų.</p></aside>
+    <nav class="breadcrumbs" aria-label="Kelias">
+      <a href="index.html">Pradžia</a>
+      <span>Parduotuvė</span>
+      <span>QR atminimo ženkliukas</span>
+    </nav>
+
+    <section class="shop-layout" aria-labelledby="product-title">
+      <div class="product-gallery product-gallery--single" aria-label="Produkto nuotrauka">
+        <div class="product-media">
+          <img src="assets/qr-lipdukas.png" alt="QR kodo atminimo lipdukas">
+        </div>
+      </div>
+
+      <div class="shop-side">
+        <article class="product-panel">
+          <h1 id="product-title">QR atminimo ženkliukas</h1>
+          <p class="product-price" data-business="price">59,00 EUR</p>
+          <p>PVM: <strong data-business="priceVat"></strong></p>
+          <p class="product-copy">
+            Ženkliukas su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis,
+            video įrašu, gyvenimo datomis ir epitafija.
+          </p>
+          <div class="product-divider"></div>
+          <dl class="product-facts"><dt>Gamintojas</dt><dd data-business="manufacturer"></dd><dt>Produkto ID</dt><dd data-business="productIdentifier"></dd><dt>Medžiaga ir matmenys</dt><dd><span data-business="material"></span>; <span data-business="dimensions"></span></dd><dt>Tvirtinimas</dt><dd data-business="mounting"></dd><dt>Sauga</dt><dd data-business="safetyWarnings"></dd></dl>
+
+          <div class="option-row">
+            <label for="delivery-option">Pasirinkimai</label>
+            <select id="delivery-option" name="delivery">
+              <option value="badge">Tik QR ženkliukas</option>
+              <option value="badge-shipping">QR ženkliukas su siuntimu</option>
+              <option value="badge-install">Su atvykimu ir pritvirtinimu (+40.00 EUR)</option>
+            </select>
+          </div>
+
+          <div class="actions">
+            <a class="button" href="vartotojas.html">Kurti</a>
+            <a class="button button--ghost" href="klientai.html">Atidaryti pagal QR kodą</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="info-grid" id="kaip-veikia" aria-label="Papildoma informacija">
+      <div class="info-box">
+        <h2>Kaip tai veikia?</h2>
+        <p>Užsakomas QR ženkliukas, paruošiamas atminimo puslapis, o lankytojai jį pasiekia telefonu nuskenavę kodą.</p>
+      </div>
+      <div class="info-box">
+        <h2>Užsakymo informacija</h2>
+        <p>Mokėjimas: <span data-business="paymentMethods"></span>. Siuntimas: <span data-business="shippingPrice"></span>, <span data-business="shippingTerritory"></span>. Pagaminimas: <span data-business="productionTime"></span>; pristatymas: <span data-business="deliveryTime"></span>. Talpinimas: <span data-business="hostingPeriod"></span>.</p><p><a href="taisykles.html">Pirkimo, grąžinimo ir naudojimo sąlygos</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>Atminimas</span>
+      <span class="site-footer__support">Jei puslapis neveikia arba reikia pagalbos, susisiekite su mumis.</span>
+      <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a><a href="pranesti.html">Pranešti apie turinį</a></nav>
+    </div>
+  </footer>
+</div>
+
+<script src="assets/business-config.js"></script><script src="assets/business-details.js"></script>
+</body>
+</html>
+
+
+
+
+

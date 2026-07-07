@@ -1,0 +1,190 @@
+import functools
+import json
+import os
+import re
+import sys
+import threading
+import unittest
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from serve import NoCacheHandler, ThreadingHTTPServer  # noqa: E402
+
+
+class QuietHandler(NoCacheHandler):
+    def log_message(self, _format, *args):
+        pass
+
+
+class AtminimasSmokeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        handler = functools.partial(QuietHandler, directory=str(ROOT))
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base_url = "http://127.0.0.1:{0}".format(cls.server.server_port)
+
+        config = (ROOT / "assets" / "supabase-config.js").read_text(encoding="utf-8")
+        cls.supabase_url = re.search(r'SUPABASE_URL:\s*"([^"]+)"', config).group(1)
+        cls.supabase_key = re.search(r'SUPABASE_ANON_KEY:\s*"([^"]+)"', config).group(1)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=3)
+
+    def local_request(self, path):
+        return urllib.request.urlopen(self.base_url + path, timeout=8)
+
+    def supabase_request(self, path):
+        request = urllib.request.Request(
+            self.supabase_url + path,
+            headers={
+                "apikey": self.supabase_key,
+                "Authorization": "Bearer " + self.supabase_key,
+                "Accept": "application/json",
+            },
+        )
+        return urllib.request.urlopen(request, timeout=15)
+
+    def test_all_html_pages_load(self):
+        pages = sorted(ROOT.glob("*.html"))
+        self.assertGreaterEqual(len(pages), 16)
+        for page in pages:
+            with self.subTest(page=page.name):
+                with self.local_request("/" + page.name) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertIn("text/html", response.headers.get("Content-Type", ""))
+                    response.read()
+
+    def test_local_references_exist(self):
+        pattern = re.compile(r'(?:href|src)\s*=\s*["\']([^"\'#?]+)', re.I)
+        for page in ROOT.glob("*.html"):
+            html = page.read_text(encoding="utf-8")
+            for reference in pattern.findall(html):
+                if re.match(r"^(?:https?:|mailto:|tel:|data:|javascript:|//)", reference):
+                    continue
+                target = ROOT / reference.lstrip("/").replace("/", os.sep)
+                with self.subTest(page=page.name, reference=reference):
+                    self.assertTrue(target.exists(), "Nerastas vietinis failas: {0}".format(target))
+
+    def test_pages_have_basic_metadata(self):
+        for page in ROOT.glob("*.html"):
+            html = page.read_text(encoding="utf-8")
+            with self.subTest(page=page.name):
+                self.assertRegex(html, r'<html[^>]+lang=["\']lt["\']')
+                self.assertRegex(html, r"<title>[^<]+</title>")
+                self.assertRegex(html, r"<h1(?:\s|>)")
+
+    def test_private_project_files_are_not_served(self):
+        for path in (
+            "/gemini-code-1779135220512.env",
+            "/supabase/schema.sql",
+            "/app.py",
+            "/serve.py",
+            "/.gitignore",
+        ):
+            with self.subTest(path=path):
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    self.local_request(path)
+                self.assertEqual(error.exception.code, 404)
+
+    def test_security_headers_are_present(self):
+        required = (
+            "Content-Security-Policy",
+            "Strict-Transport-Security",
+            "X-Content-Type-Options",
+            "Referrer-Policy",
+            "Permissions-Policy",
+            "X-Frame-Options",
+        )
+        with self.local_request("/index.html") as response:
+            for header in required:
+                with self.subTest(header=header):
+                    self.assertTrue(response.headers.get(header))
+
+    def test_no_known_mojibake_sequences(self):
+        bad = re.compile(r"ā–|ā€|Ć—")
+        files = list(ROOT.glob("*.html")) + list((ROOT / "assets").glob("*.js"))
+        for path in files:
+            with self.subTest(path=path.name):
+                self.assertNotRegex(path.read_text(encoding="utf-8"), bad)
+
+    def test_no_third_party_qr_service(self):
+        files = list(ROOT.glob("*.html")) + list((ROOT / "assets").glob("*.js"))
+        for path in files:
+            with self.subTest(path=path.name):
+                self.assertNotIn("api.qrserver.com", path.read_text(encoding="utf-8"))
+
+    def test_legal_and_delivery_pages_exist(self):
+        for name in (
+            "rekvizitai.html",
+            "taisykles.html",
+            "grazinimas.html",
+            "pranesti.html",
+            "prieinamumas.html",
+            "apmokejimas.html",
+        ):
+            with self.subTest(page=name):
+                self.assertTrue((ROOT / name).is_file())
+
+    def test_supabase_auth_and_public_profiles_are_reachable(self):
+        with self.supabase_request("/auth/v1/settings") as response:
+            self.assertEqual(response.status, 200)
+            self.assertIsInstance(json.loads(response.read().decode("utf-8")), dict)
+
+        with self.supabase_request("/rest/v1/profiliai?select=id&aktyvus=eq.true&limit=1") as response:
+            self.assertIn(response.status, (200, 206))
+            self.assertIsInstance(json.loads(response.read().decode("utf-8")), list)
+
+    def test_private_rows_are_not_visible_anonymously(self):
+        with self.supabase_request(
+            "/rest/v1/profiliai?select=id&aktyvus=eq.false&limit=1"
+        ) as response:
+            self.assertEqual(json.loads(response.read().decode("utf-8")), [])
+
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.supabase_request("/rest/v1/uzsakymai?select=id&limit=1")
+        self.assertIn(error.exception.code, (401, 403))
+
+        for table in ("atsisakymai", "turinio_pranesimai"):
+            with self.subTest(table=table):
+                with self.assertRaises(urllib.error.HTTPError) as private_error:
+                    self.supabase_request("/rest/v1/{0}?select=id&limit=1".format(table))
+                self.assertIn(private_error.exception.code, (401, 403))
+
+    def test_internal_qr_function_returns_svg(self):
+        value = urllib.parse.quote(
+            "https://example.com/sablonas-viskas.html?slug=qa-test",
+            safe="",
+        )
+        with urllib.request.urlopen(
+            self.supabase_url + "/functions/v1/qr-code?data=" + value,
+            timeout=20,
+        ) as response:
+            self.assertEqual(response.status, 200)
+            self.assertIn("image/svg+xml", response.headers.get("Content-Type", ""))
+            self.assertIn(b"<svg", response.read(500))
+
+    def test_parcel_locker_function_returns_lithuanian_locations(self):
+        with urllib.request.urlopen(
+            self.supabase_url + "/functions/v1/parcel-lockers?carrier=omniva",
+            timeout=25,
+        ) as response:
+            self.assertEqual(response.status, 200)
+            data = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(data.get("carrier"), "omniva")
+            self.assertGreater(len(data.get("lockers", [])), 10)
+            self.assertNotIn("recipient_email", data)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

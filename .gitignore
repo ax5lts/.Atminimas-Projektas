@@ -1,0 +1,10 @@
+gemini-code*.env
+.env
+.env.*
+!.env.example
+.codex-qa/
+.cursor/
+.vscode/
+.net bankas/
+__pycache__/
+*.py[cod]

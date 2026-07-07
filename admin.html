@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260706-1">
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="Atminimas">
+        <span class="brand__mark">A</span>
+        <span class="brand__name">Atminimas</span>
+      </a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="index.html">Pradžia</a>
+        <a href="parduotuve.html">Parduotuvė</a>
+        <a href="vartotojas.html">Klientas</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <section class="client-access" aria-labelledby="admin-title">
+      <div class="client-access__intro">
+        <p class="eyebrow">Admin panelė</p>
+        <h1 id="admin-title">Atminimo puslapių valdymas</h1>
+        <p>Admin mato sukurtus puslapius, užsakymus, būsenas, apmokėjimą ir gali įjungti arba paslėpti viešą rodymą.</p>
+      </div>
+
+      <form class="auth-form" id="admin-auth-form">
+        <div class="form-grid">
+          <label>El. paštas
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+          <label>Slaptažodis
+            <input type="password" name="password" autocomplete="current-password" minlength="12" required>
+          </label>
+        </div>
+        <div class="actions">
+          <button class="button" type="submit">Prisijungti kaip admin</button>
+          <button class="button button--ghost" type="button" id="admin-logout" hidden>Atsijungti</button>
+        </div>
+        <p class="form-status" id="admin-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="admin-panel" id="admin-shipments" hidden aria-labelledby="shipments-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Pristatymas</p><h2 id="shipments-title">Siuntimų sąrašas</h2></div><button class="button button--ghost" id="shipments-refresh" type="button">Atnaujinti</button></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užsakymas / gavėjas</th><th>Paštomatas</th><th>Būsena</th><th>Sekimas</th><th>Veiksmai</th></tr></thead><tbody id="shipment-rows"></tbody></table></div>
+    </section>
+
+    <section class="admin-panel" id="admin-legal-requests" hidden aria-labelledby="legal-requests-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Prašymai</p><h2 id="legal-requests-title">Atsisakymai ir turinio pranešimai</h2></div><button class="button button--ghost" id="legal-requests-refresh" type="button">Atnaujinti</button></div>
+      <h3>Sutarties atsisakymai</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Numeris / kontaktas</th><th>Užsakymas</th><th>Būsena ir sprendimas</th><th>Veiksmai</th></tr></thead><tbody id="withdrawal-rows"></tbody></table></div>
+      <h3>Turinio pranešimai</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Numeris / kontaktas</th><th>Turinys ir pagrindas</th><th>Būsena ir sprendimas</th><th>Veiksmai</th></tr></thead><tbody id="content-report-rows"></tbody></table></div>
+    </section>
+
+    <section class="admin-panel" id="admin-panel" hidden>
+      <div class="admin-toolbar">
+        <label>Filtras
+          <input type="search" id="admin-search" placeholder="vardas, pavardė, slug, būsena">
+        </label>
+        <button class="button button--ghost" id="admin-refresh" type="button">Atnaujinti</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Puslapis</th>
+              <th>Datos</th>
+              <th>Būsena</th>
+              <th>Veiksmai</th>
+            </tr>
+          </thead>
+          <tbody id="admin-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>Atminimas</span>
+      <span class="site-footer__support">Jei puslapis neveikia arba reikia pagalbos, susisiekite su mumis.</span>
+      <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="pranesti.html">Pranešti apie turinį</a></nav>
+    </div>
+  </footer>
+</div>
+
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/admin.js?v=20260707-1"></script>
+</body>
+</html>
+
+
+
+
+
