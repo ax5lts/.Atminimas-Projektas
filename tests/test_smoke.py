@@ -476,6 +476,20 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("revoke delete on table public.profiliai from anon, authenticated", migration.lower())
         self.assertIn("owner_id = (select auth.uid())::text", migration)
 
+    def test_password_recovery_uses_live_site_instead_of_localhost(self):
+        page = (ROOT / "slaptazodis.html").read_text(encoding="utf-8")
+        script = (ROOT / "assets" / "password-reset.js").read_text(encoding="utf-8")
+        login = (ROOT / "prisijungti.html").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn("Pamiršau slaptažodį", login)
+        self.assertIn('id="password-request-form"', page)
+        self.assertIn('id="password-update-form"', page)
+        self.assertIn('/recover?redirect_to=', script)
+        self.assertIn('method: "PUT"', script)
+        self.assertIn('Authorization: "Bearer " + accessToken', script)
+        self.assertIn('site_url = "https://ax5lts.github.io/.Atminimas-Projektas/"', config)
+        self.assertNotIn('site_url = "http://127.0.0.1:3000"', config)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
