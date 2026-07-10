@@ -25,6 +25,9 @@
   var colorWheelThumb = document.getElementById("editor-color-wheel-thumb");
   var colorBrightness = document.getElementById("editor-color-brightness");
   var colorCurrent = document.getElementById("editor-color-current");
+  var fontFamilyInput = document.getElementById("editor-font-family");
+  var fontSizeInput = document.getElementById("editor-font-size");
+  var fontSizeValue = document.getElementById("editor-font-size-value");
   var photoFileList = document.getElementById("editor-photo-file-list");
   var MAX_PHOTOS = 8;
   var MAX_STORY_WORDS = 1000;
@@ -59,6 +62,14 @@
   var selectedHue = 0;
   var selectedSaturation = 0;
   var selectedBrightness = 100;
+  var FONT_STACKS = {
+    georgia: 'Georgia, "Times New Roman", serif',
+    arial: 'Arial, Helvetica, sans-serif',
+    trebuchet: '"Trebuchet MS", Arial, sans-serif',
+    verdana: 'Verdana, Geneva, sans-serif',
+    times: '"Times New Roman", Times, serif',
+    courier: '"Courier New", Courier, monospace'
+  };
 
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
@@ -227,6 +238,19 @@
     return Object.fromEntries(new FormData(form).entries());
   }
 
+  function typographyState() {
+    var family = fontFamilyInput && FONT_STACKS[fontFamilyInput.value] ? fontFamilyInput.value : "georgia";
+    var size = clamp(Number(fontSizeInput && fontSizeInput.value) || 18, 14, 28);
+    return { family: family, size: size };
+  }
+
+  function applyTypography() {
+    var typography = typographyState();
+    stage.style.setProperty("--memorial-font-family", FONT_STACKS[typography.family]);
+    stage.style.setProperty("--memorial-font-size", typography.size + "px");
+    if (fontSizeValue) fontSizeValue.textContent = typography.size + " px";
+  }
+
   function openDraftDb() {
     return new Promise(function (resolve, reject) {
       if (!window.indexedDB) return resolve(null);
@@ -322,6 +346,15 @@
       if (backgroundInput) backgroundInput.value = layout.__stage.background;
       if (backgroundValue) backgroundValue.textContent = layout.__stage.background;
     }
+    if (layout.__stage) {
+      if (fontFamilyInput && FONT_STACKS[layout.__stage.fontFamily]) {
+        fontFamilyInput.value = layout.__stage.fontFamily;
+      }
+      if (fontSizeInput) {
+        fontSizeInput.value = String(clamp(Number(layout.__stage.fontSize) || 18, 14, 28));
+      }
+      applyTypography();
+    }
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       var saved = layout[piece.dataset.piece];
       if (!saved) return;
@@ -344,7 +377,9 @@
       mirties_data: form.elements.mirties_data.value || "",
       epitafija: form.elements.epitafija.value || "",
       tekstas_200: form.elements.tekstas_200.value || "",
-      fono_spalva: form.elements.fono_spalva.value || "#ffffff"
+      fono_spalva: form.elements.fono_spalva.value || "#ffffff",
+      font_family: form.elements.font_family.value || "georgia",
+      font_size: form.elements.font_size.value || "18"
     };
     for (var i = 1; i <= MAX_PHOTOS; i++) {
       state["photo_caption_" + i] = form.elements["photo_caption_" + i].value || "";
@@ -497,13 +532,14 @@
     });
     var background = data.fono_spalva || "#ffffff";
     setBackgroundColor(background, true, false);
+    applyTypography();
     fitName();
     wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių";
     wordCountEl.classList.toggle("is-limit", count >= MAX_STORY_WORDS);
   }
 
   function fitName() {
-    var size = 52;
+    var size = clamp(typographyState().size * 3, 36, 72);
     previewName.style.fontSize = size + "px";
     while (size > 20 && previewName.scrollWidth > previewName.clientWidth) {
       size -= 2;
@@ -896,8 +932,13 @@
   }
 
   function collectLayout() {
+    var typography = typographyState();
     var layout = {
-      __stage: { background: backgroundInput ? backgroundInput.value : "#ffffff" }
+      __stage: {
+        background: backgroundInput ? backgroundInput.value : "#ffffff",
+        fontFamily: typography.family,
+        fontSize: typography.size
+      }
     };
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       var img = piece.querySelector && piece.querySelector("img");

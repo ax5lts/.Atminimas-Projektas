@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-14">
+<link rel="stylesheet" href="css/styles.css?v=20260708-1">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -67,6 +67,26 @@
           <textarea name="tekstas_200" rows="12" maxlength="10000" placeholder="Iki 1000 žodžių. Galite aprašyti gyvenimo kelią, šeimą, darbus, pomėgius ir svarbiausius prisiminimus."></textarea>
         </label>
         <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių</p>
+
+        <fieldset class="editor-typography" id="editor-section-typography">
+          <legend>Teksto stilius</legend>
+          <label>
+            Šrifto tipas
+            <select name="font_family" id="editor-font-family">
+              <option value="georgia">Georgia – klasikinis</option>
+              <option value="arial">Arial – aiškus</option>
+              <option value="trebuchet">Trebuchet – švelnus</option>
+              <option value="verdana">Verdana – lengvai skaitomas</option>
+              <option value="times">Times New Roman – tradicinis</option>
+              <option value="courier">Courier New – rašomosios mašinėlės</option>
+            </select>
+          </label>
+          <label class="editor-font-size">
+            <span>Raidžių dydis: <output id="editor-font-size-value" for="editor-font-size">18 px</output></span>
+            <input type="range" name="font_size" id="editor-font-size" min="14" max="28" step="1" value="18">
+          </label>
+          <p class="editor-field-help">Pasirinkimas taikomas vardui, datoms, epitafijai ir gyvenimo istorijai.</p>
+        </fieldset>
 
         <fieldset class="editor-color-picker" id="editor-section-colors">
           <legend>Puslapio fonas</legend>
@@ -260,7 +280,7 @@
         <dt>Nuotraukos</dt>
         <dd>Iki 8 nuotraukų su matomais užrašais ir prieinamumo apibūdinimais.</dd>
         <dt>Išdėstymas</dt>
-        <dd>Išsaugomos jūsų pasirinktos tekstų, nuotraukų ir vaizdo įrašo vietos.</dd>
+        <dd>Išsaugomos jūsų pasirinktos tekstų, nuotraukų ir vaizdo įrašo vietos, fonas ir šriftas.</dd>
         <dt>Viešumas</dt>
         <dd>Naujas puslapis išsaugomas neviešas. Jį atskirai paskelbsite kliento zonoje.</dd>
       </dl>
@@ -279,7 +299,7 @@
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260707-3"></script>
-<script src="assets/redaktorius.js?v=20260707-5"></script>
+<script src="assets/redaktorius.js?v=20260708-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>

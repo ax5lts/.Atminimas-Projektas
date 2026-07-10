@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-11">
+<link rel="stylesheet" href="css/styles.css?v=20260708-1">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -78,6 +78,15 @@
     "photo-3": { left: "37%", top: "60%", width: "26%", heightPct: "18" },
     "photo-4": { left: "66%", top: "60%", width: "26%", heightPct: "18" },
     video: { left: "8%", top: "75%", width: "84%", heightPct: "47" }
+  };
+
+  var FONT_STACKS = {
+    georgia: 'Georgia, "Times New Roman", serif',
+    arial: 'Arial, Helvetica, sans-serif',
+    trebuchet: '"Trebuchet MS", Arial, sans-serif',
+    verdana: 'Verdana, Geneva, sans-serif',
+    times: '"Times New Roman", Times, serif',
+    courier: '"Courier New", Courier, monospace'
   };
 
   var galleryIndex = 0;
@@ -163,8 +172,8 @@
     });
   }
 
-  function fitBuilderName(title) {
-    var size = 58;
+  function fitBuilderName(title, baseSize) {
+    var size = Math.max(36, Math.min(72, (Number(baseSize) || 18) * 3));
     title.style.fontSize = size + "px";
     while (size > 20 && title.scrollWidth > title.clientWidth) {
       size -= 2;
@@ -199,9 +208,11 @@
     return wrap;
   }
 
-  function buildStorySection(text) {
+  function buildStorySection(text, typography) {
     var section = document.createElement("section");
     section.className = "memorial-story";
+    section.style.setProperty("--memorial-font-family", typography.stack);
+    section.style.setProperty("--memorial-font-size", typography.size + "px");
     var heading = document.createElement("h2");
     heading.textContent = "Gyvenimo istorija";
     var content = document.createElement("div");
@@ -254,6 +265,12 @@
     view.id = "builder-view";
     view.className = "builder-view";
     view.style.backgroundColor = (layout.__stage && layout.__stage.background) || "#ffffff";
+    var stageStyle = layout.__stage || {};
+    var fontKey = FONT_STACKS[stageStyle.fontFamily] ? stageStyle.fontFamily : "georgia";
+    var fontSize = Math.max(14, Math.min(28, Number(stageStyle.fontSize) || 18));
+    var typography = { stack: FONT_STACKS[fontKey], size: fontSize };
+    view.style.setProperty("--memorial-font-family", typography.stack);
+    view.style.setProperty("--memorial-font-size", typography.size + "px");
 
     var headerSaved = mergedPiece(layout, "header");
     var header = document.createElement("header");
@@ -316,9 +333,9 @@
 
     var contentRoot = document.getElementById("turinys");
     contentRoot.appendChild(view);
-    if (storyWordCount > 80) contentRoot.appendChild(buildStorySection(fullStory));
+    if (storyWordCount > 80) contentRoot.appendChild(buildStorySection(fullStory, typography));
     if (allImages.length > 4) contentRoot.appendChild(buildStoryGallery(allImages.slice(4), 4, allImages));
-    fitBuilderName(title);
+    fitBuilderName(title, typography.size);
     applyResponsiveBuilderHeights(view);
     window.addEventListener("resize", function () { applyResponsiveBuilderHeights(view); });
     bindBuilderGallery(view, allImages);

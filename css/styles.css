@@ -660,7 +660,8 @@ video {
 }
 
 .editor-form input,
-.editor-form textarea {
+.editor-form textarea,
+.editor-form select {
   width: 100%;
   min-height: 42px;
   border: 1px solid #69717c;
@@ -669,6 +670,42 @@ video {
   background: #fff;
   color: #202020;
   font: inherit;
+}
+
+.editor-typography {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #69717c;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.editor-typography legend {
+  padding: 0 6px;
+  color: #f2f3f5;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.editor-font-size span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-font-size output {
+  color: #bce4b9;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-form .editor-font-size input[type="range"] {
+  min-height: 44px;
+  padding: 0;
+  accent-color: #77a46f;
+  cursor: pointer;
 }
 
 .editor-color-row {
@@ -832,6 +869,7 @@ video {
 }
 
 #editor-section-text,
+#editor-section-typography,
 #editor-section-colors,
 #editor-section-files,
 #editor-section-positions,
@@ -920,7 +958,8 @@ video {
   background: #ffffff;
   color: #202020;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.36);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--memorial-font-family, Georgia, "Times New Roman", serif);
+  font-size: var(--memorial-font-size, 18px);
 }
 
 .editor-piece {
@@ -950,13 +989,14 @@ video {
 .editor-phone-preview p {
   margin: 0 0 14px;
   color: #536463;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: inherit;
+  font-size: 0.85em;
 }
 
 .editor-phone-preview header blockquote {
   margin: 0;
   color: #334241;
-  font-size: 1.05rem;
+  font-size: 0.9em;
   line-height: 1.35;
 }
 
@@ -971,7 +1011,7 @@ video {
 .editor-phone-preview > blockquote {
   margin: 0;
   color: #334241;
-  font-size: 1.2rem;
+  font-size: 1em;
   line-height: 1.45;
   text-align: center;
   white-space: normal;
@@ -2434,7 +2474,8 @@ video {
   margin: 0 auto;
   overflow: hidden;
   background: #ffffff;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--memorial-font-family, Georgia, "Times New Roman", serif);
+  font-size: var(--memorial-font-size, 18px);
 }
 
 .builder-piece {
@@ -2457,20 +2498,21 @@ video {
 .builder-header p {
   margin: 0;
   color: #536463;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: inherit;
+  font-size: 0.85em;
 }
 
 .builder-epitaph {
   margin: 0.55rem 0 0;
   color: #334241;
-  font-size: clamp(0.95rem, 3vw, 1.1rem);
+  font-size: 0.9em;
   line-height: 1.4;
 }
 
 .builder-text {
   margin: 0;
   color: #334241;
-  font-size: clamp(1rem, 3.4vw, 1.25rem);
+  font-size: 1em;
   line-height: 1.45;
   text-align: center;
   white-space: normal;
@@ -2532,9 +2574,14 @@ video {
   font-size: clamp(1.5rem, 5vw, 2.2rem);
 }
 
+.memorial-story {
+  font-family: var(--memorial-font-family, Georgia, "Times New Roman", serif);
+  font-size: var(--memorial-font-size, 18px);
+}
+
 .memorial-story__text {
   color: #334241;
-  font-size: 1.05rem;
+  font-size: 1em;
   line-height: 1.75;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -448,6 +448,20 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("@media (pointer: coarse)", styles)
         self.assertIn('"canvas"', styles)
 
+    def test_editor_saves_font_family_and_size_in_layout(self):
+        page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        template = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('id="editor-font-family"', page)
+        self.assertIn('id="editor-font-size"', page)
+        self.assertIn("fonas ir šriftas", page)
+        self.assertIn("fontFamily: typography.family", editor)
+        self.assertIn("fontSize: typography.size", editor)
+        self.assertIn("FONT_STACKS[stageStyle.fontFamily]", template)
+        self.assertIn("--memorial-font-family", styles)
+        self.assertIn("--memorial-font-size", styles)
+
     def test_owner_can_edit_and_safely_delete_memorial_page(self):
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
