@@ -17,7 +17,7 @@
   }
 
   function productName(value) {
-    return value === "asa" ? "ASA 3D ženkliukas" : "Metalo ženkliukas";
+    return value === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
   }
 
   var chosenProduct = selectedProduct();
@@ -151,7 +151,7 @@
 
     var rows = await res.json();
     if (!rows.length) {
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo QR ženkliuko užsakymo arba redaktoriaus.</p><a class='button' href='parduotuve.html'>Užsakyti</a></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo graviruotos QR atminimo lentelės užsakymo.</p><a class='button' href='redaktorius.html?product=metal'>Užsakyti</a></div>";
       return;
     }
 
@@ -221,7 +221,7 @@
     }
     var approvalButton = event.target.closest("button[data-approve-order]");
     if (approvalButton) {
-      if (!window.confirm("Patvirtinate, kad atminimo puslapio informacija ir QR nuoroda teisingi ir ženkliuką galima gaminti?")) return;
+      if (!window.confirm("Patvirtinate, kad atminimo puslapio informacija ir QR nuoroda teisingi ir lentelę galima gaminti?")) return;
       approvalButton.disabled = true;
       statusEl.textContent = "Patvirtinimas saugomas...";
       try {

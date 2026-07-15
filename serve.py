@@ -1,3 +1,5 @@
+import argparse
+import socket
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
@@ -59,6 +61,18 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("127.0.0.1", 5000), NoCacheHandler)
-    print("Atminimas: http://localhost:5000")
+    parser = argparse.ArgumentParser(description="Paleisti Atminimas vietinį serverį.")
+    parser.add_argument("--lan", action="store_true", help="Leisti peržiūrą kituose to paties vietinio tinklo įrenginiuose.")
+    args = parser.parse_args()
+    host = "0.0.0.0" if args.lan else "127.0.0.1"
+    server = ThreadingHTTPServer((host, 5000), NoCacheHandler)
+    if args.lan:
+        try:
+            lan_ip = socket.gethostbyname(socket.gethostname())
+        except OSError:
+            lan_ip = "KOMPIUTERIO-IP"
+        print("Atminimas telefone: http://{0}:5000".format(lan_ip))
+        print("Veikia tik kol šis langas atidarytas. Baigti: Ctrl+C")
+    else:
+        print("Atminimas: http://localhost:5000")
     server.serve_forever()

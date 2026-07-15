@@ -73,8 +73,8 @@
           <label>El. paštas<input type="email" name="email" maxlength="254"></label>
           <label>Telefonas<input name="phone" maxlength="40"></label>
           <label>Dokumento tipas<select name="invoice_document_type"><option value="payment_confirmation">Mokėjimo patvirtinimas</option><option value="invoice">Sąskaita faktūra</option><option value="vat_invoice">PVM sąskaita faktūra</option></select></label>
-          <label>Metalo ženkliukas, EUR<input type="number" name="metal_price" min="0" step="0.01"></label>
-          <label>ASA ženkliukas, EUR<input type="number" name="asa_price" min="0" step="0.01"></label>
+          <label>Metalo QR atminimo lentelė, EUR<input type="number" name="metal_price" min="0" step="0.01"></label>
+          <label>ASA QR atminimo lentelė, EUR<input type="number" name="asa_price" min="0" step="0.01"></label>
           <label>Omniva siuntimas, EUR<input type="number" name="omniva_price" min="0" step="0.01"></label>
           <label>LP Express siuntimas, EUR<input type="number" name="lp_express_price" min="0" step="0.01"></label>
           <label>DPD siuntimas, EUR<input type="number" name="dpd_price" min="0" step="0.01"></label>
@@ -149,6 +149,27 @@
         </table>
       </div>
     </section>
+
+    <section class="admin-panel" id="grave-admin-panel" hidden aria-labelledby="grave-admin-title">
+      <div><p class="eyebrow">Kapaviečių duomenys</p><h2 id="grave-admin-title">Pridėti arba redaguoti kapavietę</h2><p>Prieš paskelbiant kiekvieną įrašą patikrinkite.</p></div>
+      <form id="grave-admin-form" class="grave-admin-form">
+        <input type="hidden" name="id">
+        <div class="form-grid"><label>Vardas<input name="vardas" maxlength="100" required></label><label>Pavardė<input name="pavarde" maxlength="120" required></label></div>
+        <div class="form-grid"><label>Gimimo data<input name="gimimo_data" type="date"></label><label>Mirties data<input name="mirties_data" type="date"></label></div>
+        <div class="form-grid"><label>Gimimo metai, jei data nežinoma<input name="gimimo_metai" type="number" min="1000" max="2200"></label><label>Mirties metai, jei data nežinoma<input name="mirties_metai" type="number" min="1000" max="2200"></label></div>
+        <div class="form-grid"><label>Kapinių pavadinimas<input name="kapiniu_pavadinimas" maxlength="200" required></label><label>Miestas<input name="miestas" maxlength="120"></label></div>
+        <label>Adresas<input name="adresas" maxlength="500"></label>
+        <div class="form-grid grave-admin-form__three"><label>Sektorius<input name="sektorius" maxlength="80"></label><label>Eilė<input name="eile" maxlength="80"></label><label>Kapo numeris<input name="kapo_numeris" maxlength="80"></label></div>
+        <div class="form-grid"><label>Google Maps platuma<input name="platuma" type="number" step="0.000001" min="-90" max="90" placeholder="54.687157"></label><label>Google Maps ilguma<input name="ilguma" type="number" step="0.000001" min="-180" max="180" placeholder="25.279652"></label></div>
+        <label>Vietos aprašymas<textarea name="vietos_aprasymas" rows="3" maxlength="1500"></textarea></label>
+        <div class="form-grid"><label>Nuotrauka<input name="nuotrauka" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Būsena<select name="statusas"><option value="juodrastis">Juodraštis</option><option value="paskelbtas">Paskelbtas</option><option value="pasleptas">Paslėptas</option></select></label></div>
+        <div class="form-grid"><label>Duomenų šaltinis<input name="duomenu_saltinis" maxlength="500"></label><label>Administratoriaus pastabos<textarea name="admin_pastabos" rows="2" maxlength="2000"></textarea></label></div>
+        <div class="actions"><button class="button" type="submit">Išsaugoti kapavietę</button><button class="button button--ghost" id="grave-form-reset" type="button">Naujas įrašas</button></div>
+        <p class="form-status" id="grave-admin-status" role="status" aria-live="polite"></p>
+      </form>
+      <div class="admin-toolbar"><label>Ieškoti įrašuose<input type="search" id="grave-admin-search" placeholder="Vardas, pavardė, kapinės"></label><button class="button button--ghost" id="grave-admin-refresh" type="button">Atnaujinti</button></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asmuo</th><th>Kapavietė</th><th>Būsena</th><th>Veiksmai</th></tr></thead><tbody id="grave-admin-rows"></tbody></table></div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -162,7 +183,8 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
-<script src="assets/admin.js?v=20260707-5"></script>
+<script src="assets/admin.js?v=20260715-1"></script>
+<script src="assets/graves-admin.js?v=20260712-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>

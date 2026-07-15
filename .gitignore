@@ -3,8 +3,12 @@ gemini-code*.env
 .env.*
 !.env.example
 .codex-qa/
+.codex-remote-attachments/
 .cursor/
 .vscode/
 .net bankas/
 __pycache__/
+data-imports/
+*.pyc
+.env
 *.py[cod]

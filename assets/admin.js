@@ -116,7 +116,7 @@
   }
 
   function productName(value) {
-    return value === "asa" ? "ASA 3D ženkliukas" : "Metalo ženkliukas";
+    return value === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
   }
 
   function updateOverview() {
@@ -168,6 +168,7 @@
   function render() {
     var q = (searchInput.value || "").toLowerCase().trim();
     var rows = cache.filter(function (row) {
+      if (row.statusas === "atsaukta") return false;
       var text = [row.id, row.vardas, row.pavarde, row.statusas, row.epitafija].join(" ").toLowerCase();
       return !q || text.indexOf(q) !== -1;
     });
@@ -386,12 +387,15 @@
   }
 
   function renderShipments() {
-    shipmentRows.innerHTML = shipmentCache.map(function (order) {
+    var visibleShipments = shipmentCache.filter(function (order) {
+      return order.shipping_status !== "atšaukta";
+    });
+    shipmentRows.innerHTML = visibleShipments.map(function (order) {
       var recipient = order.recipient_name || "Pristatymo duomenų nėra";
       var destination = [order.carrier, order.city, order.parcel_terminal].filter(Boolean).join(" · ") || "--";
       return (
         "<tr data-shipment-id='" + html(order.id) + "'>" +
-          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(order.product_type === "asa" ? "ASA 3D ženkliukas" : "Metalo ženkliukas") + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
+          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(productName(order.product_type)) + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
           "<td>" + html(destination) + "</td>" +
           "<td><select data-shipping-status>" + ["laukiama_duomenu", "paruošti", "išsiųsta", "pristatyta", "atšaukta"].map(function (value) {
             return "<option value='" + value + "' " + ((order.shipping_status || "laukiama_duomenu") === value ? "selected" : "") + ">" + value + "</option>";
@@ -496,6 +500,7 @@
     adminEmail.textContent = me.email || "";
     overview.hidden = false;
     panel.hidden = false;
+    window.dispatchEvent(new CustomEvent("atminimas:admin-ready"));
     setStatus("Įkeliami administravimo duomenys...");
     cache = await supabaseJson(restUrl(
       "profiliai",
@@ -515,13 +520,20 @@
 
   async function saveRow(id, tr) {
     var statusas = tr.querySelector("[data-field='statusas']").value;
-    await supabaseJson(restUrl("profiliai", "id=eq." + encodeURIComponent(id)), {
+    var saved = await supabaseJson(restUrl("profiliai", "id=eq." + encodeURIComponent(id) + "&select=id,statusas"), {
       method: "PATCH",
-      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=representation" }),
       body: JSON.stringify({ statusas: statusas })
     });
-    setStatus("Išsaugota: " + id);
-    await loadAdmin();
+    if (!saved || !saved.length || saved[0].statusas !== statusas) {
+      throw new Error("Būsena duomenų bazėje nebuvo pakeista. Atnaujinkite puslapį ir bandykite dar kartą.");
+    }
+    cache = cache.map(function (row) {
+      if (row.id === id) row.statusas = saved[0].statusas;
+      return row;
+    });
+    render();
+    setStatus(statusas === "atsaukta" ? "Įrašas atšauktas ir paslėptas." : "Išsaugota: " + id);
   }
 
   async function saveShipment(id, tr) {
@@ -532,8 +544,8 @@
       headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
       body: JSON.stringify({ order_id: id, new_tracking_number: trackingNumber, new_shipping_status: shippingStatus })
     });
-    setStatus("Siunta atnaujinta: " + id);
     await loadShipments();
+    setStatus(shippingStatus === "atšaukta" ? "Siunta atšaukta ir paslėpta." : "Siunta išsaugota: " + id);
   }
 
   async function saveServiceRequest(id, tr) {
@@ -590,8 +602,10 @@
     var button = event.target.closest("[data-save]");
     if (!button) return;
     var tr = button.closest("tr");
+    button.disabled = true;
     saveRow(button.dataset.save, tr).catch(function (err) {
       setStatus(err.message || "Nepavyko išsaugoti.");
+      button.disabled = false;
     });
   });
 

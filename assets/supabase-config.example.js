@@ -4,6 +4,9 @@ window.ATMINIMAS_CONFIG = {
   SUPABASE_URL: "https://tpwrkgdmtucecqxbpwwf.supabase.co",
   SUPABASE_ANON_KEY: "TAVO_SUPABASE_ANON_KEY",
 
+  // Neprivaloma: tik jei kapinių paieškos API talpinamas ne šiame Supabase projekte.
+  CEMETERY_SEARCH_API_URL: "",
+
   PUBLIC_SITE_URL: "",
   CLOUDINARY_CLOUD_NAME: "ax5lts",
 

@@ -17,6 +17,7 @@
         <span class="brand__name">Atminimas</span>
       </a>
       <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="kapu-ieskojimas.html">Kapų paieška</a>
         <a href="prisijungti.html">Prisijungti</a>
         <a class="button site-nav__cta" href="registruotis.html">Registruotis</a>
       </nav>
@@ -42,6 +43,23 @@
       </a>
     </section>
 
+    <section class="home-section home-grave-search" aria-labelledby="home-grave-title">
+      <div class="home-grave-search__copy">
+        <p class="eyebrow">Kapų ieškojimas</p>
+        <h2 id="home-grave-title">Raskite artimojo kapavietę</h2>
+        <p>Ieškokite pagal vardą ir pavardę. Rezultatuose matysite kapines, tikslesnę vietą ir koordinates, kai jos žinomos.</p>
+      </div>
+      <form class="grave-search-form" data-grave-search-form data-limit="3">
+        <label class="visually-hidden" for="home-grave-query">Vardas ir pavardė</label>
+        <input id="home-grave-query" name="q" type="search" minlength="2" maxlength="220" autocomplete="off" placeholder="Vardas ir pavardė" required>
+        <button class="button" type="submit">Ieškoti</button>
+      </form>
+      <p class="form-status" data-grave-status role="status" aria-live="polite"></p>
+      <div class="grave-result-grid grave-result-grid--compact" data-grave-results></div>
+      <a class="text-link" href="kapu-ieskojimas.html">Atidaryti išsamią kapų paiešką →</a>
+      <p class="muted grave-source">Kapinių registro duomenų šaltinis: <a href="https://data.gov.lt/datasets/2779/?resource_version=1619" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, Valstybės duomenų agentūra. Licencija <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a>.</p>
+    </section>
+
     <section class="home-section home-section--qr" id="qr-paslauga" aria-labelledby="qr-title">
       <div class="home-hero">
         <div class="home-hero__content">
@@ -49,22 +67,22 @@
           <h2 id="qr-title">Istorija, kurią galima aplankyti</h2>
           <p>
             Sukurkite ramų, tvarkingą atminimo puslapį su nuotraukomis, vaizdo įrašu,
-            gyvenimo datomis ir epitafija. QR ženkliukas ant kapavietės leidžia artimiesiems
+            gyvenimo datomis ir epitafija. Graviruota QR atminimo lentelė ant kapavietės leidžia artimiesiems
             pasiekti istoriją telefonu.
           </p>
           <div class="actions">
-            <a class="button" href="parduotuve.html">Užsakyti QR ženkliuką</a>
+            <a class="button" href="redaktorius.html?product=metal">Užsakyti</a>
             <a class="button button--ghost" href="prisijungti.html">Jau turiu puslapį</a>
           </div>
         </div>
         <div class="home-hero__media">
-          <img src="assets/qr-lipdukas-480.webp" srcset="assets/qr-lipdukas-480.webp 480w, assets/qr-lipdukas.webp 1086w" sizes="(max-width: 760px) 88vw, 420px" width="1086" height="1448" loading="lazy" decoding="async" alt="Atminimo QR ženkliuko pavyzdys">
+          <img src="assets/qr-atminimo-lentele-480.webp" srcset="assets/qr-atminimo-lentele-480.webp 480w, assets/qr-atminimo-lentele.webp 1086w" sizes="(max-width: 760px) 88vw, 420px" width="1086" height="1448" loading="lazy" decoding="async" alt="Graviruotos QR atminimo lentelės pavyzdys">
         </div>
       </div>
 
       <div class="info-grid" aria-label="QR paslaugos dalys">
         <div class="info-box">
-          <h3>QR ženkliukas</h3>
+          <h3>Graviruota QR atminimo lentelė</h3>
           <p>Patvarus ženklas nukreipia į vieną konkretų atminimo puslapį.</p>
         </div>
         <div class="info-box">
@@ -205,6 +223,7 @@
 <script src="assets/auth.js?v=20260702-2"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
 <script src="assets/home.js?v=20260707-2"></script>
+<script src="assets/official-grave-search.js?v=20260714-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 </body>
 </html>

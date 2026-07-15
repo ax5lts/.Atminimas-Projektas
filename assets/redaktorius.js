@@ -72,7 +72,7 @@
   var productType = selectedProduct();
   if (productSummary) productSummary.textContent = editId
     ? "Redaguojamas jūsų atminimo puslapis."
-    : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Kaina kol kas –.";
+    : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "graviruota metalo QR atminimo lentelė") + (productType === "asa" ? ". Kaina bus patvirtinta." : ". Kaina – 59,00 EUR.");
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));

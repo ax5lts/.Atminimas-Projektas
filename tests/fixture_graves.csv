@@ -1,0 +1,2 @@
+_id,vda_id,savivaldybe,kapo_id,kapines,palaidotu_sk,maks_velioniu_sk,tipas,ilgis_m,plotis_m,geometrija,ar_nestandartinis_dydis,ar_kulturos_paveldas,paveldo_kodas,papildomas
+grave-1,vda-g1,Panevėžio miesto savivaldybė,SLC-1-2-3,Šilaičių kapinės,1,3,kapavietė,"2,5",1.2,POINT (2711044.76 7487943),False,False,,paliekamas raw_data

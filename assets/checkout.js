@@ -126,7 +126,7 @@
     if (!rows.length) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var order = rows[0];
     updatePayment(order);
-    orderEl.textContent = "Užsakymo numeris: " + order.id + ". Produktas: " + (order.product_type === "asa" ? "ASA 3D ženkliukas" : "metalo ženkliukas") + ". Puslapis: " + order.profilis_id + ".";
+    orderEl.textContent = "Užsakymo numeris: " + order.id + ". Produktas: " + (order.product_type === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "graviruota QR atminimo lentelė") + ". Puslapis: " + order.profilis_id + ".";
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
     });

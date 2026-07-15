@@ -111,6 +111,11 @@ class AtminimasSmokeTests(unittest.TestCase):
                 with self.subTest(header=header):
                     self.assertTrue(response.headers.get(header))
 
+    def test_server_has_opt_in_lan_preview(self):
+        server_source = (ROOT / "serve.py").read_text(encoding="utf-8")
+        self.assertIn('parser.add_argument("--lan"', server_source)
+        self.assertIn('"0.0.0.0" if args.lan', server_source)
+
     def test_no_known_mojibake_sequences(self):
         bad = re.compile(r"ā–|ā€|Ć—")
         files = list(ROOT.glob("*.html")) + list((ROOT / "assets").glob("*.js"))
@@ -230,6 +235,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         login = (ROOT / "assets" / "login.js").read_text(encoding="utf-8")
         self.assertIn("function nextPage()", login)
         self.assertRegex(login, r"\^\[a-z0-9-\]\+\\\.html")
+        self.assertIn("AtminimasAuth.isAdmin()", login)
+        self.assertIn('"admin.html" : next', login)
 
     def test_service_request_migration_has_rls_and_minimal_grants(self):
         sql = (ROOT / "supabase" / "migrations" / "20260707_service_requests.sql").read_text(encoding="utf-8")
@@ -239,14 +246,31 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("owner_id = (select auth.uid())", sql)
         self.assertNotRegex(sql.lower(), r"grant\s+[^;]*\bto\s+anon\b")
 
-    def test_shop_offers_metal_and_asa_products(self):
+    def test_shop_offers_metal_and_asa_3d_plaques(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
         self.assertIn('value="asa"', html)
+        self.assertIn('src="assets/qr-atminimo-lentele-480.webp"', html)
         self.assertIn('src="assets/qr-asa-480.webp"', html)
-        self.assertIn("ASA 3D ženkliukas", html)
+        self.assertIn("Graviruota QR atminimo lentelė", html)
+        self.assertIn("ASA 3D spausdinta QR atminimo lentelė", html)
+        self.assertLess((ROOT / "assets" / "qr-atminimo-lentele-480.webp").stat().st_size, 30_000)
+        self.assertLess((ROOT / "assets" / "qr-atminimo-lentele.webp").stat().st_size, 100_000)
         self.assertLess((ROOT / "assets" / "qr-asa-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-asa.webp").stat().st_size, 100_000)
+
+    def test_public_product_copy_has_no_sticker_variant(self):
+        public_files = list(ROOT.glob("*.html")) + list((ROOT / "assets").glob("*.js"))
+        forbidden = re.compile(r"lipduk|sticker|ženkliuk", re.I)
+        for path in public_files:
+            with self.subTest(path=path.name):
+                self.assertNotRegex(path.read_text(encoding="utf-8"), forbidden)
+
+    def test_order_buttons_open_the_metal_plaque_form(self):
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        self.assertIn('<a class="button" href="redaktorius.html?product=metal">Užsakyti</a>', home)
+        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Užsakyti</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -266,12 +290,12 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("atminimas.selected-product.v1", shop)
         self.assertIn("redaktorius.html?product=", user)
         self.assertIn("data.product_type = productType", editor)
-        self.assertIn("product_type: input && input.product_type", api)
+        self.assertIn('input.product_type === "asa" ? "asa" : "metal"', api)
         self.assertIn("product_type", admin)
 
-        sql = (ROOT / "supabase" / "migrations" / "20260707_order_product_type.sql").read_text(encoding="utf-8")
-        self.assertIn("product_type text not null default 'metal'", sql.lower())
+        sql = (ROOT / "supabase" / "migrations" / "20260713224500_restore_asa_3d_product.sql").read_text(encoding="utf-8")
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
+        self.assertIn("asa 3d spausdinta qr atminimo lentelė", sql.lower())
 
     def test_admin_has_separate_all_orders_dashboard(self):
         html = (ROOT / "admin.html").read_text(encoding="utf-8")
@@ -331,6 +355,37 @@ class AtminimasSmokeTests(unittest.TestCase):
                 continue
             html = page.read_text(encoding="utf-8")
             self.assertNotIn('href="admin.html"', html, page.name)
+
+    def test_grave_search_pages_and_admin_flow_exist(self):
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        search = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")
+        admin = (ROOT / "admin.html").read_text(encoding="utf-8")
+        search_js = (ROOT / "assets" / "grave-search.js").read_text(encoding="utf-8")
+        admin_js = (ROOT / "assets" / "graves-admin.js").read_text(encoding="utf-8")
+        main_admin_js = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        self.assertIn('data-grave-search-form data-limit="3"', home)
+        self.assertIn('data-grave-search-form', search)
+        self.assertIn('https://data.gov.lt/datasets/2779/?resource_version=1619', home)
+        self.assertIn('https://data.gov.lt/datasets/2779/', search)
+        self.assertIn('id="grave-admin-form"', admin)
+        self.assertIn('/rest/v1/rpc/ieskoti_kapavieciu', search_js)
+        self.assertIn('/storage/v1/object/kapavietes/', admin_js)
+        self.assertIn('window.dispatchEvent(new CustomEvent("atminimas:admin-ready"))', main_admin_js)
+        self.assertIn('if (row.statusas === "atsaukta") return false;', main_admin_js)
+        self.assertIn('Prefer: "return=representation"', main_admin_js)
+        self.assertIn('Įrašas atšauktas ir paslėptas.', main_admin_js)
+
+    def test_grave_migration_has_publication_rls_and_admin_writes(self):
+        sql = (ROOT / "supabase" / "migrations" / "20260712_grave_search.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("alter table public.kapavietes enable row level security", sql)
+        self.assertIn("statusas = 'paskelbtas'", sql)
+        self.assertIn("to anon, authenticated", sql)
+        self.assertIn("r.role = 'admin'", sql)
+        self.assertIn("security invoker", sql)
+        self.assertNotIn("security definer", sql)
+        advisor_sql = (ROOT / "supabase" / "migrations" / "20260712_grave_search_advisor_fixes.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("kapavietes_created_by_idx", advisor_sql)
+        self.assertIn("statusas = 'paskelbtas'", advisor_sql)
 
     def test_customer_pages_hide_internal_implementation_terms(self):
         clients = (ROOT / "klientai.html").read_text(encoding="utf-8")
@@ -413,12 +468,12 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(page=name):
                 self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
                 self.assertIn('src="assets/loading.js?v=20260707-1"', html)
-        for image in ("qr-lipdukas.webp", "qr-lipdukas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
+        for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
             with self.subTest(image=image):
                 self.assertTrue((ROOT / "assets" / image).is_file())
                 self.assertLess((ROOT / "assets" / image).stat().st_size, 100_000)
         served = (ROOT / "index.html").read_text(encoding="utf-8") + (ROOT / "parduotuve.html").read_text(encoding="utf-8") + (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
-        self.assertNotIn("qr-lipdukas.png", served)
+        self.assertNotIn("qr-atminimo-lentele.png", served)
         self.assertNotIn("qr-asa.png", served)
 
     def test_memorial_media_is_mobile_optimized(self):

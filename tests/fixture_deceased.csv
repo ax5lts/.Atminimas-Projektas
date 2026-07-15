@@ -1,0 +1,3 @@
+_id,vda_id,savivaldybe,kapo_id,vardas,pavarde,lytis,gimimo_data,mirties_data,laidojimo_data,kapo_gylis_m,nezinomas_laukas
+person-1,vda-p1,Panevėžio miesto savivaldybė,SLC-1-2-3,Živilė,Žukauskienė,M,1940,2020-11-03,2020-11-06,"1,8",raw reikšmė
+person-2,vda-p2,Panevėžio miesto savivaldybė,SLC-NOT-FOUND,Jonas,Jonaitis,V,,neteisinga,,,
