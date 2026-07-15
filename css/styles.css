@@ -2270,7 +2270,11 @@ video {
 .grave-admin-form select {
   width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; background: #fff; color: var(--ink); font: inherit;
 }
-.grave-search-filters { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.grave-search-advanced { grid-column: 1 / -1; text-align: left; }
+.grave-search-advanced summary { display: inline-flex; align-items: center; gap: 7px; color: var(--accent-dark); font-weight: 700; cursor: pointer; }
+.grave-search-advanced summary::after { content: "+"; font-size: 1.1rem; }
+.grave-search-advanced[open] summary::after { content: "−"; }
+.grave-search-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .grave-search-filters label { text-align: left; }
 .grave-admin-form { display: grid; gap: 15px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: #faf8f1; }
 .grave-admin-form label { display: grid; gap: 7px; font-weight: 700; }
