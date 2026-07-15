@@ -6,15 +6,15 @@
   var business = window.ATMINIMAS_BUSINESS || {};
   var products = {
     metal: {
-      kind: "Metalo variantas",
-      title: "QR atminimo ženkliukas",
-      image: "assets/qr-lipdukas-480.webp",
-      imageSet: "assets/qr-lipdukas-480.webp 480w, assets/qr-lipdukas.webp 1086w",
-      alt: "Metalo QR atminimo ženkliukas",
+      kind: "Patvari metalo lentelė",
+      title: "Graviruota QR atminimo lentelė",
+      image: "assets/qr-atminimo-lentele-480.webp",
+      imageSet: "assets/qr-atminimo-lentele-480.webp 480w, assets/qr-atminimo-lentele.webp 1086w",
+      alt: "Graviruota metalo QR atminimo lentelė",
       price: business.price || "–",
       vat: business.priceVat || "–",
-      copy: "Klasikinis ženkliukas su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis, vaizdo įrašu, gyvenimo datomis ir epitafija.",
-      type: "Metalo QR ženkliukas",
+      copy: "Patvari graviruota lentelė su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis, vaizdo įrašu, gyvenimo datomis ir epitafija.",
+      type: "Graviruota metalo QR atminimo lentelė",
       material: business.material || "–",
       dimensions: business.dimensions || "–",
       mounting: business.mounting || "–",
@@ -22,14 +22,14 @@
     },
     asa: {
       kind: "3D spausdintas variantas",
-      title: "ASA QR atminimo ženkliukas",
+      title: "ASA 3D spausdinta QR atminimo lentelė",
       image: "assets/qr-asa-480.webp",
       imageSet: "assets/qr-asa-480.webp 480w, assets/qr-asa.webp 1086w",
-      alt: "ASA plastiko 3D spausdintas QR atminimo ženkliukas",
+      alt: "ASA 3D spausdinta QR atminimo lentelė",
       price: "–",
       vat: "–",
-      copy: "Dvispalvis 3D spausdintas QR ženkliukas iš lauko sąlygoms tinkamo ASA plastiko. Galutiniai matmenys, tvirtinimas ir kaina bus patvirtinti po prototipo bandymų.",
-      type: "ASA 3D spausdintas QR ženkliukas",
+      copy: "Dvispalvė 3D spausdinta QR atminimo lentelė iš lauko sąlygoms tinkamo ASA plastiko nukreipia į asmeninį atminimo puslapį.",
+      type: "ASA 3D spausdinta QR atminimo lentelė",
       material: "Dviejų spalvų ASA plastikas",
       dimensions: "–",
       mounting: "–",
@@ -70,7 +70,7 @@
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
     fields.safety.textContent = product.safety;
-    createLink.href = "vartotojas.html?product=" + encodeURIComponent(safeType);
+    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType);
     sessionStorage.setItem(selectedKey, safeType);
   }
 

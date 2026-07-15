@@ -5,7 +5,7 @@ import urllib.parse
 import urllib.request
 
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory
 
 from serve import SECURITY_HEADERS, is_public_path
 
@@ -91,6 +91,51 @@ def get_atminimas_api(identifier):
         return jsonify(local_payload(str(exc)))
 
 
+@app.route("/api/deceased/search")
+def search_deceased_api():
+    try:
+        page = max(int(request.args.get("page", "1")), 1)
+        page_size = min(max(int(request.args.get("pageSize", "20")), 1), 100)
+        birth_year = optional_year(request.args.get("birthYear"))
+        death_year = optional_year(request.args.get("deathYear"))
+    except ValueError:
+        return jsonify({"error": "Neteisingi puslapiavimo arba metu parametrai."}), 400
+
+    query = (request.args.get("query") or "").strip()
+    first_name = (request.args.get("firstName") or "").strip()
+    last_name = (request.args.get("lastName") or "").strip()
+    if not any((query, first_name, last_name, birth_year, death_year,
+                request.args.get("municipality"), request.args.get("cemetery"))):
+        return jsonify({"error": "Nurodykite bent viena paieskos kriteriju."}), 400
+
+    payload = {
+        "p_query": query or None,
+        "p_first_name": first_name or None,
+        "p_last_name": last_name or None,
+        "p_birth_year": birth_year,
+        "p_death_year": death_year,
+        "p_municipality": (request.args.get("municipality") or "").strip() or None,
+        "p_cemetery": (request.args.get("cemetery") or "").strip() or None,
+        "p_page": page,
+        "p_page_size": page_size,
+    }
+    try:
+        result = cemetery_search(payload)
+    except Exception as exc:
+        app.logger.warning("Deceased search failed: %s", exc)
+        return jsonify({"error": "Paieska siuo metu nepasiekiama."}), 502
+    return jsonify(result)
+
+
+def optional_year(value):
+    if value is None or not str(value).strip():
+        return None
+    year = int(value)
+    if not 1000 <= year <= 2200:
+        raise ValueError("year")
+    return year
+
+
 def find_atminimas(identifier):
     if identifier.isdigit():
         rows = supabase_get("atminimai", {"id": "eq." + identifier, "select": "*", "limit": "1"})
@@ -126,6 +171,45 @@ def supabase_get(table, params):
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Supabase {exc.code}: {body}") from exc
+
+
+def supabase_rpc(function_name, payload):
+    url = f"{SUPABASE_URL}/rest/v1/rpc/{urllib.parse.quote(function_name)}"
+    headers = {"apikey": SUPABASE_KEY, "Accept": "application/json", "Content-Type": "application/json"}
+    if not SUPABASE_KEY.startswith("sb_publishable_"):
+        headers["Authorization"] = "Bearer " + SUPABASE_KEY
+    rpc_request = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(rpc_request, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Supabase {exc.code}: {body}") from exc
+
+
+def cemetery_search(payload):
+    """Proxy the public search through an Edge Function; no cemetery rows live in Supabase."""
+    url = os.environ.get("CEMETERY_SEARCH_API_URL") or (
+        f"{SUPABASE_URL}/functions/v1/cemetery-search"
+    )
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    if not SUPABASE_KEY.startswith("sb_publishable_"):
+        headers["Authorization"] = "Bearer " + SUPABASE_KEY
+    api_request = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(api_request, timeout=45) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Cemetery search API {exc.code}: {body}") from exc
 
 
 def local_payload(warning=None):

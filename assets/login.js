@@ -9,12 +9,21 @@
   }
 
   var next = nextPage();
+
+  async function destination() {
+    return await AtminimasAuth.isAdmin() ? "admin.html" : next;
+  }
   document.querySelectorAll("a[href='registruotis.html']").forEach(function (link) {
     if (next !== "vartotojas.html") link.href = "registruotis.html?next=" + encodeURIComponent(next);
   });
 
   if (AtminimasAuth.accessToken()) {
-    window.location.replace(next);
+    destination().then(function (page) {
+      window.location.replace(page);
+    }).catch(function () {
+      AtminimasAuth.signOut();
+      status.textContent = "Sesija nebegalioja. Prisijunkite dar kartą.";
+    });
     return;
   }
 
@@ -26,7 +35,7 @@
     status.textContent = "Jungiamasi...";
     try {
       await AtminimasAuth.signIn(data.email, data.password);
-      window.location.href = next;
+      window.location.href = await destination();
     } catch (error) {
       status.textContent = error.message || "Nepavyko prisijungti.";
       button.disabled = false;

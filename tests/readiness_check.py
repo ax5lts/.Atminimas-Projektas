@@ -24,10 +24,10 @@ REQUIRED = {
     "emailProvider": "automatinių el. laiškų teikėjas",
     "hostingProvider": "svetainės hostingo teikėjas",
     "hostingPeriod": "atminimo puslapio talpinimo trukmė",
-    "manufacturer": "ženkliuko gamintojas",
+    "manufacturer": "lentelės gamintojas",
     "productIdentifier": "produkto identifikatorius",
-    "material": "ženkliuko medžiaga",
-    "dimensions": "ženkliuko matmenys",
+    "material": "lentelės medžiaga",
+    "dimensions": "lentelės matmenys",
     "mounting": "tvirtinimo būdas",
     "safetyWarnings": "saugos perspėjimai",
 }
