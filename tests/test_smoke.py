@@ -93,6 +93,18 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertFalse(path.exists())
 
+    def test_homepage_navigation_reflects_auth_session(self):
+        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
+        home_js = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        self.assertIn("data-auth-navigation", homepage)
+        self.assertEqual(homepage.count("data-auth-guest"), 2)
+        self.assertEqual(homepage.count("data-auth-user"), 2)
+        self.assertIn('href="vartotojas.html" data-auth-user', homepage)
+        self.assertIn("data-auth-signout", homepage)
+        self.assertIn("AtminimasAuth.accessToken()", home_js)
+        self.assertIn("AtminimasAuth.signOut()", home_js)
+        self.assertIn('window.addEventListener("storage", renderAuthNavigation)', home_js)
+
     def test_supabase_sources_match_the_deployed_structure(self):
         migration_names = [path.name for path in (ROOT / "supabase" / "migrations").glob("*.sql")]
         self.assertTrue(migration_names)

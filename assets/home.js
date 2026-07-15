@@ -1,4 +1,32 @@
 (function () {
+  function renderAuthNavigation() {
+    var authenticated = Boolean(window.AtminimasAuth && AtminimasAuth.accessToken());
+    document.querySelectorAll("[data-auth-guest]").forEach(function (element) {
+      element.hidden = authenticated;
+    });
+    document.querySelectorAll("[data-auth-user]").forEach(function (element) {
+      element.hidden = !authenticated;
+    });
+  }
+
+  function initAuthNavigation() {
+    var navigation = document.querySelector("[data-auth-navigation]");
+    if (!navigation || !window.AtminimasAuth) return;
+
+    var signOutButton = navigation.querySelector("[data-auth-signout]");
+    if (signOutButton) {
+      signOutButton.addEventListener("click", function () {
+        AtminimasAuth.signOut();
+        renderAuthNavigation();
+      });
+    }
+
+    window.addEventListener("storage", renderAuthNavigation);
+    renderAuthNavigation();
+  }
+
+  initAuthNavigation();
+
   var form = document.getElementById("service-request-form");
   if (!form) return;
 

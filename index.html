@@ -16,10 +16,12 @@
         <span class="brand__mark"><img src="assets/atminimas-dove.svg" alt=""></span>
         <span class="brand__name">Atminimas</span>
       </a>
-      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+      <nav class="site-nav" aria-label="Pagrindinė navigacija" data-auth-navigation>
         <a href="kapu-ieskojimas.html">Kapų paieška</a>
-        <a href="prisijungti.html">Prisijungti</a>
-        <a class="button site-nav__cta" href="registruotis.html">Registruotis</a>
+        <a href="prisijungti.html" data-auth-guest>Prisijungti</a>
+        <a class="button site-nav__cta" href="registruotis.html" data-auth-guest>Registruotis</a>
+        <a href="vartotojas.html" data-auth-user hidden>Mano paskyra</a>
+        <button class="button site-nav__cta" type="button" data-auth-user data-auth-signout hidden>Atsijungti</button>
       </nav>
     </div>
   </header>
@@ -222,7 +224,7 @@
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
-<script src="assets/home.js?v=20260707-2"></script>
+<script src="assets/home.js?v=20260715-2"></script>
 <script src="assets/official-grave-search.js?v=20260715-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 </body>
