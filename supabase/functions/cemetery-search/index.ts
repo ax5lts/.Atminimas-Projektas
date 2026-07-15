@@ -113,12 +113,31 @@ async function models(): Promise<Model[]> {
 }
 
 function geometryPoint(value: unknown): { latitude: number | null; longitude: number | null } {
-  const match = text(value, 1000).match(/POINT\s*(?:Z\s*)?\(\s*([-+0-9.eE]+)\s+([-+0-9.eE]+)/i);
-  if (!match) return { latitude: null, longitude: null };
-  const longitude = Number(match[1]);
-  const latitude = Number(match[2]);
-  return Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
-    ? { latitude, longitude } : { latitude: null, longitude: null };
+  const pairs = [...text(value, 10000).matchAll(/([-+0-9.eE]+)\s+([-+0-9.eE]+)/g)]
+    .map((match) => [Number(match[1]), Number(match[2])])
+    .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  if (!pairs.length) return { latitude: null, longitude: null };
+
+  // Poligono centro pakanka nuorodai į konkrečią kapavietę; POINT atveju ribos sutampa.
+  const xs = pairs.map(([x]) => x);
+  const ys = pairs.map(([, y]) => y);
+  const x = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const y = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const candidates: Array<{ latitude: number; longitude: number }> = [];
+  if (Math.abs(x) <= 180 && Math.abs(y) <= 90) candidates.push({ longitude: x, latitude: y });
+  if (Math.abs(y) <= 180 && Math.abs(x) <= 90) candidates.push({ longitude: y, latitude: x });
+
+  function fromWebMercator(easting: number, northing: number) {
+    const longitude = easting / 20037508.34 * 180;
+    const projectedLatitude = northing / 20037508.34 * 180;
+    const latitude = 180 / Math.PI * (2 * Math.atan(Math.exp(projectedLatitude * Math.PI / 180)) - Math.PI / 2);
+    return { latitude, longitude };
+  }
+  candidates.push(fromWebMercator(x, y), fromWebMercator(y, x));
+  const valid = candidates.filter((point) => Math.abs(point.latitude) <= 90 && Math.abs(point.longitude) <= 180);
+  return valid.find((point) => point.latitude >= 53 && point.latitude <= 57 && point.longitude >= 20 && point.longitude <= 27)
+    || valid[0]
+    || { latitude: null, longitude: null };
 }
 
 function resultRow(row: any, code: string) {

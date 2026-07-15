@@ -2277,8 +2277,9 @@ video {
 .grave-admin-form__three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grave-results { display: grid; gap: 18px; }
 .grave-results__heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
-.grave-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr)); gap: 20px; }
-.grave-result-grid--compact .grave-card:nth-child(n+4) { display: none; }
+.grave-result-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.grave-result-grid--compact .grave-card:nth-child(n+4),
+.grave-result-grid--compact .grave-list-item:nth-child(n+4) { display: none; }
 .grave-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
 .grave-card__image,
 .grave-card__placeholder { width: 100%; height: 220px; object-fit: cover; }
@@ -2287,6 +2288,21 @@ video {
 .grave-card__body h3,
 .grave-card__body p { margin: 0; }
 .grave-card__body .button { justify-self: start; margin-top: 8px; }
+.grave-list-item { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+.grave-list-item[open] { border-color: rgba(23, 79, 74, 0.38); box-shadow: 0 12px 30px rgba(23, 79, 74, 0.08); }
+.grave-list-item__summary { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; cursor: pointer; list-style: none; }
+.grave-list-item__summary::-webkit-details-marker { display: none; }
+.grave-list-item__summary::after { content: "+"; flex: 0 0 auto; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #e9eee8; color: var(--accent-dark); font-size: 1.35rem; }
+.grave-list-item[open] .grave-list-item__summary::after { content: "−"; }
+.grave-list-item__person { display: grid; gap: 3px; min-width: 0; }
+.grave-list-item__person strong { font-family: var(--font-display); font-size: 1.25rem; }
+.grave-list-item__person > span:last-child { color: var(--muted); }
+.grave-list-item__action { margin-left: auto; color: var(--accent-dark); font-weight: 700; white-space: nowrap; }
+.grave-list-item__details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 18px 20px 22px; border-top: 1px solid var(--line); background: #faf8f1; }
+.grave-list-item__details p { display: grid; gap: 3px; margin: 0; }
+.grave-list-item__details p span { color: var(--muted); font-size: 0.86rem; }
+.grave-list-item__details .button { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
+.grave-list-item__location { grid-column: 1 / -1; color: var(--muted); }
 .grave-empty { grid-column: 1 / -1; padding: 36px; border: 1px dashed var(--line); border-radius: 16px; text-align: center; }
 .grave-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 24px 0; }
 .grave-source { margin-top: 28px; }
@@ -2298,12 +2314,17 @@ video {
 
 @media (max-width: 760px) {
   .grave-search-filters { grid-template-columns: 1fr; }
+  .grave-list-item__action { display: none; }
+  .grave-list-item__details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
   .grave-search-form,
   .grave-admin-form__three { grid-template-columns: 1fr; }
   .grave-search-form .button { width: 100%; }
+  .grave-list-item__summary { padding: 16px; }
+  .grave-list-item__details { grid-template-columns: 1fr; padding: 16px; }
+  .grave-list-item__details .button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

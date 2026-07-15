@@ -121,6 +121,16 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertIn("grave-loader__spinner", source); self.assertIn('aria-busy", "true', source)
         self.assertIn("@keyframes grave-loader-spin", styles)
 
+    def test_grave_results_expand_and_link_to_google_maps(self):
+        source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
+        styles = (ROOT.parent / "css" / "styles.css").read_text(encoding="utf-8")
+        edge = (ROOT.parent / "supabase" / "functions" / "cemetery-search" / "index.ts").read_text(encoding="utf-8")
+        self.assertIn("<details class='grave-list-item'>", source)
+        self.assertIn("Atidaryti „Google Maps“", source)
+        self.assertIn("grave-list-item__details", styles)
+        self.assertIn("fromWebMercator", edge)
+        self.assertIn("matchAll", edge)
+
     def test_public_search_uses_data_gov_edge_function(self):
         frontend = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         edge = (ROOT.parent / "supabase" / "functions" / "cemetery-search" / "index.ts").read_text(encoding="utf-8")
