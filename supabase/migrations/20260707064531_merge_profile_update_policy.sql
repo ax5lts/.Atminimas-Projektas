@@ -1,3 +1,4 @@
+-- Vieninga savininko ir administratoriaus profilio atnaujinimo politika.
 drop policy if exists "Admin valdo profilius" on public.profiliai;
 drop policy if exists "Savininkas keicia profilio viesuma" on public.profiliai;
 create policy "Savininkas ir admin atnaujina profili" on public.profiliai

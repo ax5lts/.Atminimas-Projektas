@@ -1,4 +1,5 @@
 -- Atminimo puslapių redagavimas ir saugus pašalinimas.
+-- Savininko failai tvarkomi tame pačiame profilio gyvavimo cikle.
 alter table public.profiliai
   add column if not exists deleted_at timestamptz;
 

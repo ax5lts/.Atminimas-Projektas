@@ -40,10 +40,6 @@
     return Array.from(form.querySelectorAll("[name='" + name + "']:checked")).map(function (input) { return input.value; });
   }
 
-  function firstSelected(name) {
-    return selectedNamedValues(name)[0] || "";
-  }
-
   function priceValue(key) {
     var value = prices[key];
     if (value === null || value === undefined || value === "") return null;

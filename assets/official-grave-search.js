@@ -6,7 +6,11 @@
     });
   }
   function shownDate(date, year, text) { return date || year || text || "?"; }
-  function mapUrl(row) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(row.latitude + "," + row.longitude); }
+  function mapLocation(row) {
+    if (row.latitude != null && row.longitude != null) return row.latitude + "," + row.longitude;
+    return [row.cemetery, row.municipality].filter(Boolean).join(", ");
+  }
+  function mapUrl(row) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(mapLocation(row)); }
   function loader() {
     return "<div class='grave-loader' role='status' aria-live='polite'><span class='grave-loader__spinner' aria-hidden='true'></span><span>Ieškoma kapų duomenyse…</span></div>";
   }
@@ -15,11 +19,23 @@
     var dates = html(shownDate(row.birth_date, row.birth_year, row.birth_date_text) + "–" + shownDate(row.death_date, row.death_year, row.death_date_text));
     var place = [row.cemetery, row.municipality].filter(Boolean).map(html).join(", ");
     var grave = [["sektorius", row.section], ["eilė", row.row_name], ["vieta", row.place_number]].filter(function (x) { return x[1]; }).map(function (x) { return x[0] + " " + html(x[1]); }).join(" · ");
-    return "<article class='grave-card'><div class='grave-card__placeholder' aria-hidden='true'>✦</div><div class='grave-card__body'>" +
-      "<p class='eyebrow'>" + dates + "</p><h3>" + name + "</h3>" +
-      (row.burial_date || row.burial_year ? "<p>Palaidota: " + html(shownDate(row.burial_date, row.burial_year, row.burial_date_text)) + "</p>" : "") +
-      (place ? "<p><strong>" + place + "</strong></p>" : "") + (grave ? "<p>" + grave + "</p>" : "") +
-      (row.latitude != null && row.longitude != null ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Rodyti žemėlapyje</a>" : "") + "</div></article>";
+    var burial = row.burial_date || row.burial_year ? html(shownDate(row.burial_date, row.burial_year, row.burial_date_text)) : "";
+    var coordinates = row.latitude != null && row.longitude != null ? Number(row.latitude).toFixed(6) + ", " + Number(row.longitude).toFixed(6) : "";
+    var map = mapLocation(row);
+    return "<details class='grave-list-item'><summary class='grave-list-item__summary'>" +
+      "<span class='grave-list-item__person'><span class='eyebrow'>" + dates + "</span><strong>" + name + "</strong>" +
+      (place ? "<span>" + place + "</span>" : "") + "</span><span class='grave-list-item__action'>Rodyti informaciją</span></summary>" +
+      "<div class='grave-list-item__details'>" +
+      (burial ? "<p><span>Palaidojimo data</span><strong>" + burial + "</strong></p>" : "") +
+      (row.cemetery ? "<p><span>Kapinės</span><strong>" + html(row.cemetery) + "</strong></p>" : "") +
+      (row.municipality ? "<p><span>Savivaldybė</span><strong>" + html(row.municipality) + "</strong></p>" : "") +
+      (row.section ? "<p><span>Sektorius</span><strong>" + html(row.section) + "</strong></p>" : "") +
+      (row.row_name ? "<p><span>Eilė</span><strong>" + html(row.row_name) + "</strong></p>" : "") +
+      (row.place_number ? "<p><span>Kapavietė</span><strong>" + html(row.place_number) + "</strong></p>" : "") +
+      (coordinates ? "<p><span>Koordinatės</span><strong>" + html(coordinates) + "</strong></p>" : "") +
+      (grave ? "<p class='grave-list-item__location'>" + grave + "</p>" : "") +
+      (map ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“</a>" : "") +
+      "</div></details>";
   }
   function manual(row) {
     return { full_name: [row.vardas, row.pavarde].filter(Boolean).join(" "), birth_date: row.gimimo_data,

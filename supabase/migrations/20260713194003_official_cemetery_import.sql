@@ -1,4 +1,5 @@
 -- Oficialaus Lietuvos atviru duomenu kapiniu registro integracija.
+-- Lentelės paliktos kaip išjungto ankstesnio importo techninė istorija.
 -- Pries vykdant: atlikite BACKUP.md aprasyta atsargine kopija.
 
 create extension if not exists unaccent with schema extensions;

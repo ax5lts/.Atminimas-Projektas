@@ -159,71 +159,14 @@
     return (params.get("id") || params.get("slug") || params.get("s") || "demo").trim();
   }
 
-  async function findAtminimasInTable(table, identifier) {
-    var safeIdentifier = encodeURIComponent(identifier);
-    var queries = [];
-
-    if (table === "profiliai" || table === "sablonas-viskas") {
-      queries.push("id=eq." + safeIdentifier + "&select=*&limit=1");
-    } else if (/^\d+$/.test(identifier) || /^[0-9a-f-]{32,36}$/i.test(identifier)) {
-      queries.push("id=eq." + safeIdentifier + "&select=*&limit=1");
-      queries.push("slug=eq." + safeIdentifier + "&select=*&limit=1");
-    } else {
-      queries.push("slug=eq." + safeIdentifier + "&select=*&limit=1");
-    }
-
-    for (var i = 0; i < queries.length; i++) {
-      try {
-        var rows = await fetchJson(restUrl(table, queries[i]));
-        if (rows && rows.length) return rows[0];
-      } catch (err) {
-        if (i === queries.length - 1) throw err;
-      }
-    }
-
-    return null;
-  }
-
   async function loadAtminimasBySlug(identifier) {
-    var atminimas = null;
-    var table = "atminimai";
-    var tables = ["profiliai", "sablonas-viskas", "atminimai"];
-    var lastError = null;
-
-    for (var i = 0; i < tables.length; i++) {
-      try {
-        var found = await findAtminimasInTable(tables[i], identifier);
-        if (found) {
-          atminimas = found;
-          table = tables[i];
-          break;
-        }
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    if (!atminimas) {
-      if (lastError) console.warn(lastError);
+    var rows = await fetchJson(
+      restUrl("profiliai", "id=eq." + encodeURIComponent(identifier) + "&select=*&limit=1")
+    );
+    if (!rows || !rows.length) {
       throw new Error('Atminimas nerastas duomenų bazėje (ID/slug: "' + identifier + '")');
     }
-
-    var nuotraukos = [];
-    if (table === "atminimai") {
-    try {
-      var foreignKey = table === "profiliai" ? "profilis_id" : "atminimas_id";
-      nuotraukos = await fetchJson(
-        restUrl(
-          "nuotraukos",
-          foreignKey + "=eq." + encodeURIComponent(atminimas.id) + "&select=*&order=eile_nr.asc"
-        )
-      );
-    } catch (e) {
-      console.warn("Nuotraukų lentelė nerasta arba neprieinama. Naudojamas tuščias sąrašas.");
-    }
-    }
-
-    return { atminimas: atminimas, nuotraukos: nuotraukos };
+    return { atminimas: rows[0] };
   }
 
   async function createAtminimas(input, options) {

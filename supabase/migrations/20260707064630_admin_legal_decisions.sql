@@ -1,3 +1,4 @@
+-- Administratoriaus sprendimų metaduomenys.
 alter table public.atsisakymai
   add column if not exists decision_note text,
   add column if not exists decided_at timestamptz;

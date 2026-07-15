@@ -76,13 +76,72 @@ class AtminimasSmokeTests(unittest.TestCase):
                 with self.subTest(page=page.name, reference=reference):
                     self.assertTrue(target.exists(), "Nerastas vietinis failas: {0}".format(target))
 
+    def test_legacy_runtime_assets_are_removed(self):
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        memorial = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        security = (ROOT / "serve.py").read_text(encoding="utf-8")
+        self.assertNotIn('"sablonas-viskas"', api)
+        self.assertNotIn('"atminimai"', api)
+        self.assertNotIn('"nuotraukos"', api)
+        self.assertNotIn("Cloudinary", memorial + security)
+        for path in (
+            ROOT / "assets" / "grave-search.js",
+            ROOT / "assets" / "cloudinary.js",
+            ROOT / "assets" / "qr-asa.png",
+            ROOT / "assets" / "qr-atminimo-lentele.png",
+        ):
+            with self.subTest(path=path.name):
+                self.assertFalse(path.exists())
+
+    def test_supabase_sources_match_the_deployed_structure(self):
+        migration_names = [path.name for path in (ROOT / "supabase" / "migrations").glob("*.sql")]
+        self.assertTrue(migration_names)
+        for name in migration_names:
+            with self.subTest(migration=name):
+                version = name.split("_", 1)[0]
+                self.assertTrue(version.isdigit())
+                self.assertEqual(len(version), 14)
+        self.assertIn("20260611152136_connect_profiliai_public_form.sql", migration_names)
+        self.assertIn("20260713204058_restore_asa_3d_product.sql", migration_names)
+
+        qr = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
+        lockers = (ROOT / "supabase" / "functions" / "parcel-lockers" / "index.ts").read_text(encoding="utf-8")
+        self.assertIn('npm:qrcode@1.5.4', qr)
+        self.assertIn('target.pathname.endsWith("/sablonas-viskas.html")', qr)
+        self.assertIn('"lp-express"', lockers)
+        self.assertIn("slice(0, 1500)", lockers)
+
+    def test_accessibility_structure_and_password_policy(self):
+        memorial = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        editor = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        password = (ROOT / "slaptazodis.html").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn('class="memorial-dates"', memorial)
+        self.assertIn('class="memorial-epitaph"', memorial)
+        self.assertNotRegex(memorial, r'<h[2-6][^>]+id="atminimo-(?:datos|epitafija)"')
+        self.assertIn('class="editor-photo-description__title"', editor)
+        self.assertNotIn('<article class="editor-photo-description"><h3>', editor)
+        self.assertEqual(password.count('minlength="12"'), 2)
+        self.assertIn("minimum_password_length = 12", config)
+        self.assertIn("secure_password_change = true", config)
+
     def test_pages_have_basic_metadata(self):
         for page in ROOT.glob("*.html"):
             html = page.read_text(encoding="utf-8")
             with self.subTest(page=page.name):
                 self.assertRegex(html, r'<html[^>]+lang=["\']lt["\']')
                 self.assertRegex(html, r"<title>[^<]+</title>")
+                self.assertRegex(html, r'<meta\s+name=["\']description["\']\s+content=["\'][^"\']+["\']')
                 self.assertRegex(html, r"<h1(?:\s|>)")
+
+    def test_private_pages_are_not_indexed(self):
+        for name in (
+            "admin.html", "apmokejimas.html", "redaktorius.html",
+            "slaptazodis.html", "vartotojas.html",
+        ):
+            html = (ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertIn('<meta name="robots" content="noindex,nofollow">', html)
 
     def test_private_project_files_are_not_served(self):
         for path in (
@@ -239,7 +298,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('"admin.html" : next', login)
 
     def test_service_request_migration_has_rls_and_minimal_grants(self):
-        sql = (ROOT / "supabase" / "migrations" / "20260707_service_requests.sql").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260707120449_create_service_requests.sql").read_text(encoding="utf-8")
         self.assertIn("alter table public.paslaugu_uzklausos enable row level security", sql.lower())
         self.assertIn("revoke all on table public.paslaugu_uzklausos from public, anon, authenticated", sql.lower())
         self.assertIn("grant select, insert, update on table public.paslaugu_uzklausos to authenticated", sql.lower())
@@ -293,14 +352,14 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('input.product_type === "asa" ? "asa" : "metal"', api)
         self.assertIn("product_type", admin)
 
-        sql = (ROOT / "supabase" / "migrations" / "20260713224500_restore_asa_3d_product.sql").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260713204058_restore_asa_3d_product.sql").read_text(encoding="utf-8")
         self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
         self.assertIn("asa 3d spausdinta qr atminimo lentelė", sql.lower())
 
     def test_admin_has_separate_all_orders_dashboard(self):
         html = (ROOT / "admin.html").read_text(encoding="utf-8")
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
-        schema = (ROOT / "supabase" / "schema.sql").read_text(encoding="utf-8")
+        order_security = (ROOT / "supabase" / "migrations" / "20260706081809_harden_orders_and_uploads.sql").read_text(encoding="utf-8")
         self.assertIn('id="admin-overview"', html)
         self.assertIn('id="admin-orders"', html)
         self.assertIn('id="order-rows"', html)
@@ -310,7 +369,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("payment_reference", admin)
         self.assertIn("delivery_method", admin)
         self.assertIn("orderCache.length", admin)
-        self.assertRegex(schema, r"(?s)uzsakymai for select.*?r\.role = 'admin'")
+        self.assertRegex(order_security, r"(?s)uzsakymai for select.*?r\.role = 'admin'")
         self.assertNotIn('href="vartotojas.html">Klientas</a>', html)
 
     def test_editor_supports_long_story_and_described_photo_gallery(self):
@@ -360,15 +419,20 @@ class AtminimasSmokeTests(unittest.TestCase):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         search = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")
         admin = (ROOT / "admin.html").read_text(encoding="utf-8")
-        search_js = (ROOT / "assets" / "grave-search.js").read_text(encoding="utf-8")
+        search_js = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         admin_js = (ROOT / "assets" / "graves-admin.js").read_text(encoding="utf-8")
         main_admin_js = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         self.assertIn('data-grave-search-form data-limit="3"', home)
         self.assertIn('data-grave-search-form', search)
+        self.assertIn('<details class="grave-search-advanced">', search)
+        self.assertIn('Tikslesnė paieška', search)
+        self.assertNotIn('name="firstName"', search)
+        self.assertNotIn('name="lastName"', search)
         self.assertIn('https://data.gov.lt/datasets/2779/?resource_version=1619', home)
         self.assertIn('https://data.gov.lt/datasets/2779/', search)
         self.assertIn('id="grave-admin-form"', admin)
-        self.assertIn('/rest/v1/rpc/ieskoti_kapavieciu', search_js)
+        self.assertIn('/rest/v1/rpc/', search_js)
+        self.assertIn('rpc("ieskoti_kapavieciu"', search_js)
         self.assertIn('/storage/v1/object/kapavietes/', admin_js)
         self.assertIn('window.dispatchEvent(new CustomEvent("atminimas:admin-ready"))', main_admin_js)
         self.assertIn('if (row.statusas === "atsaukta") return false;', main_admin_js)
@@ -376,14 +440,14 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('Įrašas atšauktas ir paslėptas.', main_admin_js)
 
     def test_grave_migration_has_publication_rls_and_admin_writes(self):
-        sql = (ROOT / "supabase" / "migrations" / "20260712_grave_search.sql").read_text(encoding="utf-8").lower()
+        sql = (ROOT / "supabase" / "migrations" / "20260712194906_grave_search.sql").read_text(encoding="utf-8").lower()
         self.assertIn("alter table public.kapavietes enable row level security", sql)
         self.assertIn("statusas = 'paskelbtas'", sql)
         self.assertIn("to anon, authenticated", sql)
         self.assertIn("r.role = 'admin'", sql)
         self.assertIn("security invoker", sql)
         self.assertNotIn("security definer", sql)
-        advisor_sql = (ROOT / "supabase" / "migrations" / "20260712_grave_search_advisor_fixes.sql").read_text(encoding="utf-8").lower()
+        advisor_sql = (ROOT / "supabase" / "migrations" / "20260712194950_grave_search_advisor_fixes.sql").read_text(encoding="utf-8").lower()
         self.assertIn("kapavietes_created_by_idx", advisor_sql)
         self.assertIn("statusas = 'paskelbtas'", advisor_sql)
 
@@ -397,7 +461,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('<a href="klientai.html">Atidaryti puslapį</a>', editor)
 
     def test_automation_schema_uses_rls_and_private_documents(self):
-        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260707164259_automation_foundation.sql").read_text(encoding="utf-8")
         for table in ("payment_events", "invoice_documents", "production_jobs", "automation_events", "automation_audit_log"):
             self.assertIn("alter table public.{0} enable row level security".format(table), sql.lower())
         self.assertIn("'automation-documents', 'automation-documents', false", sql)
@@ -417,7 +481,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('request.headers.get("stripe-signature")', webhook)
         self.assertIn("crypto.subtle.sign", webhook)
         self.assertIn('client.rpc("process_stripe_payment_event"', webhook)
-        transactional = (ROOT / "supabase" / "migrations" / "20260707164600_transactional_payment_webhook.sql").read_text(encoding="utf-8")
+        transactional = (ROOT / "supabase" / "migrations" / "20260707164658_transactional_payment_webhook.sql").read_text(encoding="utf-8")
         self.assertIn("where id = p_order_id for update", transactional.lower())
         self.assertIn("p_amount_cents = ord.total_cents", transactional)
         self.assertIn("upper(p_currency) = ord.currency", transactional)
@@ -425,7 +489,7 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_customer_approval_precedes_production(self):
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
-        sql = (ROOT / "supabase" / "migrations" / "20260707161634_automation_foundation.sql").read_text(encoding="utf-8")
+        sql = (ROOT / "supabase" / "migrations" / "20260707164259_automation_foundation.sql").read_text(encoding="utf-8")
         self.assertIn("approve_order_for_production", user)
         self.assertIn("Patvirtinti gamybai", user)
         self.assertRegex(sql, r"(?s)old\.customer_approved_at is null.*?insert into public\.production_jobs")
@@ -509,7 +573,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
         function = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
-        migration = (ROOT / "supabase" / "migrations" / "20260707205626_profile_edit_delete.sql").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260707180232_profile_edit_delete.sql").read_text(encoding="utf-8")
 
         self.assertIn("redaktorius.html?edit=", user)
         self.assertIn("button--danger", user)

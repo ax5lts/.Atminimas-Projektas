@@ -1,3 +1,4 @@
+-- Paieškos rezultatui išsaugoma tikslesnė kapo vieta.
 alter table public.deceased_people
   add column if not exists grave_section text,
   add column if not exists grave_row text,

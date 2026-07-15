@@ -10,5 +10,5 @@ gemini-code*.env
 __pycache__/
 data-imports/
 *.pyc
-.env
 *.py[cod]
+tmp/

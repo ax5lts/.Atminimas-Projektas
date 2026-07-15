@@ -1,6 +1,8 @@
 # Supabase pakeitimai
 
-Produkcinė duomenų bazė jau atnaujinta. Naujam projektui pirmiausia taikykite `schema.sql`, tada visus failus iš `migrations` pagal datos ir pavadinimo tvarką.
+Produkcinė duomenų bazė jau atnaujinta. `migrations/` failų versijos sutampa su produkcinės bazės migracijų istorija. Kadangi pradinis projektas buvo sukurtas dar prieš migracijų istoriją, naujam visiškai tuščiam projektui pirmiausia vieną kartą taikykite `schema.sql`, tada visus failus iš `migrations` pagal pavadinimo tvarką.
+
+Repozitorijoje taip pat laikomas visų produkcijoje veikiančių Edge Functions šaltinis, įskaitant `qr-code` ir `parcel-lockers`. Funkcijų paslaptys turi būti saugomos tik Supabase Secrets, ne šiame aplanke.
 
 Svarbiausi saugumo principai:
 

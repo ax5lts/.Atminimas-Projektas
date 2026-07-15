@@ -1,3 +1,4 @@
+-- Mokėjimo įvykis apdorojamas vienoje duomenų bazės transakcijoje.
 create or replace function public.process_stripe_payment_event(
   p_order_id uuid,
   p_provider_event_id text,

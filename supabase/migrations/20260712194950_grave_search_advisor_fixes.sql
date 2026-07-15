@@ -1,3 +1,4 @@
+-- Saugumo patarėjo pataisos kapaviečių lentelei.
 create index if not exists kapavietes_created_by_idx on public.kapavietes(created_by);
 
 drop policy if exists "Viesai rodomos tik paskelbtos kapavietes" on public.kapavietes;

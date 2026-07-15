@@ -1,4 +1,5 @@
 -- Automatizavimo branduolys. Išoriniai raktai laikomi tik Supabase Edge Function Secrets.
+-- Katalogai, mokėjimų įvykiai, dokumentai, gamyba ir auditas valdomi vienoje grandinėje.
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 

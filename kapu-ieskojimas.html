@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <meta name="description" content="Kapavietės paieška pagal mirusiojo vardą ir pavardę.">
 <title>Kapų ieškojimas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260712-1">
+<link rel="stylesheet" href="css/styles.css?v=20260715-3">
 </head>
 <body>
 <div class="site-shell">
@@ -21,19 +21,20 @@
     <section class="grave-search-hero" aria-labelledby="grave-title">
       <p class="eyebrow">Kapaviečių duomenys</p>
       <h1 id="grave-title">Raskite artimojo kapavietę</h1>
-      <p>Ieškokite pagal vardą, pavardę, metus, savivaldybę arba kapines. Galite rašyti ir be lietuviškų raidžių.</p>
+      <p>Įveskite vardą ir pavardę. Galite rašyti ir be lietuviškų raidžių.</p>
       <form class="grave-search-form" data-grave-search-form>
         <label class="visually-hidden" for="grave-query">Vardas ir pavardė</label>
         <input id="grave-query" name="q" type="search" minlength="2" maxlength="220" autocomplete="off" placeholder="Pvz., Jonas Jonaitis" required>
         <button class="button" type="submit">Ieškoti</button>
-        <div class="grave-search-filters">
-          <label>Vardas<input name="firstName" type="search" maxlength="100"></label>
-          <label>Pavardė<input name="lastName" type="search" maxlength="120"></label>
-          <label>Gimimo metai<input name="birthYear" type="number" min="1000" max="2200"></label>
-          <label>Mirties metai<input name="deathYear" type="number" min="1000" max="2200"></label>
-          <label>Savivaldybė<input name="municipality" type="search" maxlength="160"></label>
-          <label>Kapinės<input name="cemetery" type="search" maxlength="200"></label>
-        </div>
+        <details class="grave-search-advanced">
+          <summary>Tikslesnė paieška</summary>
+          <div class="grave-search-filters">
+            <label>Gimimo metai<input name="birthYear" type="number" min="1000" max="2200"></label>
+            <label>Mirties metai<input name="deathYear" type="number" min="1000" max="2200"></label>
+            <label>Savivaldybė<input name="municipality" type="search" maxlength="160"></label>
+            <label>Kapinės<input name="cemetery" type="search" maxlength="200"></label>
+          </div>
+        </details>
       </form>
       <p class="form-status" data-grave-status role="status" aria-live="polite">Paieškai įveskite bent 2 raides.</p>
     </section>
@@ -48,6 +49,6 @@
   <footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><span class="site-footer__support">Pastebėjote netikslumą? Praneškite mums.</span><nav class="legal-links" aria-label="Teisinė informacija"><a href="privatumas.html">Privatumas</a><a href="pranesti.html">Pranešti apie turinį</a></nav></div></footer>
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
-<script src="assets/official-grave-search.js?v=20260714-1"></script>
+<script src="assets/official-grave-search.js?v=20260715-1"></script>
 </body>
 </html>
