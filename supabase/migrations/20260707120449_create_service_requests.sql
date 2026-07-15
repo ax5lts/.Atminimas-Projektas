@@ -1,3 +1,4 @@
+-- Kapavietės priežiūros paslaugų užklausos.
 create table if not exists public.paslaugu_uzklausos (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null default auth.uid() references auth.users (id) on delete cascade,

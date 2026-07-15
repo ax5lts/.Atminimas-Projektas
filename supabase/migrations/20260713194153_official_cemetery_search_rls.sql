@@ -1,4 +1,5 @@
 -- Viesoji paieska vykdoma kvieciancio vaidmens teisemis.
+-- Politika taikoma tik aktyviems oficialaus registro įrašams.
 -- Suteikiamos tik funkcijai reikalingu, viesu stulpeliu SELECT teises.
 
 grant select (id, name, normalized_name) on public.municipalities to anon, authenticated;

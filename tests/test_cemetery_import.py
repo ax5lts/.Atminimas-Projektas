@@ -92,7 +92,7 @@ class CemeteryImportTests(unittest.TestCase):
     def test_search_without_diacritics(self): self.assertIn(normalized("zukaus"), normalized("Žukauskas"))
     def test_partial_last_name_search(self): self.assertIn(normalized("jonai"), normalized("Jonaitis"))
     def test_pagination_is_present_in_rpc(self):
-        sql = (ROOT.parent / "supabase" / "migrations" / "20260713210000_official_cemetery_import.sql").read_text(encoding="utf-8")
+        sql = (ROOT.parent / "supabase" / "migrations" / "20260713194003_official_cemetery_import.sql").read_text(encoding="utf-8")
         self.assertIn("p_page integer default 1", sql); self.assertIn("offset (greatest(coalesce(p_page, 1), 1) - 1)", sql)
     def test_official_server_http_error(self):
         with self.assertRaises(RuntimeError): HttpClient(timeout=2, retries=1).json(self.base + "/error")
@@ -113,7 +113,7 @@ class CemeteryImportTests(unittest.TestCase):
         latitude, longitude = point_coordinates("POINT (2711044.76 7487943)"); self.assertTrue(54 < latitude < 56); self.assertTrue(23 < longitude < 26)
     def test_decimal_comma_and_point(self): self.assertEqual(parse_number("2,5"), 2.5); self.assertEqual(parse_number("2.5"), 2.5)
     def test_public_rpc_does_not_return_raw_data(self):
-        sql = (ROOT.parent / "supabase" / "migrations" / "20260713210000_official_cemetery_import.sql").read_text(encoding="utf-8")
+        sql = (ROOT.parent / "supabase" / "migrations" / "20260713194003_official_cemetery_import.sql").read_text(encoding="utf-8")
         self.assertNotIn("raw_data", sql.split("create or replace function public.search_deceased", 1)[1])
     def test_grave_search_shows_loader_while_waiting(self):
         source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")

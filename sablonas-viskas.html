@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Artimo žmogaus atminimo puslapis su gyvenimo istorija, nuotraukomis ir vaizdo įrašu.">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-11">
+<link rel="stylesheet" href="css/styles.css?v=20260715-3">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -23,8 +24,8 @@
   <main id="turinys" hidden>
     <section class="antmastis" id="antmastis" aria-label="Atminimo informacija">
       <h1 id="atminimo-vardas">Vardas Pavardė</h1>
-      <h4 id="atminimo-datos">Gimimo data - Mirties data</h4>
-      <h5 id="atminimo-epitafija">Epitafija</h5>
+      <p class="memorial-dates" id="atminimo-datos">Gimimo data - Mirties data</p>
+      <p class="memorial-epitaph" id="atminimo-epitafija">Epitafija</p>
       <blockquote class="memorial-long-text" id="atminimo-tekstas" hidden></blockquote>
     </section>
 
@@ -49,27 +50,9 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260706-1"></script>
-<script src="assets/cloudinary.js?v=20260618"></script>
-<script src="assets/atminimas-duomenys.js?v=20260707-2"></script>
+<script src="assets/atminimas-duomenys.js?v=20260715-1"></script>
 <script>
 (function () {
-  var LOCAL_ATMINIMAS = {
-    id: "demo",
-    vardas: "Romualdas",
-    pavarde: "Rimaitis",
-    gimimo_data: "1954-08-05",
-    mirties_data: "2025-02-23",
-    epitafija: "Išėjai ten, kur tyla ir ramybė, bet Tavo šviesa liko mūsų širdyse.",
-    tekstas_200: "Mylime ir prisimename.",
-    aktyvus: true
-  };
-
-  var LOCAL_MEDIA = [
-    { type: "image", url: "Nuotraukos/S_pirma.jpg", order: 1 },
-    { type: "image", url: "Nuotraukos/S_antra.jpg", order: 2 },
-    { type: "image", url: "Nuotraukos/S_trecia.jpg", order: 3 }
-  ];
-
   var DEFAULT_LAYOUT = {
     header: { left: "8%", top: "3%", width: "84%" },
     text: { left: "8%", top: "16%", width: "84%" },
@@ -105,34 +88,9 @@
     return list.length > max ? list.slice(0, max).join(" ") + "…" : list.join(" ");
   }
 
-  function imageUrl(row) {
-    if (row.url) return row.url;
-    if (row.nuotraukos_url) return row.nuotraukos_url;
-    if (row.cloudinary_public_id && window.CloudinaryHelper) {
-      return CloudinaryHelper.galleryImageUrl(row.cloudinary_public_id);
-    }
-    return "";
-  }
-
-  function normalizeMedia(atminimas, nuotraukos) {
+  function normalizeMedia(atminimas) {
     var saved = parseJson(atminimas.media_json, []);
-    if (Array.isArray(saved) && saved.length) return saved;
-
-    var media = (nuotraukos || []).map(function (row, index) {
-      return {
-        type: "image",
-        url: imageUrl(row),
-        order: row.eile_nr || index + 1,
-        pixel_art: !!row.pixel_art
-      };
-    }).filter(function (row) { return row.url; });
-
-    var videoUrl = atminimas.video_url || "";
-    if (!videoUrl && atminimas.video_cloudinary_id && window.CloudinaryHelper) {
-      videoUrl = CloudinaryHelper.videoUrl(atminimas.video_cloudinary_id);
-    }
-    if (videoUrl) media.push({ type: "video", url: videoUrl, order: 1 });
-    return media;
+    return Array.isArray(saved) ? saved : [];
   }
 
   function mergedPiece(layout, name) {
@@ -388,7 +346,7 @@
 
   function renderPage(payload, message) {
     var atminimas = payload.atminimas || payload;
-    var media = normalizeMedia(atminimas, payload.nuotraukos || []);
+    var media = normalizeMedia(atminimas);
     var layout = parseJson(atminimas.layout_json, {});
     var hasBuilderData = Object.keys(layout).length > 0 || parseJson(atminimas.media_json, []).length > 0;
 
@@ -548,8 +506,7 @@
     try {
       var payload = await AtminimasApi.loadAtminimasBySlug(identifier);
       renderPage(payload, "");
-    } catch (err) {
-      console.warn(err);
+    } catch {
       document.getElementById("kraunama").hidden = true;
       document.getElementById("klaida").textContent = "Atminimo puslapio nepavyko rasti.";
       document.getElementById("klaida").hidden = false;

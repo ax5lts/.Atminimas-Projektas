@@ -5,16 +5,16 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 
-PUBLIC_DIRECTORIES = {"assets", "css", "Nuotraukos"}
+PUBLIC_DIRECTORIES = {"assets", "css"}
 PUBLIC_ROOT_SUFFIXES = {".html", ".ico", ".jpg", ".jpeg", ".png", ".webp", ".mp4"}
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
         "form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https://*.supabase.co https://res.cloudinary.com; "
-        "media-src 'self' blob: https://*.supabase.co "
-        "https://res.cloudinary.com; connect-src 'self' https://*.supabase.co"
+        "img-src 'self' data: blob: https://*.supabase.co; "
+        "media-src 'self' blob: https://*.supabase.co; "
+        "connect-src 'self' https://*.supabase.co"
     ),
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",

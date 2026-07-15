@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Saugiai atkurkite arba pakeiskite Atminimas paskyros slaptažodį.">
+<meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="icon" href="assets/atminimas-dove.svg" type="image/svg+xml">
 <title>Atkurti slaptažodį - Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260707-14">
+<link rel="stylesheet" href="css/styles.css?v=20260715-3">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -30,8 +32,9 @@
       </form>
 
       <form class="auth-form" id="password-update-form" hidden>
-        <label>Naujas slaptažodis<input type="password" name="password" autocomplete="new-password" minlength="8" required></label>
-        <label>Pakartokite slaptažodį<input type="password" name="password_confirm" autocomplete="new-password" minlength="8" required></label>
+        <label>Naujas slaptažodis<input type="password" name="password" autocomplete="new-password" minlength="12" required aria-describedby="password-update-help"></label>
+        <p id="password-update-help" class="editor-note">Bent 12 simbolių. Naudokite unikalų slaptažodį, kurio nenaudojate kitur.</p>
+        <label>Pakartokite slaptažodį<input type="password" name="password_confirm" autocomplete="new-password" minlength="12" required></label>
         <button class="button" type="submit">Išsaugoti naują slaptažodį</button>
       </form>
 

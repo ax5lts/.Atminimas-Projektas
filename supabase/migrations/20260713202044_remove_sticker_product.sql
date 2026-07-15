@@ -1,5 +1,7 @@
 begin;
 
+-- Pašalinamas nebenaudojamas lipduko produkto variantas.
+
 update public.product_catalog
 set name = 'Graviruota QR atminimo lentelė',
     currency = 'EUR',

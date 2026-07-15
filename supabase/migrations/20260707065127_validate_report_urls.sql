@@ -1,3 +1,4 @@
+-- Turinio pranešimuose priimami tik HTTP ir HTTPS adresai.
 alter table public.turinio_pranesimai
   drop constraint if exists turinio_pranesimai_content_url_https;
 alter table public.turinio_pranesimai

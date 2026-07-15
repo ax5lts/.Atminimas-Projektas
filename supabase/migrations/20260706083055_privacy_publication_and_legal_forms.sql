@@ -1,3 +1,4 @@
+-- Privatumas, puslapio viešinimas ir teisinės formos.
 alter table public.profiliai alter column aktyvus set default false;
 
 create or replace function public.set_my_profile_visibility(profile_id text, is_active boolean)

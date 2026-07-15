@@ -29,7 +29,8 @@ jobs:
         run: |
           mkdir -p _site
           cp -- *.html _site/
-          cp -R assets css Nuotraukos _site/
+          cp -R assets css _site/
+          rm -f _site/assets/supabase-config.example.js
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages

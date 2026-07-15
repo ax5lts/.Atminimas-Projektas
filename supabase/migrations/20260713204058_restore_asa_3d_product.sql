@@ -1,5 +1,7 @@
 begin;
 
+-- Grąžinamas ASA 3D spausdintos lentelės produkto variantas.
+
 insert into public.product_catalog (
   id, name, price_cents, currency, vat_rate, enabled, updated_at
 )

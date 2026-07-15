@@ -1,3 +1,4 @@
+-- Užsakyme išsaugomas pasirinktas produkto tipas.
 alter table public.uzsakymai
   add column if not exists product_type text not null default 'metal';
 

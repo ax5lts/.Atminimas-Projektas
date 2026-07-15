@@ -1,3 +1,4 @@
+-- Pristatymo į paštomatą duomenys ir valdymo funkcijos.
 alter table public.uzsakymai
   add column if not exists delivery_method text not null default 'pastomatas',
   add column if not exists carrier text,

@@ -1,4 +1,5 @@
 -- Užsakymai yra privatūs: juos mato tik profilio savininkas arba administratorius.
+-- Failų įkėlimas taip pat apribojamas prisijungusiais vartotojais.
 revoke select, insert on table public.uzsakymai from anon;
 grant select, insert on table public.uzsakymai to authenticated;
 
