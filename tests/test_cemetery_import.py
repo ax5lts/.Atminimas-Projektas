@@ -129,6 +129,8 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertIn("Atidaryti „Google Maps“", source)
         self.assertIn("grave-list-item__details", styles)
         self.assertIn("fromWebMercator", edge)
+        self.assertIn("fromLks94", edge)
+        self.assertNotIn("|| valid[0]", edge)
         self.assertIn("matchAll", edge)
 
     def test_public_search_uses_data_gov_edge_function(self):

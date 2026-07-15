@@ -133,10 +133,51 @@ function geometryPoint(value: unknown): { latitude: number | null; longitude: nu
     const latitude = 180 / Math.PI * (2 * Math.atan(Math.exp(projectedLatitude * Math.PI / 180)) - Math.PI / 2);
     return { latitude, longitude };
   }
-  candidates.push(fromWebMercator(x, y), fromWebMercator(y, x));
-  const valid = candidates.filter((point) => Math.abs(point.latitude) <= 90 && Math.abs(point.longitude) <= 180);
-  return valid.find((point) => point.latitude >= 53 && point.latitude <= 57 && point.longitude >= 20 && point.longitude <= 27)
-    || valid[0]
+
+  // Lietuvos koordinačių sistema LKS-94 / Lithuania TM (EPSG:3346).
+  // Kai kurių rinkinių WKT ašys pateikiamos tvarka northing, easting, todėl
+  // tikriname abi ašių tvarkas ir pasirenkame tik Lietuvos ribose esantį tašką.
+  function fromLks94(easting: number, northing: number) {
+    const a = 6378137;
+    const inverseFlattening = 298.257222101;
+    const flattening = 1 / inverseFlattening;
+    const eccentricitySquared = flattening * (2 - flattening);
+    const secondEccentricitySquared = eccentricitySquared / (1 - eccentricitySquared);
+    const scale = 0.9998;
+    const centralMeridian = 24 * Math.PI / 180;
+    const meridionalArc = northing / scale;
+    const mu = meridionalArc / (a * (1 - eccentricitySquared / 4 - 3 * eccentricitySquared ** 2 / 64 - 5 * eccentricitySquared ** 3 / 256));
+    const root = Math.sqrt(1 - eccentricitySquared);
+    const e1 = (1 - root) / (1 + root);
+    const footprintLatitude = mu
+      + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu)
+      + (21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu)
+      + (151 * e1 ** 3 / 96) * Math.sin(6 * mu)
+      + (1097 * e1 ** 4 / 512) * Math.sin(8 * mu);
+    const sin = Math.sin(footprintLatitude);
+    const cos = Math.cos(footprintLatitude);
+    const tan = Math.tan(footprintLatitude);
+    const n = a / Math.sqrt(1 - eccentricitySquared * sin ** 2);
+    const r = a * (1 - eccentricitySquared) / (1 - eccentricitySquared * sin ** 2) ** 1.5;
+    const t = tan ** 2;
+    const c = secondEccentricitySquared * cos ** 2;
+    const d = (easting - 500000) / (n * scale);
+    const latitude = footprintLatitude - n * tan / r * (
+      d ** 2 / 2
+      - (5 + 3 * t + 10 * c - 4 * c ** 2 - 9 * secondEccentricitySquared) * d ** 4 / 24
+      + (61 + 90 * t + 298 * c + 45 * t ** 2 - 252 * secondEccentricitySquared - 3 * c ** 2) * d ** 6 / 720
+    );
+    const longitude = centralMeridian + (
+      d
+      - (1 + 2 * t + c) * d ** 3 / 6
+      + (5 - 2 * c + 28 * t - 3 * c ** 2 + 8 * secondEccentricitySquared + 24 * t ** 2) * d ** 5 / 120
+    ) / cos;
+    return { latitude: latitude * 180 / Math.PI, longitude: longitude * 180 / Math.PI };
+  }
+
+  candidates.push(fromLks94(x, y), fromLks94(y, x), fromWebMercator(x, y), fromWebMercator(y, x));
+  return candidates.find((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude)
+      && point.latitude >= 53 && point.latitude <= 57 && point.longitude >= 20 && point.longitude <= 27)
     || { latitude: null, longitude: null };
 }
 
