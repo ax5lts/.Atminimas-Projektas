@@ -14,12 +14,13 @@ SECURITY_HEADERS = {
         "form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob: https://*.supabase.co; "
         "media-src 'self' blob: https://*.supabase.co; "
-        "connect-src 'self' https://*.supabase.co"
+        "connect-src 'self' https://*.supabase.co; "
+        "frame-src https://www.openstreetmap.org"
     ),
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
     "X-Frame-Options": "DENY",
 }
 

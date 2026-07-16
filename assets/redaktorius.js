@@ -19,6 +19,11 @@
   var orderCode = document.getElementById("editor-order-code");
   var stage = document.getElementById("editor-preview-stage");
   var clearDraftButton = document.getElementById("editor-clear-draft");
+  var draftStateEl = document.getElementById("editor-draft-state");
+  var stepProgressEl = document.getElementById("editor-step-progress");
+  var saveProgressEl = document.getElementById("editor-save-progress");
+  var photoOrderEl = document.getElementById("editor-photo-order");
+  var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
   var colorWheel = document.getElementById("editor-color-wheel");
@@ -59,6 +64,11 @@
   var selectedHue = 0;
   var selectedSaturation = 0;
   var selectedBrightness = 100;
+  var editorSteps = ["text", "colors", "files", "positions", "preview"];
+  var currentEditorStep = "text";
+  var photoOrderNames = [];
+  var photoOrderMode = "files";
+  var photoPreviewUrls = new WeakMap();
 
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
@@ -70,9 +80,32 @@
   }
 
   var productType = selectedProduct();
+  if (productImage) {
+    productImage.src = productType === "asa" ? "assets/qr-asa-480.webp" : "assets/qr-atminimo-lentele-480.webp";
+    productImage.alt = productType === "asa" ? "Pasirinkta ASA QR atminimo lentelė" : "Pasirinkta metalo QR atminimo lentelė";
+  }
   if (productSummary) productSummary.textContent = editId
     ? "Redaguojamas jūsų atminimo puslapis."
     : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "graviruota metalo QR atminimo lentelė") + (productType === "asa" ? ". Kaina bus patvirtinta." : ". Kaina – 59,00 EUR.");
+
+  function setDraftState(message, state) {
+    if (!draftStateEl) return;
+    draftStateEl.textContent = message;
+    draftStateEl.dataset.state = state || "";
+  }
+
+  function showSaveProgress(value, message) {
+    if (!saveProgressEl) return;
+    saveProgressEl.hidden = false;
+    saveProgressEl.value = Math.max(0, Math.min(100, Number(value) || 0));
+    if (message) statusEl.textContent = message;
+  }
+
+  function hideSaveProgress() {
+    if (!saveProgressEl) return;
+    saveProgressEl.value = 0;
+    saveProgressEl.hidden = true;
+  }
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -361,13 +394,19 @@
         layout: collectLayout(),
         savedAt: new Date().toISOString()
       }));
+      setDraftState("Juodraštis išsaugotas " + new Intl.DateTimeFormat("lt-LT", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date()), "saved");
     } catch (err) {
       console.warn("Draft save failed", err);
+      setDraftState("Juodraščio nepavyko išsaugoti", "error");
     }
   }
 
   function scheduleDraftSave() {
     clearTimeout(draftSaveTimer);
+    setDraftState("Saugomi pakeitimai…", "saving");
     draftSaveTimer = setTimeout(saveDraftNow, 150);
   }
 
@@ -386,6 +425,152 @@
       : "Nuotraukos dar nepasirinktos.";
   }
 
+  function orderedExistingImages() {
+    return editingMedia.filter(function (item) { return item.type === "image"; })
+      .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); });
+  }
+
+  function photoUrlAt(index) {
+    if (photoOrderMode === "existing") {
+      var existing = orderedExistingImages()[index];
+      return existing && existing.url ? existing.url : "";
+    }
+    var file = processedPhotos[index];
+    if (!file) return "";
+    if (!photoPreviewUrls.has(file)) photoPreviewUrls.set(file, URL.createObjectURL(file));
+    return photoPreviewUrls.get(file);
+  }
+
+  function refreshOrderedPhotoPreviews() {
+    for (var i = 0; i < photoSlots.length; i++) {
+      var slot = photoSlots[i];
+      var wrap = slot.closest(".editor-photo-slot");
+      var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
+      var url = photoUrlAt(i);
+      if (!url) {
+        slot.hidden = true;
+        slot.removeAttribute("src");
+        if (empty) empty.hidden = false;
+        continue;
+      }
+      slot.src = url;
+      slot.hidden = false;
+      if (photoOrderMode === "files") slot.onload = function () { setFrameToImageRatio(this, this); };
+      if (empty) empty.hidden = true;
+    }
+  }
+
+  function movePhotoFields(from, to) {
+    ["photo_caption_", "photo_alt_"].forEach(function (prefix) {
+      var values = [];
+      for (var i = 0; i < MAX_PHOTOS; i++) {
+        values.push(form.elements[prefix + (i + 1)].value);
+      }
+      var value = values.splice(from, 1)[0];
+      values.splice(to, 0, value);
+      for (var j = 0; j < MAX_PHOTOS; j++) {
+        form.elements[prefix + (j + 1)].value = values[j];
+      }
+    });
+  }
+
+  async function persistProcessedPhotoOrder() {
+    if (photoOrderMode !== "files") return;
+    for (var i = 0; i < MAX_PHOTOS; i++) {
+      if (processedPhotos[i]) await putDraftFile("photo-" + i, processedPhotos[i]);
+      else await deleteDraftFile("photo-" + i);
+    }
+  }
+
+  function swapPhotoOrder(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= photoOrderNames.length || to >= photoOrderNames.length) return;
+    var name = photoOrderNames.splice(from, 1)[0];
+    photoOrderNames.splice(to, 0, name);
+    if (photoOrderMode === "existing") {
+      var images = orderedExistingImages();
+      var image = images.splice(from, 1)[0];
+      images.splice(to, 0, image);
+      images.forEach(function (item, index) { item.order = index + 1; });
+      editingMedia = images.concat(editingMedia.filter(function (item) { return item.type !== "image"; }));
+    } else {
+      var file = processedPhotos.splice(from, 1)[0];
+      processedPhotos.splice(to, 0, file);
+      persistProcessedPhotoOrder().catch(function (err) { console.warn(err); });
+    }
+    movePhotoFields(from, to);
+    renderPhotoOrder();
+    refreshOrderedPhotoPreviews();
+    syncPreview();
+    scheduleDraftSave();
+  }
+
+  function renderPhotoOrder() {
+    if (!photoOrderEl) return;
+    photoOrderEl.innerHTML = "";
+    photoOrderEl.hidden = photoOrderNames.length === 0;
+    photoOrderNames.forEach(function (name, index) {
+      var item = document.createElement("article");
+      item.className = "editor-photo-order__item";
+      item.dataset.photoOrderIndex = String(index);
+
+      var handle = document.createElement("button");
+      handle.className = "editor-photo-order__handle";
+      handle.type = "button";
+      handle.setAttribute("aria-label", "Tempti " + (index + 1) + " nuotrauką");
+      handle.textContent = "⋮⋮";
+
+      var preview = document.createElement("img");
+      var previewUrl = photoUrlAt(index);
+      if (previewUrl) preview.src = previewUrl;
+      else preview.hidden = true;
+      preview.alt = "";
+
+      var copy = document.createElement("span");
+      copy.innerHTML = "<strong>" + (index + 1) + " nuotrauka</strong><small></small>";
+      copy.querySelector("small").textContent = name || ("Nuotrauka " + (index + 1));
+
+      var controls = document.createElement("span");
+      controls.className = "editor-photo-order__controls";
+      controls.innerHTML =
+        '<button type="button" data-photo-move="-1" aria-label="Perkelti aukštyn">↑</button>' +
+        '<button type="button" data-photo-move="1" aria-label="Perkelti žemyn">↓</button>';
+      controls.querySelector("[data-photo-move='-1']").disabled = index === 0;
+      controls.querySelector("[data-photo-move='1']").disabled = index === photoOrderNames.length - 1;
+
+      item.appendChild(handle);
+      item.appendChild(preview);
+      item.appendChild(copy);
+      item.appendChild(controls);
+      photoOrderEl.appendChild(item);
+
+      handle.addEventListener("pointerdown", function (event) {
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        item.classList.add("is-dragging");
+      });
+      handle.addEventListener("pointerup", function (event) {
+        var target = document.elementFromPoint(event.clientX, event.clientY);
+        var targetItem = target && target.closest ? target.closest("[data-photo-order-index]") : null;
+        item.classList.remove("is-dragging");
+        if (!targetItem) return;
+        swapPhotoOrder(index, Number(targetItem.dataset.photoOrderIndex));
+      });
+      handle.addEventListener("pointercancel", function () {
+        item.classList.remove("is-dragging");
+      });
+    });
+  }
+
+  if (photoOrderEl) {
+    photoOrderEl.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-photo-move]");
+      if (!button) return;
+      var item = button.closest("[data-photo-order-index]");
+      var from = Number(item.dataset.photoOrderIndex);
+      swapPhotoOrder(from, from + Number(button.dataset.photoMove));
+    });
+  }
+
   async function restoreDraftMedia() {
     var restoredNames = [];
     for (var i = 0; i < MAX_PHOTOS; i++) {
@@ -401,7 +586,12 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    if (restoredNames.some(Boolean) || !editId) renderPhotoFileList(restoredNames);
+    if (restoredNames.some(Boolean) || !editId) {
+      photoOrderMode = "files";
+      photoOrderNames = restoredNames.filter(Boolean);
+      renderPhotoFileList(restoredNames);
+      renderPhotoOrder();
+    }
 
     var video = await getDraftFile("video");
     if (video) {
@@ -423,7 +613,8 @@
       restoreDraftFields(draft.form);
       applyLayout(draft.layout);
       await restoreDraftMedia();
-      statusEl.textContent = "Atkurta paskutine neissaugota versija.";
+      statusEl.textContent = "Atkurta paskutinė neišsaugota versija.";
+      setDraftState("Atkurtas ankstesnis juodraštis", "saved");
     } catch (err) {
       console.warn("Draft restore failed", err);
     } finally {
@@ -448,7 +639,14 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     });
-    if (images.length) photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+    if (images.length) {
+      photoOrderMode = "existing";
+      photoOrderNames = images.map(function (item, index) {
+        return item.caption || ("Esama nuotrauka " + (index + 1));
+      });
+      photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+      renderPhotoOrder();
+    }
 
     var video = editingMedia.find(function (item) { return item.type === "video"; });
     if (video) {
@@ -607,6 +805,8 @@
   async function syncPhotos() {
     var allFiles = Array.prototype.slice.call(photosInput.files || []);
     var files = allFiles.slice(0, MAX_PHOTOS);
+    photoOrderMode = "files";
+    photoOrderNames = files.map(function (file) { return file.name; });
     processedPhotos = [];
     cropPromises = [];
     photoSlots.forEach(function (slot) {
@@ -619,15 +819,6 @@
     files.forEach(function (file, index) {
       var promise = autoCropBlackBorders(file).then(function (cropped) {
         processedPhotos[index] = cropped;
-        var slot = photoSlots[index];
-        if (slot) {
-          var wrap = slot.closest(".editor-photo-slot");
-          var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
-          slot.src = URL.createObjectURL(cropped);
-          slot.hidden = false;
-          slot.onload = function () { setFrameToImageRatio(slot, slot); };
-          if (empty) empty.hidden = true;
-        }
         putDraftFile("photo-" + index, cropped).catch(function (err) { console.warn(err); });
         scheduleDraftSave();
       });
@@ -637,9 +828,14 @@
       deleteDraftFile("photo-" + i).catch(function (err) { console.warn(err); });
     }
     renderPhotoFileList(files.map(function (file) { return file.name; }));
+    renderPhotoOrder();
+    statusEl.textContent = files.length ? "Nuotraukos optimizuojamos…" : "";
+    await Promise.all(cropPromises);
+    renderPhotoOrder();
+    refreshOrderedPhotoPreviews();
     statusEl.textContent = allFiles.length > MAX_PHOTOS
       ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
-      : (files.length ? "Pasirinkta nuotraukų: " + files.length + "." : "");
+      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Eiliškumą galite keisti tempdami." : "");
   }
 
   function pct(value, total) {
@@ -690,28 +886,125 @@
     });
   }
 
+  function validateEditorStep(name) {
+    var step = document.querySelector("[data-editor-step='" + name + "']");
+    if (!step) return true;
+    var invalid = Array.from(step.querySelectorAll("input, textarea, select")).find(function (field) {
+      return !field.checkValidity();
+    });
+    if (!invalid) return true;
+    invalid.reportValidity();
+    invalid.focus();
+    return false;
+  }
+
+  function activateEditorStep(name, scroll) {
+    var index = editorSteps.indexOf(name);
+    if (index < 0) return;
+    currentEditorStep = name;
+    var target = document.querySelector("[data-editor-step='" + name + "']");
+    document.querySelectorAll("[data-editor-step]").forEach(function (step) {
+      step.classList.toggle("is-active", step === target);
+    });
+    document.querySelectorAll("[data-editor-section]").forEach(function (button) {
+      button.classList.toggle("is-active", button.dataset.editorSection === name);
+    });
+    document.querySelectorAll("[data-editor-step-button]").forEach(function (button) {
+      var active = button.dataset.editorStepButton === name;
+      button.classList.toggle("is-active", active);
+      if (active) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
+    });
+    if (stepProgressEl) stepProgressEl.style.width = ((index + 1) / editorSteps.length * 100) + "%";
+
+    if (scroll && target) {
+      if (window.matchMedia("(max-width: 860px)").matches) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        var panel = document.querySelector(".editor-panel");
+        if (panel) panel.scrollTo({
+          top: Math.max(0, target.offsetTop - panel.offsetTop - 18),
+          behavior: "smooth"
+        });
+      }
+      target.classList.remove("editor-section-flash");
+      void target.offsetWidth;
+      target.classList.add("editor-section-flash");
+    }
+  }
+
+  function setupEditorStepActions() {
+    document.querySelectorAll("[data-editor-step]").forEach(function (step) {
+      if (step.dataset.editorActionsReady === "true") return;
+      step.dataset.editorActionsReady = "true";
+      var index = editorSteps.indexOf(step.dataset.editorStep);
+      var actions = document.createElement("div");
+      actions.className = "editor-step-actions";
+      if (index > 0) {
+        var previous = document.createElement("button");
+        previous.className = "button button--ghost";
+        previous.type = "button";
+        previous.textContent = "Atgal";
+        previous.addEventListener("click", function () {
+          activateEditorStep(editorSteps[index - 1], true);
+        });
+        var finalActions = step.querySelector(".editor-final-actions");
+        if (index === editorSteps.length - 1 && finalActions) {
+          previous.classList.add("editor-final-back");
+          finalActions.insertBefore(previous, finalActions.firstChild);
+        } else {
+          actions.appendChild(previous);
+        }
+      }
+      if (index < editorSteps.length - 1) {
+        var next = document.createElement("button");
+        next.className = "button";
+        next.type = "button";
+        next.textContent = "Išsaugoti ir tęsti";
+        next.addEventListener("click", function () {
+          if (!validateEditorStep(step.dataset.editorStep)) return;
+          saveDraftNow();
+          activateEditorStep(editorSteps[index + 1], true);
+        });
+        actions.appendChild(next);
+      }
+      if (actions.childElementCount) step.appendChild(actions);
+    });
+  }
+
+  function setupPreviewDialog() {
+    var close = document.querySelector("[data-editor-preview-close]");
+    function openPreview() {
+      document.body.classList.add("editor-preview-open");
+      if (close) close.focus();
+      refreshProportionalHeights();
+    }
+    function closePreview() {
+      document.body.classList.remove("editor-preview-open");
+    }
+    document.querySelectorAll("[data-editor-preview-open]").forEach(function (button) {
+      button.addEventListener("click", openPreview);
+    });
+    if (close) close.addEventListener("click", closePreview);
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && document.body.classList.contains("editor-preview-open")) closePreview();
+    });
+  }
+
   function setupEditorSectionButtons() {
-    var panel = document.querySelector(".editor-panel");
     document.querySelectorAll("[data-editor-section]").forEach(function (button) {
       button.addEventListener("click", function () {
-        var target = document.getElementById("editor-section-" + button.dataset.editorSection);
-        if (!target) return;
-        document.querySelectorAll("[data-editor-section]").forEach(function (item) {
-          item.classList.toggle("is-active", item === button);
-        });
-        if (window.matchMedia("(max-width: 860px)").matches) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else if (panel) {
-          panel.scrollTo({
-            top: Math.max(0, target.offsetTop - panel.offsetTop - 18),
-            behavior: "smooth"
-          });
-        }
-        target.classList.remove("editor-section-flash");
-        void target.offsetWidth;
-        target.classList.add("editor-section-flash");
+        activateEditorStep(button.dataset.editorSection, true);
       });
     });
+    document.querySelectorAll("[data-editor-step-button]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        activateEditorStep(button.dataset.editorStepButton, true);
+      });
+    });
+    setupEditorStepActions();
+    setupPreviewDialog();
+    activateEditorStep(currentEditorStep, false);
   }
 
   function bindDrag() {
@@ -946,16 +1239,26 @@
     clearDraftButton.addEventListener("click", function () {
       clearDraft().catch(function (err) {
         console.warn(err);
-        statusEl.textContent = "Nepavyko isvalyti juodrascio.";
+        statusEl.textContent = "Nepavyko išvalyti juodraščio.";
       });
     });
   }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    var invalid = Array.from(form.querySelectorAll("input, textarea, select")).find(function (field) {
+      return !field.checkValidity();
+    });
+    if (invalid) {
+      var invalidStep = invalid.closest("[data-editor-step]");
+      if (invalidStep) activateEditorStep(invalidStep.dataset.editorStep, true);
+      invalid.reportValidity();
+      invalid.focus();
+      return;
+    }
     var submit = form.querySelector("button[type='submit']");
     var data = formData();
-    statusEl.textContent = "Ruošiamos nuotraukos...";
+    showSaveProgress(10, "Ruošiamos nuotraukos…");
     submit.disabled = true;
     resultBox.hidden = true;
     await Promise.all(cropPromises);
@@ -966,22 +1269,29 @@
     data.apmoketa = false;
     data.product_type = productType;
 
-    statusEl.textContent = "Įkeliami failai ir saugoma į DB...";
+    showSaveProgress(28, "Įkeliami failai ir saugomas puslapis…");
     submit.disabled = true;
     resultBox.hidden = true;
 
     try {
       var captions = captionsInput && captionsInput.files ? captionsInput.files[0] : null;
+      function onUploadProgress(done, total) {
+        var fraction = total ? done / total : 1;
+        showSaveProgress(28 + fraction * 58, total ? "Įkeliami failai: " + done + " iš " + total + "…" : "Saugomas puslapis…");
+      }
       var result = editId
         ? await AtminimasApi.updateAtminimas(editId, data, {
             existingMedia: editingMedia,
             files: { photos: photos, video: video, captions: captions },
-            layout: collectLayout()
+            layout: collectLayout(),
+            onProgress: onUploadProgress
           })
         : await AtminimasApi.createAtminimas(data, {
             files: { photos: photos, video: video, captions: captions },
-            layout: collectLayout()
+            layout: collectLayout(),
+            onProgress: onUploadProgress
           });
+      showSaveProgress(94, "Baigiamas išsaugojimas…");
       if (editId) {
         editingMedia = result.media || editingMedia;
         await discardCurrentDraft();
@@ -997,6 +1307,8 @@
         var resultHeading = resultBox.querySelector("h3");
         if (resultHeading) resultHeading.textContent = "Pakeitimai išsaugoti";
         resultBox.hidden = false;
+        showSaveProgress(100, "Pakeitimai išsaugoti.");
+        setDraftState("Visi pakeitimai išsaugoti", "saved");
         return;
       }
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
@@ -1010,11 +1322,16 @@
       qrLink.href = order.qr_kodas_url;
       orderCode.textContent = "Užsakymas DB: " + (order.id || "sukurtas");
       resultBox.hidden = false;
+      showSaveProgress(100, "Puslapis ir užsakymas sukurti.");
+      setDraftState("Puslapis išsaugotas", "saved");
     } catch (err) {
       console.error(err);
       statusEl.textContent = err.message || "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
+      if (saveProgressEl) saveProgressEl.value = 0;
+      setDraftState("Išsaugoti nepavyko", "error");
     } finally {
       submit.disabled = false;
+      window.setTimeout(hideSaveProgress, 1800);
     }
   });
 

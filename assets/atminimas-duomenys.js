@@ -111,14 +111,20 @@
     return publicStorageUrl(bucket, path);
   }
 
-  async function uploadBuilderMedia(identifier, files, upsert) {
+  async function uploadBuilderMedia(identifier, files, upsert, onProgress) {
     var media = [];
     var photos = Array.prototype.slice.call((files && files.photos) || []).filter(Boolean).slice(0, 8);
     var video = files && files.video ? files.video : null;
     var captions = files && files.captions ? files.captions : null;
+    var totalUploads = photos.length + (video ? 1 : 0) + (captions ? 1 : 0);
+    var completedUploads = 0;
     var ownerId = global.AtminimasAuth && global.AtminimasAuth.userId ? global.AtminimasAuth.userId() : "";
     if (!ownerId) throw new Error("Failams įkelti būtina prisijungti.");
     var ownerPath = ownerId + "/" + identifier;
+
+    function reportProgress() {
+      if (typeof onProgress === "function") onProgress(completedUploads, totalUploads);
+    }
 
     for (var i = 0; i < photos.length; i++) {
       var photoPath = ownerPath + "/photo-" + (i + 1) + "." + fileExt(photos[i]);
@@ -128,6 +134,8 @@
         path: photoPath,
         order: i + 1
       });
+      completedUploads += 1;
+      reportProgress();
     }
 
     if (video) {
@@ -138,6 +146,8 @@
         path: videoPath,
         order: 1
       });
+      completedUploads += 1;
+      reportProgress();
     }
 
     if (captions) {
@@ -149,8 +159,11 @@
         language: "lt",
         order: 1
       });
+      completedUploads += 1;
+      reportProgress();
     }
 
+    if (!totalUploads) reportProgress();
     return media;
   }
 
@@ -179,7 +192,7 @@
     var layout = options && options.layout ? options.layout : {};
 
     if (options && options.files) {
-      media = await uploadBuilderMedia(identifier, options.files);
+      media = await uploadBuilderMedia(identifier, options.files, false, options.onProgress);
     }
 
     var imageIndex = 0;
@@ -248,7 +261,7 @@
     var hasVideo = !!files.video;
     var hasCaptions = !!files.captions;
     var uploaded = (hasPhotos || hasVideo || hasCaptions)
-      ? await uploadBuilderMedia(identifier, files, true)
+      ? await uploadBuilderMedia(identifier, files, true, options && options.onProgress)
       : [];
     var media = existing.filter(function (item) {
       if (item.type === "image" && hasPhotos) return false;
