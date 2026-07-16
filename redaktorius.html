@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260716-2">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -70,15 +70,70 @@
             Pavardė
             <input type="text" name="pavarde">
           </label>
-          <div class="form-grid">
-            <label>
-              Gimimo data
-              <input type="date" name="gimimo_data">
-            </label>
-            <label>
-              Mirties data
-              <input type="date" name="mirties_data">
-            </label>
+          <div class="editor-date-grid">
+            <fieldset class="editor-date-picker" data-date-picker data-date-name="gimimo_data">
+              <legend>
+                <span class="editor-date-picker__icon" aria-hidden="true">○</span>
+                <span>Gimimo data</span>
+              </legend>
+              <input type="hidden" name="gimimo_data">
+              <div class="editor-date-picker__fields">
+                <label>
+                  <span>Metai</span>
+                  <select data-date-year aria-label="Gimimo metai">
+                    <option value="">Metai</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Mėnuo</span>
+                  <select data-date-month aria-label="Gimimo mėnuo" disabled>
+                    <option value="">Mėnuo</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Diena</span>
+                  <select data-date-day aria-label="Gimimo diena" disabled>
+                    <option value="">Diena</option>
+                  </select>
+                </label>
+              </div>
+              <div class="editor-date-picker__footer">
+                <p data-date-status aria-live="polite">Pirmiausia pasirinkite metus.</p>
+                <button type="button" data-date-clear>Išvalyti</button>
+              </div>
+            </fieldset>
+
+            <fieldset class="editor-date-picker editor-date-picker--memorial" data-date-picker data-date-name="mirties_data">
+              <legend>
+                <span class="editor-date-picker__icon" aria-hidden="true">✦</span>
+                <span>Mirties data</span>
+              </legend>
+              <input type="hidden" name="mirties_data">
+              <div class="editor-date-picker__fields">
+                <label>
+                  <span>Metai</span>
+                  <select data-date-year aria-label="Mirties metai">
+                    <option value="">Metai</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Mėnuo</span>
+                  <select data-date-month aria-label="Mirties mėnuo" disabled>
+                    <option value="">Mėnuo</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Diena</span>
+                  <select data-date-day aria-label="Mirties diena" disabled>
+                    <option value="">Diena</option>
+                  </select>
+                </label>
+              </div>
+              <div class="editor-date-picker__footer">
+                <p data-date-status aria-live="polite">Pirmiausia pasirinkite metus.</p>
+                <button type="button" data-date-clear>Išvalyti</button>
+              </div>
+            </fieldset>
           </div>
           <label>
             Epitafija
@@ -337,7 +392,7 @@
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260702-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260715-1"></script>
-<script src="assets/redaktorius.js?v=20260707-5"></script>
+<script src="assets/redaktorius.js?v=20260716-2"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

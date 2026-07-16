@@ -655,6 +655,24 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn(".editor-preview-open .editor-canvas", styles)
         self.assertIn("view-transition-name: selected-product-image", styles)
 
+    def test_editor_uses_simple_separate_date_parts_on_mobile(self):
+        page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        self.assertNotIn('type="date" name="gimimo_data"', page)
+        self.assertNotIn('type="date" name="mirties_data"', page)
+        self.assertIn('type="hidden" name="gimimo_data"', page)
+        self.assertIn('type="hidden" name="mirties_data"', page)
+        self.assertEqual(page.count("data-date-year"), 2)
+        self.assertEqual(page.count("data-date-month"), 2)
+        self.assertEqual(page.count("data-date-day"), 2)
+        self.assertIn("daysInMonth", editor)
+        self.assertIn("validateDatePickers", editor)
+        self.assertIn("Mirties data negali būti ankstesnė už gimimo datą.", editor)
+        self.assertIn("Data negali būti vėlesnė nei šiandien.", editor)
+        self.assertIn(".editor-date-picker__fields", styles)
+        self.assertIn(".editor-date-picker.has-error", styles)
+
     def test_grave_search_has_location_routes_sharing_and_map_preview(self):
         page = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")
         script = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")

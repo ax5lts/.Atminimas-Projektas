@@ -31,9 +31,19 @@
   var colorBrightness = document.getElementById("editor-color-brightness");
   var colorCurrent = document.getElementById("editor-color-current");
   var photoFileList = document.getElementById("editor-photo-file-list");
+  var datePickers = Array.from(document.querySelectorAll("[data-date-picker]"));
   var MAX_PHOTOS = 8;
   var MAX_STORY_WORDS = 1000;
   var PREVIEW_STORY_WORDS = 80;
+  var DATE_MIN_YEAR = 1800;
+  var DATE_MONTHS = [
+    "Sausis", "Vasaris", "Kovas", "Balandis", "Gegužė", "Birželis",
+    "Liepa", "Rugpjūtis", "Rugsėjis", "Spalis", "Lapkritis", "Gruodis"
+  ];
+  var DATE_MONTHS_GENITIVE = [
+    "sausio", "vasario", "kovo", "balandžio", "gegužės", "birželio",
+    "liepos", "rugpjūčio", "rugsėjo", "spalio", "lapkričio", "gruodžio"
+  ];
   var photoSlots = [
     document.getElementById("editor-preview-photo-1"),
     document.getElementById("editor-preview-photo-2"),
@@ -254,6 +264,194 @@
     var list = words(value);
     if (list.length <= PREVIEW_STORY_WORDS) return value;
     return list.slice(0, PREVIEW_STORY_WORDS).join(" ") + "…";
+  }
+
+  function padDatePart(value) {
+    return String(value || "").padStart(2, "0");
+  }
+
+  function datePickerElements(picker) {
+    return {
+      hidden: form.elements[picker.dataset.dateName],
+      year: picker.querySelector("[data-date-year]"),
+      month: picker.querySelector("[data-date-month]"),
+      day: picker.querySelector("[data-date-day]"),
+      status: picker.querySelector("[data-date-status]")
+    };
+  }
+
+  function daysInMonth(year, month) {
+    return new Date(Number(year), Number(month), 0).getDate();
+  }
+
+  function datePickerValue(picker) {
+    var fields = datePickerElements(picker);
+    if (!fields.year.value || !fields.month.value || !fields.day.value) return "";
+    return fields.year.value + "-" + padDatePart(fields.month.value) + "-" + padDatePart(fields.day.value);
+  }
+
+  function clearDatePickerError(picker) {
+    var fields = datePickerElements(picker);
+    picker.classList.remove("has-error");
+    fields.year.removeAttribute("aria-invalid");
+    fields.month.removeAttribute("aria-invalid");
+    fields.day.removeAttribute("aria-invalid");
+  }
+
+  function datePickerSummary(picker) {
+    var fields = datePickerElements(picker);
+    if (!fields.year.value) return "Pirmiausia pasirinkite metus.";
+    if (!fields.month.value) return "Dabar pasirinkite mėnesį.";
+    if (!fields.day.value) return "Liko pasirinkti dieną.";
+    return "Pasirinkta: " + fields.year.value + " m. " +
+      DATE_MONTHS_GENITIVE[Number(fields.month.value) - 1] + " " + Number(fields.day.value) + " d.";
+  }
+
+  function refreshDatePickerMonths(picker) {
+    var fields = datePickerElements(picker);
+    var now = new Date();
+    Array.from(fields.month.options).forEach(function (option) {
+      option.disabled = !!option.value &&
+        Number(fields.year.value) === now.getFullYear() &&
+        Number(option.value) > now.getMonth() + 1;
+    });
+    if (fields.month.selectedOptions[0] && fields.month.selectedOptions[0].disabled) {
+      fields.month.value = "";
+      fields.day.value = "";
+    }
+  }
+
+  function refreshDatePickerDays(picker, preferredDay) {
+    var fields = datePickerElements(picker);
+    var selectedDay = preferredDay || fields.day.value;
+    var enabled = !!(fields.year.value && fields.month.value);
+    var count = enabled ? daysInMonth(fields.year.value, fields.month.value) : 0;
+    var now = new Date();
+    if (enabled &&
+        Number(fields.year.value) === now.getFullYear() &&
+        Number(fields.month.value) === now.getMonth() + 1) {
+      count = Math.min(count, now.getDate());
+    }
+    fields.day.innerHTML = "<option value=''>Diena</option>";
+    for (var day = 1; day <= count; day++) {
+      var option = document.createElement("option");
+      option.value = padDatePart(day);
+      option.textContent = day;
+      fields.day.appendChild(option);
+    }
+    fields.day.disabled = !enabled;
+    if (enabled && Number(selectedDay) <= count) fields.day.value = padDatePart(selectedDay);
+  }
+
+  function syncDatePicker(picker) {
+    var fields = datePickerElements(picker);
+    fields.month.disabled = !fields.year.value;
+    refreshDatePickerMonths(picker);
+    if (!fields.year.value) {
+      fields.month.value = "";
+      fields.day.value = "";
+    } else if (!fields.month.value) {
+      fields.day.value = "";
+    }
+    refreshDatePickerDays(picker);
+    fields.hidden.value = datePickerValue(picker);
+    fields.status.textContent = datePickerSummary(picker);
+    clearDatePickerError(picker);
+  }
+
+  function setDatePickerValue(picker, value) {
+    var fields = datePickerElements(picker);
+    var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+    fields.year.value = match ? match[1] : "";
+    fields.month.disabled = !fields.year.value;
+    fields.month.value = match ? match[2] : "";
+    refreshDatePickerMonths(picker);
+    refreshDatePickerDays(picker, match ? match[3] : "");
+    fields.day.value = match ? match[3] : "";
+    fields.hidden.value = datePickerValue(picker);
+    fields.status.textContent = datePickerSummary(picker);
+    clearDatePickerError(picker);
+  }
+
+  function syncDatePickersFromHidden() {
+    datePickers.forEach(function (picker) {
+      var fields = datePickerElements(picker);
+      setDatePickerValue(picker, fields.hidden.value);
+    });
+  }
+
+  function showDatePickerError(picker, message, focus) {
+    var fields = datePickerElements(picker);
+    picker.classList.add("has-error");
+    fields.status.textContent = message;
+    [fields.year, fields.month, fields.day].forEach(function (field) {
+      field.setAttribute("aria-invalid", "true");
+    });
+    if (focus) {
+      var target = !fields.year.value ? fields.year : (!fields.month.value ? fields.month : fields.day);
+      target.focus();
+    }
+  }
+
+  function validateDatePickers(focus) {
+    var today = new Date();
+    var todayIso = today.getFullYear() + "-" + padDatePart(today.getMonth() + 1) + "-" + padDatePart(today.getDate());
+    var firstInvalid = null;
+    datePickers.forEach(function (picker) {
+      clearDatePickerError(picker);
+      var fields = datePickerElements(picker);
+      var chosenParts = [fields.year.value, fields.month.value, fields.day.value].filter(Boolean).length;
+      if (chosenParts > 0 && chosenParts < 3 && !firstInvalid) {
+        firstInvalid = { picker: picker, message: "Pasirinkite visus tris laukus arba išvalykite datą." };
+      } else if (fields.hidden.value && fields.hidden.value > todayIso && !firstInvalid) {
+        firstInvalid = { picker: picker, message: "Data negali būti vėlesnė nei šiandien." };
+      }
+    });
+
+    var birth = form.elements.gimimo_data.value;
+    var death = form.elements.mirties_data.value;
+    if (!firstInvalid && birth && death && death < birth) {
+      firstInvalid = {
+        picker: datePickers.find(function (picker) { return picker.dataset.dateName === "mirties_data"; }),
+        message: "Mirties data negali būti ankstesnė už gimimo datą."
+      };
+    }
+    if (!firstInvalid) return true;
+    showDatePickerError(firstInvalid.picker, firstInvalid.message, focus);
+    return false;
+  }
+
+  function setupDatePickers() {
+    var currentYear = new Date().getFullYear();
+    datePickers.forEach(function (picker) {
+      var fields = datePickerElements(picker);
+      for (var year = currentYear; year >= DATE_MIN_YEAR; year--) {
+        var yearOption = document.createElement("option");
+        yearOption.value = String(year);
+        yearOption.textContent = String(year);
+        fields.year.appendChild(yearOption);
+      }
+      DATE_MONTHS.forEach(function (month, index) {
+        var monthOption = document.createElement("option");
+        monthOption.value = padDatePart(index + 1);
+        monthOption.textContent = month;
+        fields.month.appendChild(monthOption);
+      });
+      if (!fields.status.id) fields.status.id = picker.dataset.dateName + "-status";
+      [fields.year, fields.month, fields.day].forEach(function (field) {
+        field.setAttribute("aria-describedby", fields.status.id);
+        field.addEventListener("change", function () {
+          syncDatePicker(picker);
+        });
+      });
+      picker.querySelector("[data-date-clear]").addEventListener("click", function () {
+        setDatePickerValue(picker, "");
+        syncPreview();
+        scheduleDraftSave();
+        fields.year.focus();
+      });
+      setDatePickerValue(picker, fields.hidden.value);
+    });
   }
 
   function formData() {
@@ -889,6 +1087,7 @@
   function validateEditorStep(name) {
     var step = document.querySelector("[data-editor-step='" + name + "']");
     if (!step) return true;
+    if (name === "text" && !validateDatePickers(true)) return false;
     var invalid = Array.from(step.querySelectorAll("input, textarea, select")).find(function (field) {
       return !field.checkValidity();
     });
@@ -1246,6 +1445,13 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (!validateDatePickers(false)) {
+      activateEditorStep("text", true);
+      window.setTimeout(function () {
+        validateDatePickers(true);
+      }, 0);
+      return;
+    }
     var invalid = Array.from(form.querySelectorAll("input, textarea, select")).find(function (field) {
       return !field.checkValidity();
     });
@@ -1345,8 +1551,11 @@
       }, 900);
       return;
     }
+    setupDatePickers();
     await loadProfileForEditing();
+    syncDatePickersFromHidden();
     await restoreDraft();
+    syncDatePickersFromHidden();
     setupColorPicker();
     syncPreview();
     refreshProportionalHeights();
