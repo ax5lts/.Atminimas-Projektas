@@ -23,6 +23,9 @@
   var stepProgressEl = document.getElementById("editor-step-progress");
   var saveProgressEl = document.getElementById("editor-save-progress");
   var photoOrderEl = document.getElementById("editor-photo-order");
+  var photoDetailsEl = document.getElementById("editor-photo-details");
+  var advancedLayoutToggle = document.querySelector("[data-advanced-layout-toggle]");
+  var advancedLayoutEl = document.getElementById("editor-advanced-layout");
   var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
@@ -623,6 +626,31 @@
       : "Nuotraukos dar nepasirinktos.";
   }
 
+  function updatePhotoDescriptionVisibility(names) {
+    var selected = (names || []).filter(Boolean).slice(0, MAX_PHOTOS);
+    if (photoDetailsEl) photoDetailsEl.hidden = selected.length === 0;
+    document.querySelectorAll("[data-photo-description]").forEach(function (card) {
+      var index = Number(card.dataset.photoDescription) - 1;
+      card.hidden = index < 0 || index >= selected.length;
+      var title = card.querySelector(".editor-photo-description__title");
+      if (!title || card.hidden) return;
+      title.innerHTML = "";
+      var label = document.createTextNode((index + 1) + " nuotrauka");
+      title.appendChild(label);
+      if (index >= 4) {
+        var gallery = document.createElement("small");
+        gallery.textContent = " galerijoje";
+        title.appendChild(gallery);
+      }
+      if (selected[index]) {
+        var name = document.createElement("small");
+        name.className = "editor-photo-description__name";
+        name.textContent = selected[index];
+        title.appendChild(name);
+      }
+    });
+  }
+
   function orderedExistingImages() {
     return editingMedia.filter(function (item) { return item.type === "image"; })
       .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); });
@@ -696,6 +724,7 @@
       persistProcessedPhotoOrder().catch(function (err) { console.warn(err); });
     }
     movePhotoFields(from, to);
+    updatePhotoDescriptionVisibility(photoOrderNames);
     renderPhotoOrder();
     refreshOrderedPhotoPreviews();
     syncPreview();
@@ -788,6 +817,7 @@
       photoOrderMode = "files";
       photoOrderNames = restoredNames.filter(Boolean);
       renderPhotoFileList(restoredNames);
+      updatePhotoDescriptionVisibility(photoOrderNames);
       renderPhotoOrder();
     }
 
@@ -843,6 +873,7 @@
         return item.caption || ("Esama nuotrauka " + (index + 1));
       });
       photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+      updatePhotoDescriptionVisibility(photoOrderNames);
       renderPhotoOrder();
     }
 
@@ -1026,6 +1057,7 @@
       deleteDraftFile("photo-" + i).catch(function (err) { console.warn(err); });
     }
     renderPhotoFileList(files.map(function (file) { return file.name; }));
+    updatePhotoDescriptionVisibility(photoOrderNames);
     renderPhotoOrder();
     statusEl.textContent = files.length ? "Nuotraukos optimizuojamos…" : "";
     await Promise.all(cropPromises);
@@ -1081,6 +1113,21 @@
           setCropMode(selectedPiece);
         }
       });
+    });
+  }
+
+  function setupAdvancedLayout() {
+    if (!advancedLayoutToggle || !advancedLayoutEl) return;
+    stage.classList.add("is-simple-layout");
+    advancedLayoutToggle.addEventListener("click", function () {
+      var open = advancedLayoutEl.hidden;
+      advancedLayoutEl.hidden = !open;
+      advancedLayoutToggle.setAttribute("aria-expanded", String(open));
+      advancedLayoutToggle.textContent = open ? "Slėpti papildomus nustatymus" : "Noriu koreguoti pats";
+      stage.classList.toggle("is-simple-layout", !open);
+      if (open) {
+        advancedLayoutEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
     });
   }
 
@@ -1520,13 +1567,13 @@
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "klientai.html?slug=" + encodeURIComponent(result.identifier);
-      statusEl.textContent = "Sukurta kaip privatus puslapis. Paskelbti galėsite kliento zonoje. Slug: " + result.identifier;
-      previewCode.textContent = "slug: " + result.identifier;
+      statusEl.textContent = "Puslapis sukurtas ir išsaugotas kaip privatus. Paskelbti galėsite kliento zonoje.";
+      previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
       checkoutLink.href = "apmokejimas.html?order=" + encodeURIComponent(order.id || "");
       clientLink.href = clientUrl;
       qrLink.href = order.qr_kodas_url;
-      orderCode.textContent = "Užsakymas DB: " + (order.id || "sukurtas");
+      orderCode.textContent = order.id ? "Užsakymo numeris: " + String(order.id).slice(0, 8) : "Užsakymas sukurtas";
       resultBox.hidden = false;
       showSaveProgress(100, "Puslapis ir užsakymas sukurti.");
       setDraftState("Puslapis išsaugotas", "saved");
@@ -1560,6 +1607,7 @@
     syncPreview();
     refreshProportionalHeights();
     setupTransformModeButtons();
+    setupAdvancedLayout();
     setupEditorSectionButtons();
     bindDrag();
     bindResize();

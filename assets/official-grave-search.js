@@ -42,6 +42,14 @@
     if (distance === null) return "";
     return distance < 1 ? Math.round(distance * 1000) + " m nuo jūsų" : distance.toFixed(distance < 10 ? 1 : 0) + " km nuo jūsų";
   }
+  function careUrl(name, place, latitude, longitude) {
+    var params = new URLSearchParams();
+    if (name) params.set("graveName", name);
+    if (place) params.set("gravePlace", place);
+    if (latitude != null && latitude !== "") params.set("graveLat", latitude);
+    if (longitude != null && longitude !== "") params.set("graveLng", longitude);
+    return "index.html?" + params.toString() + "#kitos-paslaugos";
+  }
   function mapEmbed(row) {
     var latitude = number(row.latitude);
     var longitude = number(row.longitude);
@@ -74,6 +82,7 @@
     var name = html(rawName);
     var dates = html(shownDate(row.birth_date, row.birth_year, row.birth_date_text) + "–" + shownDate(row.death_date, row.death_year, row.death_date_text));
     var rawPlace = [row.cemetery, row.municipality].filter(Boolean).join(", ");
+    var carePlace = [rawPlace, row.section ? "sektorius " + row.section : "", row.row_name ? "eilė " + row.row_name : "", row.place_number ? "vieta " + row.place_number : ""].filter(Boolean).join(" · ");
     var place = html(rawPlace);
     var grave = [["sektorius", row.section], ["eilė", row.row_name], ["vieta", row.place_number]].filter(function (x) { return x[1]; }).map(function (x) { return x[0] + " " + html(x[1]); }).join(" · ");
     var burial = row.burial_date || row.burial_year ? html(shownDate(row.burial_date, row.burial_year, row.burial_date_text)) : "";
@@ -101,9 +110,10 @@
       (rich && embeddedMap ? "<div class='grave-map-preview'><iframe title='Kapavietės vieta žemėlapyje' loading='lazy' referrerpolicy='no-referrer' src='" + html(embeddedMap) + "'></iframe><small>Žemėlapis: © OpenStreetMap bendruomenė</small></div>" : "") +
       (map ? "<div class='grave-result-actions'" + actionData + ">" +
         "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą</a>" +
-        "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti žemėlapį</a>" +
+        "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“</a>" +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
-        "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" : "") +
+        "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
+        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude)) + "'>Užsakyti priežiūrą</a>" : "") +
         "</div>" : "") +
       "</div></details>";
   }
@@ -164,9 +174,10 @@
       savedList.innerHTML = saved.map(function (item) {
         var location = item.latitude && item.longitude ? item.latitude + "," + item.longitude : item.place;
         var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(location || item.name);
+        var serviceUrl = careUrl(item.name, item.place, item.latitude, item.longitude);
         return "<article data-saved-grave-key='" + html(item.key) + "'><div><strong>" + html(item.name) + "</strong><span>" +
           html(item.place || "Vieta nenurodyta") + "</span></div><div class='actions'><a class='button button--ghost' target='_blank' rel='noopener' href='" +
-          html(url) + "'>Atidaryti</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
+          html(url) + "'>Atidaryti</a><a class='button button--ghost' href='" + html(serviceUrl) + "'>Užsakyti priežiūrą</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
       }).join("");
     }
 

@@ -32,11 +32,19 @@
 
   var details = document.getElementById("service-details");
   var statusEl = document.getElementById("service-request-status");
+  var stepStatusEl = document.getElementById("service-step-status");
   var estimateEl = document.getElementById("service-estimate-price");
   var submitButton = form.querySelector("button[type='submit']");
   var serviceInputs = Array.from(form.querySelectorAll("input[name='services']"));
   var cleaningInputs = Array.from(form.querySelectorAll("input[name='cleaning_tasks']"));
+  var serviceSteps = Array.from(form.querySelectorAll("[data-service-step]"));
+  var serviceStepButtons = Array.from(form.querySelectorAll("[data-service-step-button]"));
+  var serviceStepProgress = document.getElementById("service-step-progress");
+  var savedGraveWrap = document.getElementById("service-saved-grave-wrap");
+  var savedGraveSelect = document.getElementById("service-saved-grave");
+  var currentServiceStep = 1;
   var draftKey = "atminimas.service-request.draft.v1";
+  var savedGravesKey = "atminimas.saved-graves.v1";
   var allowedServices = ["zvakes", "geles", "kapu_tvarkymas"];
   var prices = window.ATMINIMAS_SERVICE_PRICES || {};
   var optionLabels = {
@@ -110,7 +118,8 @@
 
   function updateServiceFields() {
     var selected = selectedServices();
-    details.hidden = selected.length === 0;
+    details.hidden = selected.length === 0 || currentServiceStep === 1;
+    if (!selected.length && currentServiceStep > 1) activateServiceStep(1, false);
     form.querySelectorAll("[data-service-details]").forEach(function (section) {
       var enabled = selected.indexOf(section.dataset.serviceDetails) !== -1;
       section.hidden = !enabled;
@@ -120,6 +129,101 @@
       });
     });
     updateEstimate();
+  }
+
+  function activateServiceStep(number, scroll) {
+    number = Math.max(1, Math.min(4, Number(number) || 1));
+    currentServiceStep = number;
+    details.hidden = number === 1 || !selectedServices().length;
+    serviceSteps.forEach(function (step) {
+      var active = Number(step.dataset.serviceStep) === number;
+      step.hidden = !active;
+      step.classList.toggle("is-active", active);
+    });
+    serviceStepButtons.forEach(function (button) {
+      var active = Number(button.dataset.serviceStepButton) === number;
+      button.classList.toggle("is-active", active);
+      if (active) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
+    });
+    if (serviceStepProgress) serviceStepProgress.style.width = (number * 25) + "%";
+    var activeStep = serviceSteps.find(function (step) { return Number(step.dataset.serviceStep) === number; });
+    if (scroll && activeStep) activeStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function validateServiceStep(number) {
+    stepStatusEl.textContent = "";
+    if (number === 1 && !selectedServices().length) {
+      stepStatusEl.textContent = "Pasirinkite bent vieną paslaugą.";
+      return false;
+    }
+    if (number === 3 && selectedServices().indexOf("kapu_tvarkymas") !== -1 && !selectedNamedValues("cleaning_tasks").length) {
+      stepStatusEl.textContent = "Pasirinkite bent vieną tvarkymo darbą.";
+      return false;
+    }
+    var step = serviceSteps.find(function (item) { return Number(item.dataset.serviceStep) === number; });
+    var invalid = step && Array.from(step.querySelectorAll("input, textarea, select")).find(function (field) {
+      return !field.disabled && !field.checkValidity();
+    });
+    if (!invalid) return true;
+    invalid.reportValidity();
+    invalid.focus();
+    return false;
+  }
+
+  function savedGraves() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(savedGravesKey) || "[]");
+      return Array.isArray(saved) ? saved : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function fillGrave(grave) {
+    if (!grave) return;
+    form.elements.deceased_name.value = grave.name || "";
+    form.elements.cemetery_name.value = (grave.place || "").split(",")[0].trim();
+    form.elements.grave_location.value = [
+      grave.place || "",
+      grave.latitude && grave.longitude ? "Koordinatės: " + grave.latitude + ", " + grave.longitude : ""
+    ].filter(Boolean).join("\n");
+  }
+
+  function setupSavedGraves() {
+    var saved = savedGraves();
+    if (savedGraveWrap) savedGraveWrap.hidden = saved.length === 0;
+    if (savedGraveSelect) {
+      saved.forEach(function (grave, index) {
+        var option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = [grave.name, grave.place].filter(Boolean).join(" – ");
+        savedGraveSelect.appendChild(option);
+      });
+      savedGraveSelect.addEventListener("change", function () {
+        var grave = saved[Number(savedGraveSelect.value)];
+        if (grave) fillGrave(grave);
+      });
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    var name = (params.get("graveName") || "").trim();
+    var place = (params.get("gravePlace") || "").trim();
+    if (name || place) {
+      fillGrave({
+        name: name,
+        place: place,
+        latitude: (params.get("graveLat") || "").trim(),
+        longitude: (params.get("graveLng") || "").trim()
+      });
+      var care = form.querySelector("input[name='services'][value='kapu_tvarkymas']");
+      if (care) care.checked = true;
+      updateServiceFields();
+      activateServiceStep(2, false);
+      window.setTimeout(function () {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
   }
 
   function saveDraft() {
@@ -178,6 +282,27 @@
     input.addEventListener("change", updateServiceFields);
   });
 
+  form.querySelectorAll("[data-service-next]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      if (!validateServiceStep(currentServiceStep)) return;
+      activateServiceStep(currentServiceStep + 1, true);
+    });
+  });
+
+  form.querySelectorAll("[data-service-back]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      activateServiceStep(currentServiceStep - 1, true);
+    });
+  });
+
+  serviceStepButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      var requested = Number(button.dataset.serviceStepButton);
+      if (requested < currentServiceStep) activateServiceStep(requested, true);
+      else if (requested === currentServiceStep + 1 && validateServiceStep(currentServiceStep)) activateServiceStep(requested, true);
+    });
+  });
+
   form.querySelectorAll("input[name='candle_package'], input[name='flower_package']").forEach(function (input) {
     input.addEventListener("change", updateEstimate);
   });
@@ -198,11 +323,13 @@
     event.preventDefault();
     var services = selectedServices().filter(function (service) { return allowedServices.indexOf(service) !== -1; });
     if (!services.length) {
-      statusEl.textContent = "Pasirinkite bent vieną paslaugą.";
+      activateServiceStep(1, true);
+      stepStatusEl.textContent = "Pasirinkite bent vieną paslaugą.";
       return;
     }
     if (services.indexOf("kapu_tvarkymas") !== -1 && !selectedNamedValues("cleaning_tasks").length) {
-      statusEl.textContent = "Pasirinkite bent vieną tvarkymo darbą.";
+      activateServiceStep(3, true);
+      stepStatusEl.textContent = "Pasirinkite bent vieną tvarkymo darbą.";
       return;
     }
 
@@ -243,7 +370,8 @@
       sessionStorage.removeItem(draftKey);
       form.reset();
       updateServiceFields();
-      statusEl.textContent = "Užklausa gauta. Susisieksime dėl kainos ir atlikimo laiko.";
+      activateServiceStep(1, true);
+      stepStatusEl.textContent = "Užklausa gauta. Susisieksime dėl kainos ir atlikimo laiko.";
     } catch (error) {
       statusEl.textContent = error.message || "Nepavyko pateikti užklausos.";
     } finally {
@@ -254,4 +382,6 @@
   renderPrices();
   restoreDraft();
   updateServiceFields();
+  setupSavedGraves();
+  if (currentServiceStep === 1) activateServiceStep(1, false);
 })();

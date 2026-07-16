@@ -73,6 +73,34 @@
     }[value] || value || "laukiama";
   }
 
+  function shippingName(value) {
+    return {
+      laukiam_duomenu: "reikia pristatymo duomenų",
+      laukiama_duomenu: "reikia pristatymo duomenų",
+      paruošti: "paruošta apmokėti",
+      "išsiųsta": "išsiųsta",
+      pristatyta: "pristatyta",
+      "atšaukta": "atšaukta"
+    }[value] || value || "ruošiama";
+  }
+
+  function primaryAction(row, order) {
+    if (!order) {
+      return "<a class='button user-card-primary' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Baigti kurti</a>";
+    }
+    if (!order.apmoketa) {
+      return "<a class='button user-card-primary' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>" +
+        (order.shipping_status === "paruošti" && Number.isInteger(order.total_cents) ? "Apmokėti užsakymą" : "Tęsti užsakymą") + "</a>";
+    }
+    if (!order.customer_approved_at) {
+      return "<button class='button user-card-primary' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>";
+    }
+    if (order.tracking_url && (order.shipping_status === "išsiųsta" || order.shipping_status === "pristatyta")) {
+      return "<a class='button user-card-primary' href='" + html(safeUrl(order.tracking_url)) + "' target='_blank' rel='noopener'>Stebėti siuntą</a>";
+    }
+    return "<a class='button user-card-primary' href='sablonas-viskas.html?slug=" + encodeURIComponent(row.id) + "'>Peržiūrėti puslapį</a>";
+  }
+
   async function approveProduction(orderId) {
     var res = await fetch(rpcUrl("approve_order_for_production"), {
       method: "POST",
@@ -145,7 +173,7 @@
     });
 
     if (!res.ok) {
-      listEl.innerHTML = "<div class='info-box'><h2>Nepavyko įkelti</h2><p>Patikrinkite, ar Supabase schema atnaujinta ir ar veikia RLS taisyklės.</p></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Nepavyko įkelti puslapių</h2><p>Pabandykite atnaujinti puslapį. Jei problema kartojasi, susisiekite su mumis.</p></div>";
       return;
     }
 
@@ -181,22 +209,25 @@
       var production = order ? productionByOrder[order.id] : null;
       var invoice = order ? invoiceByOrder[order.id] : null;
       var shipment = order
-        ? "<p>Produktas: <strong>" + html(productName(order.product_type)) + "</strong><br>Užsakymas: <strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><br>Siunta: <strong>" + html(order.shipping_status || "laukiama_duomenu") + "</strong>" + (order.tracking_number ? " · Sekimo numeris: <strong>" + html(order.tracking_number) + "</strong>" : "") + (order.tracking_url ? " · <a href='" + html(safeUrl(order.tracking_url)) + "' target='_blank' rel='noopener'>Sekti siuntą</a>" : "") + "</p>"
+        ? "<div class='user-card-status'><span>Užsakymas</span><strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><span>Pristatymas</span><strong>" + html(shippingName(order.shipping_status)) + "</strong></div>"
         : "";
+      var moreActions =
+        "<a class='button button--ghost' href='" + publicUrl + "'>Peržiūrėti puslapį</a>" +
+        "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a>" +
+        "<a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>Atsisiųsti QR</a>" +
+        (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
+        (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
+        "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Rodyti viešai") + "</button>" +
+        "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti puslapį</button>";
       return (
-        "<article class='info-box' data-profile-card>" +
-          "<p class='eyebrow'>" + html(row.statusas || "sukurta") + "</p>" +
+        "<article class='info-box user-page-card' data-profile-card>" +
+          "<div class='user-card-heading'><p class='eyebrow'>" + (row.aktyvus ? "Viešas puslapis" : "Privatus puslapis") + "</p><span class='user-card-visibility " + (row.aktyvus ? "is-public" : "") + "'>" + (row.aktyvus ? "Viešas" : "Privatus") + "</span></div>" +
           "<h2>" + html(name) + "</h2>" +
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
-          "<p>Apmokėta: <strong>" + (row.apmoketa ? "taip" : "ne") + "</strong> · Vieša: <strong>" + (row.aktyvus ? "taip" : "ne") + "</strong></p>" +
+          "<p class='user-card-product'>" + (order ? html(productName(order.product_type)) : "Atminimo puslapio juodraštis") + "</p>" +
           shipment +
-          "<div class='actions'><a class='button' href='" + publicUrl + "'>Peržiūrėti</a><a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a><a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>QR</a>" +
-          (order && !order.apmoketa ? "<a class='button button--ghost' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas ir mokėjimas</a>" : "") +
-          (order && order.apmoketa && !order.customer_approved_at ? "<button class='button' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>" : "") +
-          (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
-          (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
-          "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Slėpti" : "Paskelbti viešai") + "</button>" +
-          "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti</button></div>" +
+          primaryAction(row, order) +
+          "<details class='user-card-more'><summary>Daugiau veiksmų</summary><div class='actions'>" + moreActions + "</div></details>" +
         "</article>"
       );
     }).join("");

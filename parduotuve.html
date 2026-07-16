@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="Pasirinkite graviruotą metalo arba ASA 3D spausdintą QR atminimo lentelę.">
 <title>QR atminimo lentelės - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260716-3">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -39,8 +39,9 @@
 
     <fieldset class="product-selector" id="product-selector">
       <legend class="visually-hidden">Pasirinktas produktas</legend>
-      <label class="product-choice">
+      <label class="product-choice product-choice--recommended">
         <input type="radio" name="product_type" value="metal" checked>
+        <span class="product-recommendation">Rekomenduojama</span>
         <span class="product-choice__image"><img src="assets/qr-atminimo-lentele-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota metalo QR atminimo lentelė"></span>
         <span class="product-choice__content">
           <span><strong>Graviruota QR atminimo lentelė</strong><small>Patvari metalo lentelė lauko sąlygoms</small></span>
@@ -80,17 +81,8 @@
             <dt>Sauga</dt><dd id="product-safety">–</dd>
           </dl>
 
-          <div class="option-row">
-            <label for="delivery-option">Pristatymo pasirinkimas</label>
-            <select id="delivery-option" name="delivery">
-              <option value="badge">Tik QR atminimo lentelė</option>
-              <option value="badge-shipping">QR atminimo lentelė su siuntimu</option>
-              <option value="badge-install">Su atvykimu ir pritvirtinimu</option>
-            </select>
-          </div>
-
           <div class="actions">
-            <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Užsakyti</a>
+            <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Rinktis ir kurti puslapį</a>
             <a class="button button--ghost" href="klientai.html">Atidaryti pagal QR kodą</a>
           </div>
         </article>

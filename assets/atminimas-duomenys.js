@@ -42,8 +42,7 @@
   async function fetchJson(url) {
     var res = await fetch(url, { headers: headers() });
     if (!res.ok) {
-      var text = await res.text();
-      throw new Error("Supabase: " + res.status + " – " + text);
+      throw new Error("Duomenų išsaugoti nepavyko (" + res.status + ").");
     }
     return res.json();
   }
@@ -58,8 +57,7 @@
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      var text = await res.text();
-      throw new Error("Supabase: " + res.status + " – " + text);
+      throw new Error("Duomenų įkelti nepavyko (" + res.status + ").");
     }
     var rows = await res.json();
     return rows && rows[0] ? rows[0] : payload;
@@ -105,8 +103,7 @@
       body: file
     });
     if (!res.ok) {
-      var text = await res.text();
-      throw new Error("Supabase Storage: " + res.status + " – " + text);
+      throw new Error("Failo įkelti nepavyko (" + res.status + ").");
     }
     return publicStorageUrl(bucket, path);
   }
@@ -177,7 +174,7 @@
       restUrl("profiliai", "id=eq." + encodeURIComponent(identifier) + "&select=*&limit=1")
     );
     if (!rows || !rows.length) {
-      throw new Error('Atminimas nerastas duomenų bazėje (ID/slug: "' + identifier + '")');
+      throw new Error("Atminimo puslapis nerastas.");
     }
     return { atminimas: rows[0] };
   }

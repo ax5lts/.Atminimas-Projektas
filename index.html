@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260716-3">
 </head>
 <body class="home-page" data-loading>
 <div class="site-shell">
@@ -137,7 +137,18 @@
       </header>
 
       <form class="service-request" id="service-request-form">
-        <fieldset class="service-picker">
+        <nav class="service-stepper" aria-label="Paslaugos užklausos žingsniai">
+          <button type="button" class="is-active" data-service-step-button="1"><span>1</span>Paslauga</button>
+          <button type="button" data-service-step-button="2"><span>2</span>Kapavietė</button>
+          <button type="button" data-service-step-button="3"><span>3</span>Pasirinkimai</button>
+          <button type="button" data-service-step-button="4"><span>4</span>Patvirtinimas</button>
+        </nav>
+        <div class="service-step-progress" aria-hidden="true"><span id="service-step-progress"></span></div>
+        <p class="form-status service-step-status" id="service-step-status" role="status" aria-live="polite"></p>
+
+        <section class="service-step is-active" data-service-step="1" aria-labelledby="service-step-1-title">
+          <header class="service-step__header"><span>1 žingsnis iš 4</span><h3 id="service-step-1-title">Kuo galime pasirūpinti?</h3><p>Pasirinkite vieną arba kelias paslaugas.</p></header>
+          <fieldset class="service-picker">
           <legend class="visually-hidden">Pasirinkite paslaugas</legend>
           <label class="service-choice">
             <input type="checkbox" name="services" value="zvakes">
@@ -160,28 +171,36 @@
             <span class="service-choice__body"><strong>Kapo sutvarkymas</strong><small>Bazinis kapavietės sutvarkymas pagal susitarimą.</small></span>
             <span class="service-choice__price"><small>Kaina</small>–</span>
           </label>
-        </fieldset>
+          </fieldset>
+          <div class="service-step-actions"><button class="button" type="button" data-service-next>Kur yra kapavietė?</button></div>
+        </section>
 
         <div class="service-details" id="service-details" hidden>
-          <div class="service-details__intro">
-            <p class="eyebrow">Užklausos duomenys</p>
-            <h3>Apie kapavietę</h3>
-            <p>Įrašykite tiek informacijos, kad galėtume tiksliai rasti vietą ir susisiekti dėl atlikimo.</p>
-          </div>
-
-          <div class="form-grid service-details__grid">
-            <label>Mirusiojo vardas ir pavardė
-              <input type="text" name="deceased_name" autocomplete="off" maxlength="180" required>
+          <section class="service-step" data-service-step="2" aria-labelledby="service-step-2-title" hidden>
+            <header class="service-step__header"><span>2 žingsnis iš 4</span><h3 id="service-step-2-title">Kuri kapavietė?</h3><p>Pasirinkite anksčiau išsaugotą kapavietę arba įrašykite vietą.</p></header>
+            <div class="service-saved-grave" id="service-saved-grave-wrap" hidden>
+              <label>Išsaugota kapavietė
+                <select id="service-saved-grave"><option value="">Pasirinkite iš išsaugotų</option></select>
+              </label>
+            </div>
+            <div class="form-grid service-details__grid">
+              <label>Mirusiojo vardas ir pavardė
+                <input type="text" name="deceased_name" autocomplete="off" maxlength="180" required>
+              </label>
+              <label>Kapinių pavadinimas
+                <input type="text" name="cemetery_name" autocomplete="off" maxlength="200" required placeholder="Pvz., Antakalnio kapinės">
+              </label>
+            </div>
+            <label>Tiksli kapo vieta
+              <textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea>
             </label>
-            <label>Kapinių pavadinimas
-              <input type="text" name="cemetery_name" autocomplete="off" maxlength="200" required placeholder="Pvz., Antakalnio kapinės">
-            </label>
-          </div>
-          <label>Tiksli kapo vieta
-            <textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea>
-          </label>
+            <p class="editor-note">Kapavietę galite išsaugoti <a href="kapu-ieskojimas.html">kapų paieškoje</a> ir kitą kartą pasirinkti čia.</p>
+            <div class="service-step-actions"><button class="button button--ghost" type="button" data-service-back>Atgal</button><button class="button" type="button" data-service-next>Pasirinkti detales</button></div>
+          </section>
 
-          <div class="service-extra" data-service-details="geles" hidden>
+          <section class="service-step" data-service-step="3" aria-labelledby="service-step-3-title" hidden>
+            <header class="service-step__header"><span>3 žingsnis iš 4</span><h3 id="service-step-3-title">Ko konkrečiai reikia?</h3><p>Matysite tik pasirinktoms paslaugoms reikalingus laukus.</p></header>
+            <div class="service-extra" data-service-details="geles" hidden>
             <fieldset class="service-variant-group">
               <legend>Pasirinkite gėlių variantą</legend>
               <div class="service-variant-grid">
@@ -196,7 +215,7 @@
               <textarea name="flowers_details" rows="3" maxlength="900" placeholder="Gėlių rūšis, spalva, puokštės stilius ar kiti pageidavimai"></textarea>
             </label>
           </div>
-          <div class="service-extra" data-service-details="zvakes" hidden>
+            <div class="service-extra" data-service-details="zvakes" hidden>
             <fieldset class="service-variant-group">
               <legend>Pasirinkite žvakių kiekį</legend>
               <div class="service-variant-grid">
@@ -210,7 +229,7 @@
               <textarea name="candles_details" rows="3" maxlength="900" placeholder="Spalva, dydis, žvakidės tipas ar kiti pageidavimai"></textarea>
             </label>
           </div>
-          <div class="service-extra" data-service-details="kapu_tvarkymas" hidden>
+            <div class="service-extra" data-service-details="kapu_tvarkymas" hidden>
             <fieldset class="service-variant-group">
               <legend>Pasirinkite tvarkymo darbus <span class="optional">(galima kelis)</span></legend>
               <div class="service-variant-grid service-variant-grid--cleaning">
@@ -226,23 +245,29 @@
             </label>
           </div>
 
-          <div class="service-estimate" aria-live="polite">
-            <span>Preliminari pasirinkimų kaina</span>
-            <strong id="service-estimate-price">–</strong>
-            <small>Galutinę kainą patvirtinsime prieš atliekant paslaugą.</small>
-          </div>
+            <div class="service-estimate" aria-live="polite">
+              <span>Preliminari pasirinkimų kaina</span>
+              <strong id="service-estimate-price">–</strong>
+              <small>Galutinę kainą patvirtinsime prieš atliekant paslaugą.</small>
+            </div>
+            <div class="service-step-actions"><button class="button button--ghost" type="button" data-service-back>Atgal</button><button class="button" type="button" data-service-next>Patikrinti užklausą</button></div>
+          </section>
 
-          <label>Papildoma informacija <span class="optional">(nebūtina)</span>
-            <textarea name="extra_information" rows="4" maxlength="2000" placeholder="Pageidaujama data, kaip atpažinti kapavietę ar kita svarbi informacija"></textarea>
-          </label>
-          <label class="check-label service-consent">
-            <input type="checkbox" name="privacy_confirm" value="yes" required>
-            <span>Sutinku, kad pateikti duomenys būtų naudojami šiai paslaugos užklausai administruoti. Susipažinau su <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</span>
-          </label>
-          <div class="service-submit">
-            <button class="button" type="submit">Pateikti užklausą</button>
-            <p class="form-status" id="service-request-status" role="status" aria-live="polite"></p>
-          </div>
+          <section class="service-step" data-service-step="4" aria-labelledby="service-step-4-title" hidden>
+            <header class="service-step__header"><span>4 žingsnis iš 4</span><h3 id="service-step-4-title">Beveik baigta</h3><p>Pridėkite nebūtiną informaciją ir pateikite užklausą.</p></header>
+            <label>Papildoma informacija <span class="optional">(nebūtina)</span>
+              <textarea name="extra_information" rows="4" maxlength="2000" placeholder="Pageidaujama data, kaip atpažinti kapavietę ar kita svarbi informacija"></textarea>
+            </label>
+            <label class="check-label service-consent">
+              <input type="checkbox" name="privacy_confirm" value="yes" required>
+              <span>Sutinku, kad pateikti duomenys būtų naudojami šiai paslaugos užklausai administruoti. Susipažinau su <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</span>
+            </label>
+            <div class="service-submit">
+              <button class="button button--ghost" type="button" data-service-back>Atgal</button>
+              <button class="button" type="submit">Pateikti užklausą</button>
+              <p class="form-status" id="service-request-status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
         </div>
       </form>
     </section>
@@ -257,10 +282,10 @@
   </footer>
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
-<script src="assets/auth.js?v=20260702-2"></script>
+<script src="assets/auth.js?v=20260716-3"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
-<script src="assets/home.js?v=20260715-2"></script>
-<script src="assets/official-grave-search.js?v=20260715-1"></script>
+<script src="assets/home.js?v=20260716-3"></script>
+<script src="assets/official-grave-search.js?v=20260716-3"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

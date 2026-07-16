@@ -341,7 +341,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('<a class="button" href="redaktorius.html?product=metal">Užsakyti</a>', home)
-        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Užsakyti</a>', shop)
+        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Rinktis ir kurti puslapį</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -672,6 +672,53 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("Data negali būti vėlesnė nei šiandien.", editor)
         self.assertIn(".editor-date-picker__fields", styles)
         self.assertIn(".editor-date-picker.has-error", styles)
+
+    def test_main_customer_flows_are_simplified(self):
+        editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor_js = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        checkout_page = (ROOT / "apmokejimas.html").read_text(encoding="utf-8")
+        checkout_js = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+        user_js = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        home_js = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        grave_js = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
+        auth = (ROOT / "assets" / "auth.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="editor-photo-details" hidden', editor_page)
+        self.assertEqual(editor_page.count("data-photo-description="), 8)
+        self.assertIn("updatePhotoDescriptionVisibility", editor_js)
+        self.assertIn("data-advanced-layout-toggle", editor_page)
+        self.assertIn('id="editor-advanced-layout" hidden', editor_page)
+        self.assertIn("setupAdvancedLayout", editor_js)
+
+        self.assertIn('name="city" type="search" list="checkout-city-list"', checkout_page)
+        self.assertIn('id="checkout-submit"', checkout_page)
+        self.assertNotIn('id="payment-button"', checkout_page)
+        self.assertNotIn('name="delivery_confirm"', checkout_page)
+        self.assertIn("prefillAccount", checkout_js)
+        self.assertIn("startPayment", checkout_js)
+
+        self.assertIn("primaryAction", user_js)
+        self.assertIn("user-card-more", user_js)
+        self.assertIn("Daugiau veiksmų", user_js)
+        self.assertIn("Rekomenduojama", shop)
+        self.assertNotIn('id="delivery-option"', shop)
+
+        for number in range(1, 5):
+            self.assertIn('data-service-step="{0}"'.format(number), home)
+            self.assertIn('data-service-step-button="{0}"'.format(number), home)
+        self.assertIn('id="service-saved-grave"', home)
+        self.assertIn("activateServiceStep", home_js)
+        self.assertIn("setupSavedGraves", home_js)
+        self.assertIn("graveName", grave_js)
+        self.assertIn("Užsakyti priežiūrą", grave_js)
+
+        self.assertNotIn("Supabase Auth klaida", auth)
+        self.assertNotIn("Supabase Storage:", api)
+        self.assertNotIn("Užsakymas DB:", editor_js)
+        self.assertNotIn('previewCode.textContent = "slug:', editor_js)
 
     def test_grave_search_has_location_routes_sharing_and_map_preview(self):
         page = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")

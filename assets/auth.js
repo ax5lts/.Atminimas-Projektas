@@ -4,7 +4,7 @@
   function cfg() {
     var config = global.ATMINIMAS_CONFIG;
     if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
-      throw new Error("Trūksta Supabase konfigūracijos.");
+      throw new Error("Prisijungimo paslauga laikinai neparuošta.");
     }
     return config;
   }
@@ -56,7 +56,7 @@
       return "Neteisingas el. paštas arba slaptažodis.";
     }
     if (/email not confirmed/i.test(message)) {
-      return "El. paštas dar nepatvirtintas. Atidarykite Supabase atsiųstą laišką ir paspauskite patvirtinimo nuorodą.";
+      return "El. paštas dar nepatvirtintas. Atidarykite gautą laišką ir paspauskite patvirtinimo nuorodą.";
     }
     if (/user already registered/i.test(message)) {
       return "Paskyra su šiuo el. paštu jau užregistruota.";
@@ -88,7 +88,7 @@
     var text = await res.text();
     var data = text ? JSON.parse(text) : {};
     if (!res.ok) {
-      var message = data.msg || data.error_description || data.message || "Supabase Auth klaida";
+      var message = data.msg || data.error_description || data.message || "Prisijungti nepavyko.";
       throw new Error(translatedAuthMessage(message));
     }
     return data;
