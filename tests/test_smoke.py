@@ -621,6 +621,91 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('site_url = "https://ax5lts.github.io/.Atminimas-Projektas/"', config)
         self.assertNotIn('site_url = "http://127.0.0.1:3000"', config)
 
+    def test_shared_mobile_navigation_and_reduced_loader_are_enabled(self):
+        site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        loader = (ROOT / "assets" / "loading.js").read_text(encoding="utf-8")
+        server = (ROOT / "serve.py").read_text(encoding="utf-8")
+        for page in ROOT.glob("*.html"):
+            with self.subTest(page=page.name):
+                self.assertIn("assets/site-ui.js?v=20260716-1", page.read_text(encoding="utf-8"))
+        self.assertIn("mobile-dock", site_ui)
+        self.assertIn("data-site-menu-toggle", site_ui)
+        self.assertIn("Pereiti prie turinio", site_ui)
+        self.assertIn(".mobile-dock", styles)
+        self.assertIn('document.addEventListener("DOMContentLoaded", hideLoader', loader)
+        self.assertIn('"Permissions-Policy": "camera=(), microphone=(), geolocation=(self)"', server)
+        self.assertIn("frame-src https://www.openstreetmap.org", server)
+
+    def test_editor_has_five_mobile_steps_reorder_and_save_progress(self):
+        page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        for step in ("text", "colors", "files", "positions", "preview"):
+            self.assertIn('data-editor-step="{0}"'.format(step), page)
+            self.assertIn('data-editor-step-button="{0}"'.format(step), page)
+        self.assertIn('id="editor-photo-order"', page)
+        self.assertIn('id="editor-save-progress"', page)
+        self.assertIn("activateEditorStep", editor)
+        self.assertIn("swapPhotoOrder", editor)
+        self.assertIn("data-photo-move", editor)
+        self.assertIn("onUploadProgress", editor)
+        self.assertIn("typeof onProgress", api)
+        self.assertIn(".editor-preview-open .editor-canvas", styles)
+        self.assertIn("view-transition-name: selected-product-image", styles)
+
+    def test_grave_search_has_location_routes_sharing_and_map_preview(self):
+        page = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")
+        script = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
+        self.assertIn("data-use-location", page)
+        self.assertIn("data-map-preview", page)
+        self.assertIn("data-saved-graves", page)
+        self.assertIn("navigator.geolocation.getCurrentPosition", script)
+        self.assertIn("distanceKm", script)
+        self.assertIn("www.openstreetmap.org/export/embed.html", script)
+        self.assertIn("www.google.com/maps/dir/", script)
+        self.assertIn("navigator.share", script)
+        self.assertIn("atminimas.saved-graves.v1", script)
+
+    def test_memorial_phone_actions_and_moderated_engagement_are_safe(self):
+        page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        actions = (ROOT / "assets" / "memorial-actions.js").read_text(encoding="utf-8")
+        edge = (ROOT / "supabase" / "functions" / "memorial-engagement" / "index.ts").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260716173406_memorial_candles_and_memories.sql").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn('id="memorial-action-bar"', page)
+        self.assertIn('id="memorial-light-candle"', page)
+        self.assertIn('id="memorial-memory-form"', page)
+        for action in ("share", "copy", "qr", "save", "reminder", "photos"):
+            self.assertIn('data-memorial-action="{0}"'.format(action), page)
+        self.assertIn("navigator.share", actions)
+        self.assertIn("text/calendar", actions)
+        self.assertIn("atminimas.saved-memorials.v1", actions)
+        self.assertIn('action: "candle"', actions)
+        self.assertIn('action: "memory"', actions)
+        self.assertIn("crypto.subtle.digest", edge)
+        self.assertIn("visitorHash(request, `${id}|candle|${bucket}`)", edge)
+        self.assertIn("visitorHash(request, `${id}|memory|${bucket}`)", edge)
+        self.assertIn('.eq("status", "approved")', edge)
+        self.assertIn("body.consent !== true", edge)
+        self.assertIn("alter table public.memorial_candles enable row level security", migration.lower())
+        self.assertIn("alter table public.memorial_memories enable row level security", migration.lower())
+        self.assertIn("grant select, insert on table public.memorial_candles, public.memorial_memories to service_role", migration.lower())
+        self.assertNotRegex(migration.lower(), r"grant\s+[^;]*\bto\s+anon\b")
+        self.assertRegex(config, r"(?s)\[functions\.memorial-engagement\]\s*verify_jwt\s*=\s*false")
+
+    def test_legal_pages_cover_location_local_saves_and_memories(self):
+        privacy = (ROOT / "privatumas.html").read_text(encoding="utf-8")
+        terms = (ROOT / "taisykles.html").read_text(encoding="utf-8")
+        accessibility = (ROOT / "prieinamumas.html").read_text(encoding="utf-8")
+        self.assertIn("atminimas.saved-memorials.v1", privacy)
+        self.assertIn("atminimas.saved-graves.v1", privacy)
+        self.assertIn("Vieta, virtualios žvakės ir prisiminimai", privacy)
+        self.assertIn("Virtualios žvakės ir lankytojų prisiminimai", terms)
+        self.assertIn("mažesnio judesio režimas", accessibility)
+        self.assertIn("nuotraukų eiliškumą", accessibility)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

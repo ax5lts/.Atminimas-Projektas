@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="Kapavietės paieška pagal mirusiojo vardą ir pavardę.">
 <title>Kapų ieškojimas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260715-4">
+<link rel="stylesheet" href="css/styles.css?v=20260716-1">
 </head>
 <body>
 <div class="site-shell">
@@ -22,7 +22,7 @@
       <p class="eyebrow">Kapaviečių duomenys</p>
       <h1 id="grave-title">Raskite artimojo kapavietę</h1>
       <p>Įveskite vardą ir pavardę. Galite rašyti ir be lietuviškų raidžių.</p>
-      <form class="grave-search-form" data-grave-search-form>
+      <form class="grave-search-form" data-grave-search-form data-map-preview>
         <label class="visually-hidden" for="grave-query">Vardas ir pavardė</label>
         <input id="grave-query" name="q" type="search" minlength="2" maxlength="220" autocomplete="off" placeholder="Pvz., Jonas Jonaitis" required>
         <button class="button" type="submit">Ieškoti</button>
@@ -35,8 +35,19 @@
             <label>Kapinės<input name="cemetery" type="search" maxlength="200"></label>
           </div>
         </details>
+        <div class="grave-search-tools">
+          <button class="button button--ghost" type="button" data-use-location>Naudoti mano vietą</button>
+          <span data-location-status>Vieta naudojama tik atstumui ir maršrutui parodyti.</span>
+        </div>
       </form>
       <p class="form-status" data-grave-status role="status" aria-live="polite">Paieškai įveskite bent 2 raides.</p>
+    </section>
+    <section class="saved-graves" data-saved-graves hidden aria-labelledby="saved-graves-title">
+      <div>
+        <p class="eyebrow">Šiame telefone</p>
+        <h2 id="saved-graves-title">Išsaugotos kapavietės</h2>
+      </div>
+      <div class="saved-graves__list" data-saved-graves-list></div>
     </section>
     <section class="grave-results" aria-labelledby="results-title">
       <div class="grave-results__heading"><h2 id="results-title">Paieškos rezultatai</h2><span data-grave-count></span></div>
@@ -50,5 +61,6 @@
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/official-grave-search.js?v=20260715-1"></script>
+<script src="assets/site-ui.js?v=20260716-1"></script>
 </body>
 </html>

@@ -13,6 +13,8 @@
   var openServicesEl = document.getElementById("admin-open-services");
   var productionCountEl = document.getElementById("admin-production-count");
   var productionReadyEl = document.getElementById("admin-production-ready");
+  var memoryCountEl = document.getElementById("admin-memory-count");
+  var pendingMemoriesEl = document.getElementById("admin-pending-memories");
   var businessSettingsPanel = document.getElementById("admin-business-settings");
   var businessSettingsForm = document.getElementById("business-settings-form");
   var businessSettingsStatus = document.getElementById("business-settings-status");
@@ -38,6 +40,9 @@
   var legalRequestsRefresh = document.getElementById("legal-requests-refresh");
   var withdrawalRows = document.getElementById("withdrawal-rows");
   var contentReportRows = document.getElementById("content-report-rows");
+  var memoriesPanel = document.getElementById("admin-memories");
+  var memoryRows = document.getElementById("memory-rows");
+  var memoriesRefresh = document.getElementById("memories-refresh");
   var serviceRequestsPanel = document.getElementById("admin-service-requests");
   var serviceRequestsRefresh = document.getElementById("service-requests-refresh");
   var serviceRequestRows = document.getElementById("service-request-rows");
@@ -49,6 +54,7 @@
   var serviceRequestCache = [];
   var productionCache = [];
   var automationCache = [];
+  var memoryCache = [];
 
   function setStatus(message) {
     loginStatusEl.textContent = message || "";
@@ -134,6 +140,8 @@
     openServicesEl.textContent = openServices + " neužbaigta";
     productionCountEl.textContent = productionCache.filter(function (row) { return row.status !== "completed" && row.status !== "cancelled"; }).length;
     productionReadyEl.textContent = productionCache.filter(function (row) { return row.status === "ready_to_ship"; }).length + " paruošta siųsti";
+    memoryCountEl.textContent = memoryCache.length;
+    pendingMemoriesEl.textContent = memoryCache.filter(function (row) { return row.status === "pending"; }).length + " laukia peržiūros";
   }
 
   async function copyText(value) {
@@ -475,6 +483,41 @@
     renderLegalRequests();
   }
 
+  function renderMemories() {
+    memoryRows.innerHTML = memoryCache.map(function (row) {
+      var profile = profileFor(row.profile_id);
+      var profileName = profile ? [profile.vardas, profile.pavarde].filter(Boolean).join(" ") : row.profile_id;
+      return "<tr data-memory-id='" + html(row.id) + "'>" +
+        "<td><strong>" + html(profileName || row.profile_id) + "</strong><br><a href='sablonas-viskas.html?slug=" + encodeURIComponent(row.profile_id) + "' target='_blank' rel='noopener'>Atidaryti puslapį</a></td>" +
+        "<td><strong>" + html(row.author_name) + "</strong><br><span class='admin-preserve-lines'>" + html(row.message) + "</span></td>" +
+        "<td>" + html(formatDate(row.created_at)) + "</td>" +
+        "<td><select data-memory-status>" + ["pending", "approved", "rejected"].map(function (status) {
+          return "<option value='" + status + "' " + (row.status === status ? "selected" : "") + ">" + status + "</option>";
+        }).join("") + "</select></td>" +
+        "<td><button class='button' type='button' data-save-memory>Išsaugoti</button></td></tr>";
+    }).join("") || "<tr><td colspan='5'>Prisiminimų nėra.</td></tr>";
+  }
+
+  async function loadMemories() {
+    try {
+      memoryCache = await supabaseJson(restUrl(
+        "memorial_memories",
+        "select=id,profile_id,author_name,message,status,moderated_at,created_at&order=created_at.desc&limit=300"
+      ));
+    } catch (error) {
+      if (/404|PGRST205|schema cache/i.test(String(error && error.message))) {
+        memoryCache = [];
+        memoriesPanel.hidden = true;
+        updateOverview();
+        return;
+      }
+      throw error;
+    }
+    memoriesPanel.hidden = false;
+    renderMemories();
+    updateOverview();
+  }
+
   async function loadAdmin() {
     setStatus("Tikrinamos administratoriaus teisės...");
     var me = await AtminimasAuth.user();
@@ -488,6 +531,7 @@
       shipmentsPanel.hidden = true;
       serviceRequestsPanel.hidden = true;
       legalRequestsPanel.hidden = true;
+      memoriesPanel.hidden = true;
       businessSettingsPanel.hidden = true;
       productionPanel.hidden = true;
       automationPanel.hidden = true;
@@ -513,6 +557,7 @@
     await loadShipments();
     await loadServiceRequests();
     await loadLegalRequests();
+    await loadMemories();
     updateOverview();
     setStatus("Administravimo duomenys atnaujinti.");
     render();
@@ -574,6 +619,22 @@
     });
     setStatus("Prašymas atnaujintas: " + reference);
     await loadLegalRequests();
+  }
+
+  async function saveMemory(tr) {
+    var id = tr.dataset.memoryId;
+    var status = tr.querySelector("[data-memory-status]").value;
+    await supabaseJson(restUrl("memorial_memories", "id=eq." + encodeURIComponent(id)), {
+      method: "PATCH",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      body: JSON.stringify({
+        status: status,
+        moderated_at: new Date().toISOString(),
+        moderated_by: AtminimasAuth.userId()
+      })
+    });
+    setStatus("Prisiminimo būsena atnaujinta.");
+    await loadMemories();
   }
 
   form.addEventListener("submit", async function (event) {
@@ -642,6 +703,16 @@
     });
   });
 
+  memoryRows.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-save-memory]");
+    if (!button) return;
+    var tr = button.closest("tr[data-memory-id]");
+    button.disabled = true;
+    saveMemory(tr).catch(function (err) {
+      setStatus(err.message || "Nepavyko išsaugoti prisiminimo būsenos.");
+    }).finally(function () { button.disabled = false; });
+  });
+
   businessSettingsForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var button = businessSettingsForm.querySelector("button[type='submit']");
@@ -706,6 +777,9 @@
   legalRequestsRefresh.addEventListener("click", function () {
     loadLegalRequests().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti prašymų."); });
   });
+  memoriesRefresh.addEventListener("click", function () {
+    loadMemories().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti prisiminimų."); });
+  });
   logoutButton.addEventListener("click", function () {
     AtminimasAuth.signOut();
     form.hidden = false;
@@ -716,6 +790,7 @@
     shipmentsPanel.hidden = true;
     serviceRequestsPanel.hidden = true;
     legalRequestsPanel.hidden = true;
+    memoriesPanel.hidden = true;
     businessSettingsPanel.hidden = true;
     productionPanel.hidden = true;
     automationPanel.hidden = true;
