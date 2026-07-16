@@ -1,4 +1,5 @@
 import { handleOptions, json, requireUser } from "../_shared/core.ts";
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2.110.1";
 
 type MediaItem = {
   type?: string;
@@ -36,6 +37,17 @@ function mediaPaths(value: unknown) {
   return safeMedia(value).map((item) => item.path || "").filter(Boolean);
 }
 
+async function adminAccess(client: SupabaseClient, userId: string) {
+  const { data, error } = await client
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 Deno.serve(async (request: Request) => {
   const options = handleOptions(request);
   if (options) return options;
@@ -45,6 +57,36 @@ Deno.serve(async (request: Request) => {
     const { client, user } = await requireUser(request);
     const body = await request.json();
     const action = String(body.action || "");
+
+    if (action === "delete_order") {
+      const orderId = String(body.order_id || "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "Neteisingas užsakymo numeris" }, 400);
+      if (!await adminAccess(client, user.id)) return json({ error: "Veiksmas leidžiamas tik administratoriui" }, 403);
+
+      const { data: order, error: orderError } = await client
+        .from("uzsakymai")
+        .select("id,profilis_id,apmoketa,payment_status,customer_approved_at")
+        .eq("id", orderId)
+        .maybeSingle();
+      if (orderError) throw orderError;
+      if (!order) return json({ error: "Užsakymas nerastas" }, 404);
+
+      const { data: invoice, error: invoiceError } = await client
+        .from("invoice_documents")
+        .select("id")
+        .eq("order_id", orderId)
+        .maybeSingle();
+      if (invoiceError) throw invoiceError;
+      if (order.apmoketa || order.payment_status === "paid" || order.payment_status === "processing" ||
+          order.customer_approved_at || invoice) {
+        return json({ error: "Apmokėto arba apskaitoje naudojamo užsakymo ištrinti negalima" }, 409);
+      }
+
+      const { error: deleteOrderError } = await client.from("uzsakymai").delete().eq("id", orderId);
+      if (deleteOrderError) throw deleteOrderError;
+      return json({ ok: true, deleted_order: orderId, profile_id: order.profilis_id });
+    }
+
     const profileId = String(body.profile_id || "").trim();
     if (!profileId || profileId.length > 100) return json({ error: "Neteisingas puslapio kodas" }, 400);
 
@@ -54,11 +96,21 @@ Deno.serve(async (request: Request) => {
       .eq("id", profileId)
       .maybeSingle();
     if (profileError) throw profileError;
-    if (!profile || profile.owner_id !== user.id || profile.deleted_at) {
+    if (!profile || profile.deleted_at) {
+      return json({ error: "Puslapis nerastas" }, 404);
+    }
+
+    const isOwner = profile.owner_id === user.id;
+    let isAdmin = false;
+    if (!isOwner) {
+      isAdmin = await adminAccess(client, user.id);
+    }
+    if (!isOwner && !isAdmin) {
       return json({ error: "Puslapis nerastas" }, 404);
     }
 
     if (action === "update") {
+      if (!isOwner) return json({ error: "Redaguoti gali tik puslapio savininkas" }, 403);
       const input = body.profile || {};
       const media = safeMedia(body.media);
       const layout = body.layout && typeof body.layout === "object" && !Array.isArray(body.layout) ? body.layout : {};
@@ -92,9 +144,20 @@ Deno.serve(async (request: Request) => {
         .select("id,apmoketa,payment_status,customer_approved_at")
         .eq("profilis_id", profileId);
       if (ordersError) throw ordersError;
+      const orderIds = (orders || []).map((order) => order.id);
+      let hasInvoice = false;
+      if (orderIds.length) {
+        const { data: invoices, error: invoicesError } = await client
+          .from("invoice_documents")
+          .select("id")
+          .in("order_id", orderIds)
+          .limit(1);
+        if (invoicesError) throw invoicesError;
+        hasInvoice = Boolean(invoices && invoices.length);
+      }
       const mustRetainOrder = (orders || []).some((order) =>
         order.apmoketa || order.payment_status === "paid" || order.payment_status === "processing" || order.customer_approved_at
-      );
+      ) || hasInvoice;
 
       if (mustRetainOrder) {
         const { error: deleteError } = await client.from("profiliai").update({
@@ -120,7 +183,11 @@ Deno.serve(async (request: Request) => {
         const { error: storageError } = await client.storage.from("atminimas").remove(paths);
         if (storageError) console.error("Deleted profile media cleanup failed", storageError);
       }
-      return json({ ok: true, retained_order: mustRetainOrder });
+      return json({
+        ok: true,
+        retained_order: mustRetainOrder,
+        deleted_orders: mustRetainOrder ? 0 : orderIds.length,
+      });
     }
 
     return json({ error: "Nežinomas veiksmas" }, 400);

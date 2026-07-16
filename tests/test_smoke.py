@@ -384,6 +384,34 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertRegex(order_security, r"(?s)uzsakymai for select.*?r\.role = 'admin'")
         self.assertNotIn('href="vartotojas.html">Klientas</a>', html)
 
+    def test_admin_can_delete_pages_and_orders_separately(self):
+        html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+
+        self.assertIn('assets/admin.js?v=20260716-5', html)
+        self.assertIn("data-delete-admin-profile", admin)
+        self.assertIn("data-delete-admin-order", admin)
+        self.assertIn("orderCanBeDeleted", admin)
+        self.assertIn("profileCanBeDeletedCompletely", admin)
+        self.assertIn('action: "delete"', admin)
+        self.assertIn('action: "delete_order"', admin)
+        self.assertIn("Ištrinti puslapį", admin)
+        self.assertIn("Ištrinti užsakymą", admin)
+        self.assertIn("Atminimo puslapis paliktas.", admin)
+        self.assertIn("Atminimo puslapis, užsakymas ir siuntimo įrašas ištrinti.", admin)
+        self.assertIn("deleted_at=is.null", admin)
+
+        self.assertIn("adminAccess", manage)
+        self.assertIn('.eq("role", "admin")', manage)
+        self.assertIn("if (!isOwner && !isAdmin)", manage)
+        self.assertIn('action === "delete_order"', manage)
+        self.assertIn("Apmokėto arba apskaitoje naudojamo užsakymo ištrinti negalima", manage)
+        self.assertIn('.from("uzsakymai").delete().eq("id", orderId)', manage)
+        self.assertIn('.from("invoice_documents")', manage)
+        self.assertIn("deleted_orders", manage)
+        self.assertIn("mustRetainOrder", manage)
+
     def test_editor_supports_long_story_and_described_photo_gallery(self):
         html = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
@@ -598,7 +626,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("updateAtminimas: updateAtminimas", api)
         self.assertIn("deleteAtminimas: deleteAtminimas", api)
 
-        self.assertIn("profile.owner_id !== user.id", function)
+        self.assertIn("const isOwner = profile.owner_id === user.id", function)
+        self.assertIn("if (!isOwner && !isAdmin)", function)
         self.assertIn('.storage.from("atminimas").remove', function)
         self.assertIn('action === "delete"', function)
         self.assertIn("retained_order", function)

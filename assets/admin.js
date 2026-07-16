@@ -73,6 +73,10 @@
     return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/" + encodeURIComponent(name);
   }
 
+  function functionUrl(name) {
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
+  }
+
   function html(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
@@ -125,6 +129,20 @@
     return value === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
   }
 
+  function orderCanBeDeleted(order) {
+    return Boolean(order) &&
+      !order.apmoketa &&
+      order.payment_status !== "paid" &&
+      order.payment_status !== "processing" &&
+      !order.customer_approved_at;
+  }
+
+  function profileCanBeDeletedCompletely(profileId) {
+    return orderCache
+      .filter(function (order) { return order.profilis_id === profileId; })
+      .every(orderCanBeDeleted);
+  }
+
   function updateOverview() {
     var activeShipments = orderCache.filter(function (row) {
       return row.delivery_method === "pastomatas" && ["pristatyta", "atšaukta"].indexOf(row.shipping_status) === -1;
@@ -173,6 +191,78 @@
     return raw ? JSON.parse(raw) : null;
   }
 
+  async function deleteAdminProfile(profileId) {
+    var response = await fetch(functionUrl("profile-manage"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify({ action: "delete", profile_id: profileId })
+    });
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "Nepavyko ištrinti įrašo.");
+    return data;
+  }
+
+  async function deleteAdminOrder(orderId) {
+    var response = await fetch(functionUrl("profile-manage"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify({ action: "delete_order", order_id: orderId })
+    });
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "Nepavyko ištrinti užsakymo.");
+    return data;
+  }
+
+  async function handleAdminDelete(event) {
+    var button = event.target.closest("[data-delete-admin-profile]");
+    if (!button) return false;
+    var profileId = button.dataset.deleteAdminProfile;
+    var label = button.dataset.deleteLabel || profileId;
+    var fullDelete = button.dataset.deleteMode === "full";
+    var question = fullDelete
+      ? "Ar tikrai ištrinti „" + label + "“? Bus pašalintas atminimo puslapis, neapmokėtas užsakymas, siuntimo įrašas ir įkelti failai. Šio veiksmo atšaukti negalima."
+      : "Ar tikrai pašalinti „" + label + "“ puslapį? Apmokėto užsakymo apskaitos duomenys bus išsaugoti, tačiau pats atminimo puslapis ir jo failai bus pašalinti.";
+    if (!window.confirm(question)) return true;
+
+    button.disabled = true;
+    setStatus("Įrašas trinamas...");
+    try {
+      var result = await deleteAdminProfile(profileId);
+      await loadAdmin();
+      setStatus(result.retained_order
+        ? "Atminimo puslapis pašalintas. Apmokėto užsakymo apskaitos duomenys palikti."
+        : "Atminimo puslapis, užsakymas ir siuntimo įrašas ištrinti.");
+    } catch (error) {
+      setStatus(error.message || "Nepavyko ištrinti įrašo.");
+      button.disabled = false;
+    }
+    return true;
+  }
+
+  async function handleAdminOrderDelete(event) {
+    var button = event.target.closest("[data-delete-admin-order]");
+    if (!button) return false;
+    var orderId = button.dataset.deleteAdminOrder;
+    var label = button.dataset.deleteLabel || ("#" + shortId(orderId));
+    if (!window.confirm("Ar tikrai ištrinti " + label + "? Atminimo puslapis liks, tačiau užsakymo ir jo siuntimo įrašų atkurti nebebus galima.")) return true;
+
+    button.disabled = true;
+    setStatus("Užsakymas trinamas...");
+    try {
+      await deleteAdminOrder(orderId);
+      await loadOrders();
+      await loadProduction();
+      await loadAutomation();
+      await loadShipments();
+      render();
+      setStatus("Užsakymas ir jo siuntimo įrašas ištrinti. Atminimo puslapis paliktas.");
+    } catch (error) {
+      setStatus(error.message || "Nepavyko ištrinti užsakymo.");
+      button.disabled = false;
+    }
+    return true;
+  }
+
   function render() {
     var q = (searchInput.value || "").toLowerCase().trim();
     var rows = cache.filter(function (row) {
@@ -186,6 +276,7 @@
       var publicPath = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
       var fullUrl = pageUrl(row.id);
       var qrImage = qrUrl(row.id);
+      var fullDelete = profileCanBeDeletedCompletely(row.id);
       return (
         "<tr data-id='" + html(row.id) + "'>" +
           "<td><strong>" + html(name) + "</strong><br><span class='muted'>" + html(row.id) + "</span></td>" +
@@ -200,6 +291,7 @@
             "<a class='button button--ghost' href='" + qrImage + "' download='qr-" + html(row.id) + ".png'>QR kodas</a>" +
             "<button class='button button--ghost' type='button' data-copy-url='" + html(fullUrl) + "'>Kopijuoti URL</button>" +
             "<button class='button' type='button' data-save='" + html(row.id) + "'>Išsaugoti</button>" +
+            "<button class='button button--danger' type='button' data-delete-admin-profile='" + html(row.id) + "' data-delete-label='" + html(name) + "' data-delete-mode='" + (fullDelete ? "full" : "retain") + "'>Ištrinti puslapį</button>" +
           "</div></td>" +
         "</tr>"
       );
@@ -224,6 +316,9 @@
         ? [order.carrier, order.city, order.parcel_terminal].filter(Boolean).join(" · ") || "Paštomatas dar nepasirinktas"
         : "Be pristatymo";
       var publicPath = "sablonas-viskas.html?slug=" + encodeURIComponent(order.profilis_id);
+      var deleteAction = orderCanBeDeleted(order)
+        ? "<button class='button button--danger' type='button' data-delete-admin-order='" + html(order.id) + "' data-delete-label='užsakymą #" + html(shortId(order.id)) + "'>Ištrinti užsakymą</button>"
+        : "";
       return (
         "<tr>" +
           "<td><strong>#" + html(shortId(order.id)) + "</strong><br>" + html(customer) + "<br><span class='muted'>" + html(order.profilis_id) + "</span></td>" +
@@ -231,7 +326,7 @@
           "<td>" + html(formatDate(order.created_at)) + "</td>" +
           "<td><span class='admin-badge " + paymentClass + "'>" + paymentText + "</span>" + (order.payment_provider ? "<br><span class='muted'>" + html(order.payment_provider) + "</span>" : "") + "</td>" +
           "<td>" + html(delivery) + "<br><span class='muted'>" + html(order.shipping_status || "–") + "</span></td>" +
-          "<td><div class='actions admin-actions'><a class='button button--ghost' href='" + publicPath + "'>Atidaryti puslapį</a></div></td>" +
+          "<td><div class='actions admin-actions'><a class='button button--ghost' href='" + publicPath + "'>Atidaryti puslapį</a>" + deleteAction + "</div></td>" +
         "</tr>"
       );
     }).join("") || "<tr><td colspan='6'>Užsakymų nėra.</td></tr>";
@@ -240,7 +335,7 @@
   async function loadOrders() {
     orderCache = await supabaseJson(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,puslapio_url,product_type,busena,apmoketa,delivery_method,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,tracking_number,payment_provider,payment_reference,created_at&order=created_at.desc"
+      "select=id,profilis_id,puslapio_url,product_type,busena,apmoketa,payment_status,customer_approved_at,delivery_method,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,tracking_number,payment_provider,payment_reference,created_at&order=created_at.desc"
     ));
     ordersPanel.hidden = false;
     renderOrders();
@@ -401,6 +496,9 @@
     shipmentRows.innerHTML = visibleShipments.map(function (order) {
       var recipient = order.recipient_name || "Pristatymo duomenų nėra";
       var destination = [order.carrier, order.city, order.parcel_terminal].filter(Boolean).join(" · ") || "--";
+      var deleteAction = orderCanBeDeleted(order)
+        ? "<button class='button button--danger' type='button' data-delete-admin-order='" + html(order.id) + "' data-delete-label='užsakymą #" + html(shortId(order.id)) + "'>Ištrinti užsakymą</button>"
+        : "";
       return (
         "<tr data-shipment-id='" + html(order.id) + "'>" +
           "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(productName(order.product_type)) + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
@@ -409,7 +507,7 @@
             return "<option value='" + value + "' " + ((order.shipping_status || "laukiama_duomenu") === value ? "selected" : "") + ">" + value + "</option>";
           }).join("") + "</select></td>" +
           "<td><input type='text' data-tracking-number value='" + html(order.tracking_number || "") + "' maxlength='160' placeholder='Sekimo numeris'></td>" +
-          "<td><button class='button' type='button' data-save-shipment='" + html(order.id) + "'>Išsaugoti</button></td>" +
+          "<td><div class='actions admin-actions'><button class='button' type='button' data-save-shipment='" + html(order.id) + "'>Išsaugoti</button>" + deleteAction + "</div></td>" +
         "</tr>"
       );
     }).join("") || "<tr><td colspan='5'>Siuntimų nėra.</td></tr>";
@@ -418,7 +516,7 @@
   async function loadShipments() {
     shipmentCache = (await supabaseJson(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,product_type,delivery_method,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,delivery_method,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,payment_status,customer_approved_at,created_at&order=created_at.desc"
     ))).filter(function (order) { return order.delivery_method === "pastomatas"; });
     shipmentsPanel.hidden = false;
     renderShipments();
@@ -548,7 +646,7 @@
     setStatus("Įkeliami administravimo duomenys...");
     cache = await supabaseJson(restUrl(
       "profiliai",
-      "select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+      "deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ));
     await loadOrders();
     await loadBusinessSettings();
@@ -650,6 +748,10 @@
   });
 
   rowsEl.addEventListener("click", function (event) {
+    if (event.target.closest("[data-delete-admin-profile]")) {
+      handleAdminDelete(event);
+      return;
+    }
     var copyUrlButton = event.target.closest("[data-copy-url]");
     if (copyUrlButton) {
       copyText(copyUrlButton.dataset.copyUrl).then(function () {
@@ -670,7 +772,15 @@
     });
   });
 
+  orderRows.addEventListener("click", function (event) {
+    if (event.target.closest("[data-delete-admin-order]")) handleAdminOrderDelete(event);
+  });
+
   shipmentRows.addEventListener("click", function (event) {
+    if (event.target.closest("[data-delete-admin-order]")) {
+      handleAdminOrderDelete(event);
+      return;
+    }
     var button = event.target.closest("[data-save-shipment]");
     if (!button) return;
     var tr = button.closest("tr");
