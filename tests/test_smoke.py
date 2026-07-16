@@ -399,14 +399,14 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("buildStoryGallery", public_page)
         self.assertIn("builder-photo-caption", public_page)
 
-    def test_dove_brand_and_favicon_are_used_everywhere(self):
-        icon = ROOT / "assets" / "atminimas-dove.svg"
-        svg = icon.read_text(encoding="utf-8")
-        self.assertIn("Balandis su alyvmedžio šakele", svg)
-        self.assertIn("#174f4a", svg)
+    def test_candle_jpg_brand_and_favicon_are_used_everywhere(self):
+        icon = ROOT / "assets" / "atminimas-candle.jpg"
+        image = icon.read_bytes()
+        self.assertTrue(image.startswith(b"\xff\xd8\xff"))
+        self.assertGreater(len(image), 10_000)
         for page in ROOT.glob("*.html"):
             html = page.read_text(encoding="utf-8")
-            self.assertIn('rel="icon" href="assets/atminimas-dove.svg"', html, page.name)
+            self.assertIn('rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg"', html, page.name)
             self.assertNotIn('<span class="brand__mark">A</span>', html, page.name)
 
     def test_public_memorial_has_home_link_and_frame(self):

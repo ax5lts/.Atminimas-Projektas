@@ -3849,7 +3849,7 @@ body[data-loading]::after {
 body[data-loading]::before {
   content: "";
   inset: 0;
-  background: #f8f4eb url("../assets/atminimas-dove.svg") center calc(50% - 28px) / 74px 74px no-repeat;
+  background: #f8f4eb url("../assets/atminimas-candle.jpg") center calc(50% - 28px) / 74px 74px no-repeat;
 }
 
 body[data-loading]::after {
