@@ -590,6 +590,33 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
         self.assertIn('"image/webp", 0.82', editor)
 
+    def test_jonas_demo_is_available_in_editor_and_public_page(self):
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor_script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        memorial_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        demo_script = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
+
+        self.assertIn("jonas-maciulis-pavyzdys", home)
+        self.assertIn("jonas-maciulis-pavyzdys", shop)
+        self.assertIn('src="assets/demo-jonas.js?v=20260716-1"', editor_page)
+        self.assertIn('src="assets/demo-jonas.js?v=20260716-1"', memorial_page)
+        self.assertIn('demoId === "jonas"', editor_script)
+        self.assertIn("AtminimasDemo.isJonasIdentifier", memorial_page)
+        self.assertIn("jonas gimė 1948", demo_script.lower())
+
+        for image in (
+            "demo-jonas-portretas.jpg",
+            "demo-jonas-seima.jpg",
+            "demo-jonas-dirbtuves.jpg",
+            "demo-jonas-sodas.jpg",
+        ):
+            with self.subTest(image=image):
+                path = ROOT / "assets" / image
+                self.assertTrue(path.is_file())
+                self.assertLess(path.stat().st_size, 400_000)
+
     def test_editor_is_responsive_and_has_touch_color_wheel(self):
         page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")

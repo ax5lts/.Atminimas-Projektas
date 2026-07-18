@@ -6,7 +6,7 @@
 <meta name="description" content="Artimo žmogaus atminimo puslapis su gyvenimo istorija, nuotraukomis ir vaizdo įrašu.">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260716-4">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -17,6 +17,13 @@
   </a>
 </header>
 <div class="memorial-bg">
+  <aside class="memorial-demo-notice" id="memorial-demo-notice" hidden>
+    <div>
+      <strong>Demonstracinis atminimo puslapis</strong>
+      <span>Jonas Mačiulis ir visa šiame puslapyje pateikta istorija bei nuotraukos yra išgalvoti.</span>
+    </div>
+    <a href="redaktorius.html?demo=jonas">Pamatyti redaktoriuje</a>
+  </aside>
   <p class="kraunama" id="kraunama">Kraunamas atminimo puslapis...</p>
   <p class="duomenu-busena" id="duomenu-busena" hidden></p>
   <p class="klaida" id="klaida" hidden></p>
@@ -88,8 +95,9 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260716-3"></script>
+<script src="assets/demo-jonas.js?v=20260716-1"></script>
 <script src="assets/atminimas-duomenys.js?v=20260716-3"></script>
-<script src="assets/memorial-actions.js?v=20260716-1"></script>
+<script src="assets/memorial-actions.js?v=20260716-2"></script>
 <script>
 (function () {
   var DEFAULT_LAYOUT = {
@@ -399,7 +407,11 @@
     }
     document.getElementById("kraunama").hidden = true;
     document.getElementById("turinys").hidden = false;
-    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas);
+    if (atminimas.demo) {
+      document.getElementById("memorial-demo-notice").hidden = false;
+      document.title = [atminimas.vardas, atminimas.pavarde].filter(Boolean).join(" ") + " – demonstracinis atminimo puslapis";
+    }
+    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas, { demo: !!atminimas.demo });
   }
 
   function fillGallery(images) {
@@ -538,8 +550,13 @@
     initGallery();
     var params = new URLSearchParams(window.location.search);
     var identifier = (params.get("id") || params.get("slug") || params.get("s") || "").trim();
-    if (!identifier || identifier === "demo") {
+    if (!identifier) {
       window.location.replace("index.html");
+      return;
+    }
+
+    if (window.AtminimasDemo && AtminimasDemo.isJonasIdentifier(identifier)) {
+      renderPage({ atminimas: AtminimasDemo.jonas.profile }, "");
       return;
     }
 

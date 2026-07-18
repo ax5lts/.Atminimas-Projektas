@@ -264,15 +264,17 @@
     });
   }
 
-  function init(nextProfile) {
+  function init(nextProfile, options) {
     profile = nextProfile;
     document.getElementById("memorial-action-bar").hidden = false;
-    document.getElementById("memorial-community").hidden = false;
+    var demo = !!(options && options.demo);
+    document.getElementById("memorial-community").hidden = demo;
     updateSaveButton();
     if (!initialized) {
       initialized = true;
       setupActions();
     }
+    if (demo) return;
     loadEngagement().catch(function () {
       document.getElementById("memorial-engagement-status").textContent = "Virtualios žvakės ir prisiminimai laikinai nepasiekiami.";
     });
