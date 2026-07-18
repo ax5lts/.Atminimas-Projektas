@@ -67,9 +67,16 @@
   var editingMedia = [];
   var isRestoringDraft = false;
   var draftSaveTimer = null;
-  var editId = (new URLSearchParams(window.location.search).get("edit") || "").trim();
-  var DRAFT_KEY = editId ? "atminimas.editor.edit." + editId + ".v1" : "atminimas.editor.draft.v1";
-  var DRAFT_FILE_PREFIX = editId ? "edit-" + editId + "-" : "create-";
+  var editorParams = new URLSearchParams(window.location.search);
+  var editId = (editorParams.get("edit") || "").trim();
+  var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
+  var isDemoMode = demoId === "jonas";
+  var DRAFT_KEY = editId
+    ? "atminimas.editor.edit." + editId + ".v1"
+    : (isDemoMode ? "atminimas.editor.demo.jonas.v1" : "atminimas.editor.draft.v1");
+  var DRAFT_FILE_PREFIX = editId
+    ? "edit-" + editId + "-"
+    : (isDemoMode ? "demo-jonas-" : "create-");
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
   var PRODUCT_KEY = "atminimas.selected-product.v1";
@@ -97,9 +104,11 @@
     productImage.src = productType === "asa" ? "assets/qr-asa-480.webp" : "assets/qr-atminimo-lentele-480.webp";
     productImage.alt = productType === "asa" ? "Pasirinkta ASA QR atminimo lentelė" : "Pasirinkta metalo QR atminimo lentelė";
   }
-  if (productSummary) productSummary.textContent = editId
-    ? "Redaguojamas jūsų atminimo puslapis."
-    : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "graviruota metalo QR atminimo lentelė") + (productType === "asa" ? ". Kaina bus patvirtinta." : ". Kaina – 59,00 EUR.");
+  if (productSummary) productSummary.textContent = isDemoMode
+    ? "Demonstracinis puslapis užpildytas taip, kaip jį galėtų paruošti klientas."
+    : (editId
+      ? "Redaguojamas jūsų atminimo puslapis."
+      : "Pasirinktas produktas: " + (productType === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "graviruota metalo QR atminimo lentelė") + (productType === "asa" ? ". Kaina bus patvirtinta." : ". Kaina – 59,00 EUR."));
 
   function setDraftState(message, state) {
     if (!draftStateEl) return;
@@ -813,7 +822,7 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    if (restoredNames.some(Boolean) || !editId) {
+    if (restoredNames.some(Boolean) || (!editId && !isDemoMode)) {
       photoOrderMode = "files";
       photoOrderNames = restoredNames.filter(Boolean);
       renderPhotoFileList(restoredNames);
@@ -903,6 +912,27 @@
     if (checkoutLink) checkoutLink.hidden = true;
     previewCode.textContent = "puslapis: " + editId;
     document.title = "Redaguoti atminimo puslapį - Atminimas";
+  }
+
+  function loadDemoProfile() {
+    var demo = window.AtminimasDemo && AtminimasDemo.jonas;
+    if (!demo) throw new Error("Demonstracinio puslapio duomenys nepasiekiami.");
+    var profile = demo.profile;
+    ["vardas", "pavarde", "gimimo_data", "mirties_data", "epitafija", "tekstas_200"].forEach(function (name) {
+      if (form.elements[name]) form.elements[name].value = profile[name] || "";
+    });
+    showExistingMedia(demo.media);
+    applyLayout(demo.layout);
+    var heading = document.getElementById("editor-panel-title");
+    var notice = document.getElementById("editor-demo-notice");
+    var submit = form.querySelector("button[type='submit']");
+    if (heading) heading.textContent = "Išbandykite užpildytą pavyzdį";
+    if (notice) notice.hidden = false;
+    if (submit) submit.textContent = "Atidaryti pilną pavyzdį";
+    previewCode.textContent = "demonstracinis puslapis";
+    document.title = "Jono Mačiulio pavyzdys redaktoriuje - Atminimas";
+    document.body.classList.add("editor-demo-mode");
+    setDraftState("Galite keisti pavyzdį – duomenys nebus viešinami", "saved");
   }
 
   function syncPreview() {
@@ -1492,6 +1522,10 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (isDemoMode) {
+      window.location.href = "sablonas-viskas.html?slug=jonas-maciulis-pavyzdys";
+      return;
+    }
     if (!validateDatePickers(false)) {
       activateEditorStep("text", true);
       window.setTimeout(function () {
@@ -1589,7 +1623,7 @@
   });
 
   async function initEditor() {
-    if (window.AtminimasAuth && !AtminimasAuth.accessToken()) {
+    if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken()) {
       statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite " + (editId ? "redaguoti" : "kurti") + " puslapio.";
       form.querySelector("button[type='submit']").disabled = true;
       setTimeout(function () {
@@ -1599,7 +1633,8 @@
       return;
     }
     setupDatePickers();
-    await loadProfileForEditing();
+    if (isDemoMode) loadDemoProfile();
+    else await loadProfileForEditing();
     syncDatePickersFromHidden();
     await restoreDraft();
     syncDatePickersFromHidden();
