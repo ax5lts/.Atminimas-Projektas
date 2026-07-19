@@ -34,6 +34,10 @@
   var statusEl = document.getElementById("service-request-status");
   var stepStatusEl = document.getElementById("service-step-status");
   var estimateEl = document.getElementById("service-estimate-price");
+  var estimateServicesEl = document.getElementById("service-estimate-services");
+  var estimateTravelEl = document.getElementById("service-estimate-travel");
+  var estimateNoteEl = document.getElementById("service-estimate-note");
+  var locationStatusEl = document.getElementById("service-location-status");
   var submitButton = form.querySelector("button[type='submit']");
   var serviceInputs = Array.from(form.querySelectorAll("input[name='services']"));
   var cleaningInputs = Array.from(form.querySelectorAll("input[name='cleaning_tasks']"));
@@ -46,7 +50,11 @@
   var draftKey = "atminimas.service-request.draft.v1";
   var savedGravesKey = "atminimas.saved-graves.v1";
   var allowedServices = ["zvakes", "geles", "kapu_tvarkymas"];
-  var prices = window.ATMINIMAS_SERVICE_PRICES || {};
+  var prices = {};
+  var estimateSnapshot = null;
+  var estimateTimer = null;
+  var estimateRequestNumber = 0;
+  var isFillingLocation = false;
   var optionLabels = {
     candle_1: "1 žvakė",
     candle_2: "2 žvakės",
@@ -80,18 +88,18 @@
     var value = prices[key];
     if (value === null || value === undefined || value === "") return null;
     value = Number(value);
-    return Number.isFinite(value) && value >= 0 ? value : null;
+    return Number.isInteger(value) && value >= 0 ? value : null;
   }
 
-  function formatPrice(value) {
-    return new Intl.NumberFormat("lt-LT", { style: "currency", currency: "EUR" }).format(value);
+  function formatCents(value) {
+    return new Intl.NumberFormat("lt-LT", { style: "currency", currency: "EUR" }).format(value / 100);
   }
 
   function priceTextForKeys(keys) {
     if (!keys.length) return "derinama";
     var values = keys.map(priceValue);
     if (values.some(function (value) { return value === null; })) return "derinama";
-    return formatPrice(values.reduce(function (sum, value) { return sum + value; }, 0));
+    return formatCents(values.reduce(function (sum, value) { return sum + value; }, 0));
   }
 
   function selectedPriceKeys() {
@@ -103,16 +111,101 @@
     return keys;
   }
 
+  function functionUrl(name) {
+    return config().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
+  }
+
+  async function serviceFlow(payload) {
+    var response = await fetch(functionUrl("service-flow"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify(payload)
+    });
+    var result = await response.json().catch(function () { return {}; });
+    if (!response.ok) {
+      var error = new Error(result.error || "Paslaugos įvertinti nepavyko.");
+      error.status = response.status;
+      throw error;
+    }
+    return result;
+  }
+
+  function priceRange(minimum, maximum) {
+    if (!Number.isInteger(minimum) || !Number.isInteger(maximum)) return "–";
+    return minimum === maximum ? formatCents(minimum) : formatCents(minimum) + "–" + formatCents(maximum);
+  }
+
+  function updateLocationStatus() {
+    var latitude = Number(form.elements.destination_latitude.value);
+    var longitude = Number(form.elements.destination_longitude.value);
+    var hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude) && form.elements.destination_latitude.value !== "" && form.elements.destination_longitude.value !== "";
+    if (hasCoordinates) {
+      locationStatusEl.textContent = "Tiksli kapavietės vieta gauta iš kapų paieškos. Kelionės intervalą apskaičiuosime automatiškai.";
+      locationStatusEl.dataset.state = "saved";
+    } else {
+      locationStatusEl.innerHTML = "Tikslias koordinates galite pasirinkti <a href=\"kapu-ieskojimas.html\">kapų paieškoje</a>. Jei įrašysite tik miestą ar rajoną, kelionės kainą įvertinsime rankiniu būdu.";
+      locationStatusEl.dataset.state = "manual";
+    }
+  }
+
+  function renderEstimate(result) {
+    estimateSnapshot = result || null;
+    if (result && result.price_catalog_cents) {
+      prices = result.price_catalog_cents;
+      renderPrices();
+    }
+    var servicesMissing = result && Array.isArray(result.reasons) && result.reasons.indexOf("services_missing") !== -1;
+    estimateServicesEl.textContent = result && !servicesMissing && Number.isInteger(result.estimated_service_cents)
+      ? formatCents(result.estimated_service_cents)
+      : "–";
+    var distance = result && Number.isFinite(result.estimated_round_trip_min_km) && Number.isFinite(result.estimated_round_trip_max_km)
+      ? (result.estimated_round_trip_min_km === result.estimated_round_trip_max_km
+        ? result.estimated_round_trip_min_km + " km"
+        : result.estimated_round_trip_min_km + "–" + result.estimated_round_trip_max_km + " km")
+      : "";
+    estimateTravelEl.textContent = result
+      ? priceRange(result.estimated_travel_min_cents, result.estimated_travel_max_cents) + (distance ? " · " + distance : "")
+      : "–";
+    estimateEl.textContent = result ? priceRange(result.estimated_total_min_cents, result.estimated_total_max_cents) : "–";
+    if (result && result.estimate_status === "calculated") {
+      estimateNoteEl.textContent = "Rodoma preliminari kaina pagal pasirinktus darbus ir apytikslį kelionės atstumą nuo " + result.base_label + ". Kelionė skaičiuojama pirmyn ir atgal. Galutinę kainą patvirtinsime atskiru pasiūlymu.";
+    } else if (result && result.reasons && result.reasons.indexOf("coordinates_missing") !== -1) {
+      estimateNoteEl.textContent = "Vietos automatiškai įvertinti nepavyko. Pateikite užklausą – kelionę ir galutinę kainą nustatysime rankiniu būdu.";
+    } else if (result && result.estimate_status === "unconfigured") {
+      estimateNoteEl.textContent = "Dalis kainodaros dar nenustatyta. Pateikite užklausą – galutinį pasiūlymą paruošime rankiniu būdu.";
+    } else {
+      estimateNoteEl.textContent = "Galutinę kainą patvirtinsime atskiru pasiūlymu. Be jūsų patvirtinimo mokėjimas nebus pradėtas.";
+    }
+  }
+
+  async function refreshEstimate() {
+    var requestNumber = ++estimateRequestNumber;
+    try {
+      var result = await serviceFlow({
+        action: "estimate",
+        price_keys: selectedPriceKeys(),
+        destination_latitude: form.elements.destination_latitude.value || null,
+        destination_longitude: form.elements.destination_longitude.value || null
+      });
+      if (requestNumber === estimateRequestNumber) renderEstimate(result);
+    } catch (error) {
+      if (requestNumber !== estimateRequestNumber) return;
+      estimateServicesEl.textContent = priceTextForKeys(selectedPriceKeys()) === "derinama" ? "–" : priceTextForKeys(selectedPriceKeys());
+      estimateTravelEl.textContent = "–";
+      estimateEl.textContent = "–";
+      estimateNoteEl.textContent = "Preliminaraus įverčio šiuo metu parodyti nepavyko. Galutinę kainą patvirtinsime gavę užklausą.";
+    }
+  }
+
   function updateEstimate() {
-    estimateEl.textContent = priceTextForKeys(selectedPriceKeys()) === "derinama"
-      ? "–"
-      : priceTextForKeys(selectedPriceKeys());
+    clearTimeout(estimateTimer);
+    estimateTimer = setTimeout(refreshEstimate, 180);
   }
 
   function renderPrices() {
     form.querySelectorAll("[data-service-price]").forEach(function (element) {
       var value = priceValue(element.dataset.servicePrice);
-      element.textContent = value === null ? "Kaina –" : formatPrice(value);
+      element.textContent = value === null ? "Kaina –" : formatCents(value);
     });
   }
 
@@ -182,12 +275,20 @@
 
   function fillGrave(grave) {
     if (!grave) return;
+    var placeParts = String(grave.place || "").split(",").map(function (part) { return part.trim(); }).filter(Boolean);
+    var cemetery = grave.cemetery || placeParts.shift() || "";
+    var municipality = grave.municipality || placeParts.join(", ") || "";
+    isFillingLocation = true;
     form.elements.deceased_name.value = grave.name || "";
-    form.elements.cemetery_name.value = (grave.place || "").split(",")[0].trim();
-    form.elements.grave_location.value = [
-      grave.place || "",
-      grave.latitude && grave.longitude ? "Koordinatės: " + grave.latitude + ", " + grave.longitude : ""
-    ].filter(Boolean).join("\n");
+    form.elements.cemetery_name.value = cemetery;
+    form.elements.municipality.value = municipality;
+    form.elements.grave_location.value = grave.place || [cemetery, municipality].filter(Boolean).join(", ");
+    form.elements.destination_latitude.value = grave.latitude || "";
+    form.elements.destination_longitude.value = grave.longitude || "";
+    form.elements.location_source.value = grave.latitude && grave.longitude ? (grave.source || "saved") : "manual";
+    isFillingLocation = false;
+    updateLocationStatus();
+    updateEstimate();
   }
 
   function setupSavedGraves() {
@@ -213,8 +314,11 @@
       fillGrave({
         name: name,
         place: place,
+        cemetery: (params.get("graveCemetery") || "").trim(),
+        municipality: (params.get("graveMunicipality") || "").trim(),
         latitude: (params.get("graveLat") || "").trim(),
-        longitude: (params.get("graveLng") || "").trim()
+        longitude: (params.get("graveLng") || "").trim(),
+        source: "registry"
       });
       var care = form.querySelector("input[name='services'][value='kapu_tvarkymas']");
       if (care) care.checked = true;
@@ -261,22 +365,32 @@
         input.checked = Array.isArray(draft.services) && draft.services.indexOf(input.value) !== -1;
       });
       updateServiceFields();
+      updateLocationStatus();
     } catch (_error) {
       sessionStorage.removeItem(draftKey);
     }
   }
 
-  function restUrl(table) {
-    return config().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + encodeURIComponent(table);
-  }
-
   function optionDetails(keys, freeText, noun) {
     var lines = [];
     if (keys.length) lines.push(noun + ": " + keys.map(function (key) { return optionLabels[key] || key; }).join(", "));
-    lines.push("Preliminari kaina: " + priceTextForKeys(keys));
     if (freeText) lines.push("Pageidavimai: " + freeText);
     return lines.join("\n");
   }
+
+  ["cemetery_name", "municipality", "grave_location"].forEach(function (name) {
+    form.elements[name].addEventListener("input", function () {
+      if (isFillingLocation || form.elements.location_source.value === "manual") {
+        updateEstimate();
+        return;
+      }
+      form.elements.destination_latitude.value = "";
+      form.elements.destination_longitude.value = "";
+      form.elements.location_source.value = "manual";
+      updateLocationStatus();
+      updateEstimate();
+    });
+  });
 
   serviceInputs.forEach(function (input) {
     input.addEventListener("change", updateServiceFields);
@@ -333,46 +447,52 @@
       return;
     }
 
-    if (!AtminimasAuth.accessToken()) {
-      saveDraft();
-      window.location.href = "prisijungti.html?next=" + encodeURIComponent("index.html#kitos-paslaugos");
-      return;
-    }
-
     var values = Object.fromEntries(new FormData(form).entries());
     var candleKeys = selectedNamedValues("candle_package");
     var flowerKeys = selectedNamedValues("flower_package");
     var cleaningKeys = selectedNamedValues("cleaning_tasks");
     var payload = {
-      owner_id: AtminimasAuth.userId(),
-      paslaugos: services,
-      mirusiojo_vardas: values.deceased_name.trim(),
-      kapiniu_pavadinimas: values.cemetery_name.trim(),
-      kapo_vieta: values.grave_location.trim(),
-      geliu_pageidavimai: services.indexOf("geles") !== -1 ? optionDetails(flowerKeys, (values.flowers_details || "").trim(), "Pasirinkimas") : null,
-      zvakiu_pageidavimai: services.indexOf("zvakes") !== -1 ? optionDetails(candleKeys, (values.candles_details || "").trim(), "Pasirinkimas") : null,
-      tvarkymo_pageidavimai: services.indexOf("kapu_tvarkymas") !== -1 ? optionDetails(cleaningKeys, (values.cleaning_details || "").trim(), "Darbai") : null,
-      papildoma_informacija: (values.extra_information || "").trim() || null
+      action: "create",
+      services: services,
+      deceased_name: values.deceased_name.trim(),
+      cemetery_name: values.cemetery_name.trim(),
+      municipality: values.municipality.trim(),
+      grave_location: values.grave_location.trim(),
+      destination_latitude: values.destination_latitude || null,
+      destination_longitude: values.destination_longitude || null,
+      location_source: values.location_source || "manual",
+      contact_email: (values.contact_email || "").trim(),
+      contact_phone: (values.contact_phone || "").trim() || null,
+      website: (values.website || "").trim(),
+      candle_keys: candleKeys,
+      flower_keys: flowerKeys,
+      cleaning_keys: cleaningKeys,
+      flower_details: services.indexOf("geles") !== -1 ? optionDetails(flowerKeys, (values.flowers_details || "").trim(), "Pasirinkimas") : null,
+      candle_details: services.indexOf("zvakes") !== -1 ? optionDetails(candleKeys, (values.candles_details || "").trim(), "Pasirinkimas") : null,
+      cleaning_details: services.indexOf("kapu_tvarkymas") !== -1 ? optionDetails(cleaningKeys, (values.cleaning_details || "").trim(), "Darbai") : null,
+      extra_information: (values.extra_information || "").trim() || null
     };
 
     submitButton.disabled = true;
     statusEl.textContent = "Užklausa siunčiama...";
     try {
-      var response = await fetch(restUrl("paslaugu_uzklausos"), {
-        method: "POST",
-        headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        if (response.status === 401) throw new Error("Prisijungimo sesija baigėsi. Prisijunkite iš naujo.");
-        throw new Error("Nepavyko pateikti užklausos.");
-      }
+      await serviceFlow(payload);
       sessionStorage.removeItem(draftKey);
       form.reset();
+      form.elements.location_source.value = "manual";
       updateServiceFields();
+      updateLocationStatus();
+      updateEstimate();
       activateServiceStep(1, true);
-      stepStatusEl.textContent = "Užklausa gauta. Susisieksime dėl kainos ir atlikimo laiko.";
+      stepStatusEl.textContent = "Užklausa gauta. Galutinį pasiūlymą atsiųsime nurodytu el. paštu. Prisijungti reikės tik prieš priimant pasiūlymą ir mokant.";
+      statusEl.textContent = "";
     } catch (error) {
+      if (error.status === 401) {
+        saveDraft();
+        AtminimasAuth.signOut();
+        window.location.href = "prisijungti.html?next=" + encodeURIComponent("index.html#kitos-paslaugos");
+        return;
+      }
       statusEl.textContent = error.message || "Nepavyko pateikti užklausos.";
     } finally {
       submitButton.disabled = false;
@@ -383,5 +503,10 @@
   restoreDraft();
   updateServiceFields();
   setupSavedGraves();
+  updateLocationStatus();
+  refreshEstimate();
+  AtminimasAuth.user().then(function (me) {
+    if (me && me.email && !form.elements.contact_email.value) form.elements.contact_email.value = me.email;
+  }).catch(function () {});
   if (currentServiceStep === 1) activateServiceStep(1, false);
 })();

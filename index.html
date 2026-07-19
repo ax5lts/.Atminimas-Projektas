@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-4">
+<link rel="stylesheet" href="css/styles.css?v=20260719-3">
 </head>
 <body class="home-page" data-loading>
 <div class="site-shell">
@@ -136,7 +136,7 @@
       <header class="home-section__header">
         <p class="eyebrow">Rūpestis per atstumą</p>
         <h2 id="services-title">Kitos paslaugos</h2>
-        <p>Galite pasirinkti vieną arba kelias paslaugas. Kainą patvirtinsime individualiai, todėl kol kas ji žymima „–“.</p>
+        <p>Pasirinkite paslaugas ir kapavietę. Jei vieta turi tikslias koordinates, parodysime preliminarų paslaugų bei kelionės įvertį nuo Panevėžio, o galutinę kainą gausite atskiru pasiūlymu.</p>
       </header>
 
       <form class="service-request" id="service-request-form">
@@ -193,11 +193,17 @@
               <label>Kapinių pavadinimas
                 <input type="text" name="cemetery_name" autocomplete="off" maxlength="200" required placeholder="Pvz., Antakalnio kapinės">
               </label>
+              <label>Miestas arba savivaldybė
+                <input type="text" name="municipality" autocomplete="address-level2" maxlength="160" required placeholder="Pvz., Klaipėdos r. savivaldybė">
+              </label>
             </div>
             <label>Tiksli kapo vieta
               <textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea>
             </label>
-            <p class="editor-note">Kapavietę galite išsaugoti <a href="kapu-ieskojimas.html">kapų paieškoje</a> ir kitą kartą pasirinkti čia.</p>
+            <input type="hidden" name="destination_latitude">
+            <input type="hidden" name="destination_longitude">
+            <input type="hidden" name="location_source" value="manual">
+            <p class="editor-note" id="service-location-status">Tikslias koordinates galite pasirinkti <a href="kapu-ieskojimas.html">kapų paieškoje</a>. Jei įrašysite tik miestą ar rajoną, kelionės kainą įvertinsime rankiniu būdu.</p>
             <div class="service-step-actions"><button class="button button--ghost" type="button" data-service-back>Atgal</button><button class="button" type="button" data-service-next>Pasirinkti detales</button></div>
           </section>
 
@@ -249,15 +255,30 @@
           </div>
 
             <div class="service-estimate" aria-live="polite">
-              <span>Preliminari pasirinkimų kaina</span>
-              <strong id="service-estimate-price">–</strong>
-              <small>Galutinę kainą patvirtinsime prieš atliekant paslaugą.</small>
+              <span>Pasirinktos paslaugos</span>
+              <strong id="service-estimate-services">–</strong>
+              <span>Kelionė pirmyn ir atgal</span>
+              <strong id="service-estimate-travel">–</strong>
+              <span class="service-estimate__total">Preliminari bendra kaina</span>
+              <strong class="service-estimate__total" id="service-estimate-price">–</strong>
+              <small id="service-estimate-note">Galutinę kainą patvirtinsime atskiru pasiūlymu. Be jūsų patvirtinimo mokėjimas nebus pradėtas.</small>
             </div>
             <div class="service-step-actions"><button class="button button--ghost" type="button" data-service-back>Atgal</button><button class="button" type="button" data-service-next>Patikrinti užklausą</button></div>
           </section>
 
           <section class="service-step" data-service-step="4" aria-labelledby="service-step-4-title" hidden>
-            <header class="service-step__header"><span>4 žingsnis iš 4</span><h3 id="service-step-4-title">Beveik baigta</h3><p>Pridėkite nebūtiną informaciją ir pateikite užklausą.</p></header>
+            <header class="service-step__header"><span>4 žingsnis iš 4</span><h3 id="service-step-4-title">Beveik baigta</h3><p>Užklausą pateiksite be paskyros. Galutinį pasiūlymą atsiųsime el. paštu, o prisijungti reikės tik prieš jį priimant ir apmokant.</p></header>
+            <div class="form-grid">
+              <label>El. paštas pasiūlymui gauti
+                <input type="email" name="contact_email" autocomplete="email" maxlength="254" required placeholder="vardas@pastas.lt">
+              </label>
+              <label>Telefono numeris <span class="optional">(nebūtina)</span>
+                <input type="tel" name="contact_phone" autocomplete="tel" maxlength="40" placeholder="+370 600 00000">
+              </label>
+            </div>
+            <label class="service-honeypot" aria-hidden="true">Svetainė
+              <input type="text" name="website" tabindex="-1" autocomplete="off">
+            </label>
             <label>Papildoma informacija <span class="optional">(nebūtina)</span>
               <textarea name="extra_information" rows="4" maxlength="2000" placeholder="Pageidaujama data, kaip atpažinti kapavietę ar kita svarbi informacija"></textarea>
             </label>
@@ -287,8 +308,8 @@
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/auth.js?v=20260716-3"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
-<script src="assets/home.js?v=20260716-3"></script>
-<script src="assets/official-grave-search.js?v=20260719-2"></script>
+<script src="assets/home.js?v=20260719-5"></script>
+<script src="assets/official-grave-search.js?v=20260719-3"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

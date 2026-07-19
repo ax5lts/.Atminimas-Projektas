@@ -46,6 +46,8 @@
   var serviceRequestsPanel = document.getElementById("admin-service-requests");
   var serviceRequestsRefresh = document.getElementById("service-requests-refresh");
   var serviceRequestRows = document.getElementById("service-request-rows");
+  var servicePricingForm = document.getElementById("service-pricing-form");
+  var servicePricingStatus = document.getElementById("service-pricing-status");
   var cache = [];
   var orderCache = [];
   var shipmentCache = [];
@@ -55,6 +57,11 @@
   var productionCache = [];
   var automationCache = [];
   var memoryCache = [];
+  var servicePriceKeys = [
+    "candle_1", "candle_2", "candle_5", "candle_other",
+    "flower_1", "flower_3", "flower_5", "flower_bouquet", "flower_other",
+    "cleaning_full", "cleaning_grooves", "cleaning_surface", "cleaning_monument", "cleaning_leaves"
+  ];
 
   function setStatus(message) {
     loginStatusEl.textContent = message || "";
@@ -191,6 +198,17 @@
     if (res.status === 204) return null;
     var raw = await res.text();
     return raw ? JSON.parse(raw) : null;
+  }
+
+  async function serviceFlow(action, payload) {
+    var response = await fetch(functionUrl("service-flow"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+    });
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "Paslaugos veiksmas nepavyko.");
+    return data;
   }
 
   async function deleteAdminProfile(profileId) {
@@ -530,37 +548,153 @@
     return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapo sutvarkymas" }[value] || value;
   }
 
+  function cents(value) {
+    return Number.isInteger(value) ? new Intl.NumberFormat("lt-LT", { style: "currency", currency: "EUR" }).format(value / 100) : "–";
+  }
+
+  function euroInput(value) {
+    return Number.isInteger(value) ? (value / 100).toFixed(2) : "";
+  }
+
+  function quoteStatusName(value) {
+    return {
+      awaiting_admin: "laukiama jūsų kainos",
+      sent: "pasiūlymas išsiųstas",
+      accepted: "klientas priėmė",
+      declined: "klientas atmetė",
+      expired: "pasiūlymas nebegalioja"
+    }[value] || value || "laukiama";
+  }
+
+  function paymentStatusName(value) {
+    return {
+      not_ready: "mokėjimas dar nepradėtas",
+      pending: "galima apmokėti",
+      processing: "mokėjimas pradėtas",
+      paid: "apmokėta",
+      failed: "mokėjimas nepavyko",
+      refunded: "grąžinta",
+      cancelled: "mokėjimas atšauktas"
+    }[value] || value || "";
+  }
+
+  function estimateSummary(row) {
+    var services = cents(row.estimated_service_cents);
+    var travel = Number.isInteger(row.estimated_travel_min_cents) && Number.isInteger(row.estimated_travel_max_cents)
+      ? (row.estimated_travel_min_cents === row.estimated_travel_max_cents
+        ? cents(row.estimated_travel_min_cents)
+        : cents(row.estimated_travel_min_cents) + "–" + cents(row.estimated_travel_max_cents))
+      : "rankinis";
+    var total = Number.isInteger(row.estimated_total_min_cents) && Number.isInteger(row.estimated_total_max_cents)
+      ? (row.estimated_total_min_cents === row.estimated_total_max_cents
+        ? cents(row.estimated_total_min_cents)
+        : cents(row.estimated_total_min_cents) + "–" + cents(row.estimated_total_max_cents))
+      : "rankinis pasiūlymas";
+    var hasDistance = row.estimated_round_trip_min_km !== null && row.estimated_round_trip_min_km !== "" &&
+      row.estimated_round_trip_max_km !== null && row.estimated_round_trip_max_km !== "";
+    var distance = hasDistance && Number.isFinite(Number(row.estimated_round_trip_min_km)) && Number.isFinite(Number(row.estimated_round_trip_max_km))
+      ? Number(row.estimated_round_trip_min_km) + "–" + Number(row.estimated_round_trip_max_km) + " km pirmyn ir atgal"
+      : "Atstumas automatiškai nenustatytas";
+    return "Paslaugos: " + services + "\nKelionė: " + travel + "\nBendrai: " + total + "\n" + distance;
+  }
+
+  function defaultQuoteExpiry(value) {
+    if (value && new Date(value) > new Date()) return dateTimeLocal(value);
+    return dateTimeLocal(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString());
+  }
+
   function renderServiceRequests() {
     serviceRequestRows.innerHTML = serviceRequestCache.map(function (row) {
       var services = (row.paslaugos || []).map(serviceName).join(" · ");
+      var quoteLocked = ["processing", "paid"].indexOf(row.payment_status) !== -1;
+      var quoteActionLabel = quoteLocked
+        ? (row.payment_status === "paid" ? "Pasiūlymas apmokėtas" : "Mokėjimas pradėtas")
+        : ["sent", "accepted"].indexOf(row.quote_status) !== -1
+          ? "Pakeisti ir siųsti iš naujo"
+          : ["declined", "expired"].indexOf(row.quote_status) !== -1
+            ? "Siųsti naują pasiūlymą"
+            : "Išsiųsti pasiūlymą";
       var details = [
         row.geliu_pageidavimai ? "Gėlės: " + row.geliu_pageidavimai : "",
         row.zvakiu_pageidavimai ? "Žvakės: " + row.zvakiu_pageidavimai : "",
         row.tvarkymo_pageidavimai ? "Tvarkymas: " + row.tvarkymo_pageidavimai : "",
         row.papildoma_informacija ? "Papildomai: " + row.papildoma_informacija : ""
       ].filter(Boolean).join("\n");
+      var quoteInfo = "Būsena: " + quoteStatusName(row.quote_status) +
+        (row.quote_amount_cents ? "\nDabartinė kaina: " + cents(row.quote_amount_cents) : "") +
+        (row.quote_sent_at ? "\nIšsiųsta: " + formatDate(row.quote_sent_at) : "") +
+        (row.quote_email_sent_at ? "\nLaiškas išsiųstas" : row.quote_email_error ? "\nLaiškas neišsiųstas: " + row.quote_email_error : "") +
+        "\nMokėjimas: " + paymentStatusName(row.payment_status);
       return (
-        "<tr data-service-request-id='" + html(row.id) + "'>" +
-          "<td><strong>" + html(row.mirusiojo_vardas) + "</strong><br>" + html(row.kapiniu_pavadinimas) + "<br><span class='muted'>" + html(row.kapo_vieta) + "</span></td>" +
+        "<tr data-service-request-id='" + html(row.id) + "' data-quote-revision='" + html(row.quote_revision || 0) + "' data-quote-status='" + html(row.quote_status || "awaiting_admin") + "'>" +
+          "<td><strong>" + html(row.mirusiojo_vardas) + "</strong><br>" + html([row.kapiniu_pavadinimas, row.savivaldybe].filter(Boolean).join(", ")) + "<br><span class='muted admin-preserve-lines'>" + html(row.kapo_vieta) + "</span><br><small>" + html(row.location_source === "registry" ? "Tiksli vieta iš registro" : row.location_source === "saved" ? "Išsaugota tiksli vieta" : "Kliento įrašyta vieta") + "</small><br><a href='mailto:" + html(row.contact_email || "") + "'>" + html(row.contact_email || "El. paštas nenurodytas") + "</a>" + (row.contact_phone ? "<br><a href='tel:" + html(row.contact_phone) + "'>" + html(row.contact_phone) + "</a>" : "") + "</td>" +
           "<td><strong>" + html(services) + "</strong><br><span class='admin-preserve-lines'>" + html(details || "Papildomų pageidavimų nėra") + "</span></td>" +
-          "<td><input type='datetime-local' data-service-scheduled value='" + html(dateTimeLocal(row.scheduled_for)) + "'></td>" +
-          "<td><select data-service-status>" + ["gauta", "susisiekta", "vykdoma", "atlikta", "atsaukta"].map(function (value) {
+          "<td><span class='admin-preserve-lines'>" + html(estimateSummary(row)) + "</span></td>" +
+          "<td><span class='admin-preserve-lines'>" + html(quoteInfo) + "</span><label>Galutinė kaina, €<input type='number' min='0.01' step='0.01' data-service-quote-amount value='" + html(euroInput(row.quote_amount_cents)) + "'></label><label>Pasiūlymo tekstas<textarea data-service-quote-message rows='3' maxlength='2000' placeholder='Kas įskaičiuota, svarbios sąlygos'>" + html(row.quote_message || "") + "</textarea></label><label>Galioja iki<input type='datetime-local' data-service-quote-expires value='" + html(defaultQuoteExpiry(row.quote_expires_at)) + "'></label></td>" +
+          "<td><label>Atlikimo laikas<input type='datetime-local' data-service-scheduled value='" + html(dateTimeLocal(row.scheduled_for)) + "'></label><label>Būsena<select data-service-status>" + ["gauta", "susisiekta", "vykdoma", "atlikta", "atsaukta"].map(function (value) {
             return "<option value='" + value + "' " + ((row.statusas || "gauta") === value ? "selected" : "") + ">" + value + "</option>";
-          }).join("") + "</select><textarea data-service-note rows='3' maxlength='3000' placeholder='Administratoriaus pastaba'>" + html(row.admin_pastaba || "") + "</textarea></td>" +
-          "<td><button class='button' type='button' data-save-service-request='" + html(row.id) + "'>Išsaugoti</button></td>" +
+          }).join("") + "</select></label><label>Vidinė pastaba<textarea data-service-note rows='3' maxlength='3000' placeholder='Administratoriaus pastaba'>" + html(row.admin_pastaba || "") + "</textarea></label></td>" +
+          "<td><div class='actions admin-actions'><button class='button' type='button' data-send-service-quote='" + html(row.id) + "' " + (quoteLocked ? "disabled aria-disabled='true'" : "") + ">" + html(quoteActionLabel) + "</button><button class='button button--ghost' type='button' data-save-service-request='" + html(row.id) + "'>Išsaugoti būseną</button></div></td>" +
         "</tr>"
       );
-    }).join("") || "<tr><td colspan='5'>Paslaugų užklausų nėra.</td></tr>";
+    }).join("") || "<tr><td colspan='6'>Paslaugų užklausų nėra.</td></tr>";
   }
 
   async function loadServiceRequests() {
     serviceRequestCache = await supabaseJson(restUrl(
       "paslaugu_uzklausos",
-      "select=id,owner_id,paslaugos,mirusiojo_vardas,kapiniu_pavadinimas,kapo_vieta,geliu_pageidavimai,zvakiu_pageidavimai,tvarkymo_pageidavimai,papildoma_informacija,statusas,admin_pastaba,scheduled_for,completed_at,created_at&order=created_at.desc"
+      "select=id,owner_id,contact_email,contact_phone,paslaugos,mirusiojo_vardas,kapiniu_pavadinimas,savivaldybe,kapo_vieta,destination_latitude,destination_longitude,location_source,estimate_status,straight_distance_km,estimated_one_way_min_km,estimated_one_way_max_km,estimated_round_trip_min_km,estimated_round_trip_max_km,estimated_service_cents,estimated_travel_min_cents,estimated_travel_max_cents,estimated_total_min_cents,estimated_total_max_cents,currency,geliu_pageidavimai,zvakiu_pageidavimai,tvarkymo_pageidavimai,papildoma_informacija,quote_status,quote_amount_cents,quote_message,quote_revision,quote_sent_at,quote_expires_at,quote_accepted_at,quote_declined_at,quote_email_sent_at,quote_email_error,payment_status,payment_provider,payment_attempt_id,payment_session_id,payment_reference,paid_at,statusas,admin_pastaba,scheduled_for,completed_at,created_at&order=created_at.desc"
     ));
     serviceRequestsPanel.hidden = false;
     renderServiceRequests();
     updateOverview();
+  }
+
+  function setPricingField(name, value) {
+    if (servicePricingForm.elements[name]) servicePricingForm.elements[name].value = value == null ? "" : value;
+  }
+
+  async function loadServicePricing() {
+    var result = await serviceFlow("get_settings");
+    var settings = result.settings || {};
+    setPricingField("base_label", settings.base_label || "Panevėžys");
+    setPricingField("base_latitude", settings.base_latitude);
+    setPricingField("base_longitude", settings.base_longitude);
+    setPricingField("road_factor_min", settings.road_factor_min);
+    setPricingField("road_factor_max", settings.road_factor_max);
+    setPricingField("included_round_trip_km", settings.included_round_trip_km);
+    setPricingField("travel_rate_eur_per_km", Number.isInteger(settings.travel_rate_cents_per_km) ? (settings.travel_rate_cents_per_km / 100).toFixed(2) : "");
+    setPricingField("manual_review_over_one_way_km", settings.manual_review_over_one_way_km);
+    var catalog = settings.price_catalog || {};
+    servicePriceKeys.forEach(function (key) {
+      setPricingField("price_" + key, Number.isInteger(catalog[key]) ? (catalog[key] / 100).toFixed(2) : "");
+    });
+    servicePricingStatus.textContent = "";
+  }
+
+  function euroFieldToCents(field) {
+    var raw = String(field.value || "").trim();
+    if (!raw) return null;
+    var value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) throw new Error("Patikrinkite įvestas kainas.");
+    return Math.round(value * 100);
+  }
+
+  async function saveServicePricing() {
+    var catalog = {};
+    servicePriceKeys.forEach(function (key) { catalog[key] = euroFieldToCents(servicePricingForm.elements["price_" + key]); });
+    await serviceFlow("save_settings", {
+      base_label: servicePricingForm.elements.base_label.value,
+      base_latitude: servicePricingForm.elements.base_latitude.value,
+      base_longitude: servicePricingForm.elements.base_longitude.value,
+      road_factor_min: servicePricingForm.elements.road_factor_min.value,
+      road_factor_max: servicePricingForm.elements.road_factor_max.value,
+      included_round_trip_km: servicePricingForm.elements.included_round_trip_km.value,
+      travel_rate_cents_per_km: euroFieldToCents(servicePricingForm.elements.travel_rate_eur_per_km),
+      manual_review_over_one_way_km: servicePricingForm.elements.manual_review_over_one_way_km.value,
+      price_catalog: catalog
+    });
+    servicePricingStatus.textContent = "Kainodara išsaugota. Nauji preliminarūs įverčiai naudos šias reikšmes.";
   }
 
   function legalStatusControl(row) {
@@ -658,6 +792,11 @@
     await loadAutomation();
     await loadShipments();
     await loadServiceRequests();
+    try {
+      await loadServicePricing();
+    } catch (pricingError) {
+      servicePricingStatus.textContent = "Kainodaros įkelti nepavyko: " + (pricingError.message || "nežinoma klaida");
+    }
     await loadLegalRequests();
     await loadMemories();
     updateOverview();
@@ -707,6 +846,30 @@
     });
     setStatus("Paslaugos užklausa atnaujinta: " + id);
     await loadServiceRequests();
+  }
+
+  async function sendServiceQuote(id, tr) {
+    var amountField = tr.querySelector("[data-service-quote-amount]");
+    var amount = Number(amountField.value);
+    var expiresValue = tr.querySelector("[data-service-quote-expires]").value;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      amountField.focus();
+      throw new Error("Įrašykite galutinę pasiūlymo kainą.");
+    }
+    if (!expiresValue) throw new Error("Pasirinkite pasiūlymo galiojimo laiką.");
+    return serviceFlow("send_quote", {
+      request_id: id,
+      expected_revision: Number(tr.dataset.quoteRevision || 0),
+      amount_cents: Math.round(amount * 100),
+      message: tr.querySelector("[data-service-quote-message]").value.trim(),
+      expires_at: new Date(expiresValue).toISOString()
+    });
+  }
+
+  function serviceQuoteSuccessMessage(result) {
+    return result.email_sent
+      ? "Pasiūlymas išsaugotas ir išsiųstas klientui el. paštu."
+      : "Pasiūlymas matomas kliento zonoje, tačiau laiško išsiųsti nepavyko: " + (result.email_error || "el. pašto paslauga nesukonfigūruota");
   }
 
   async function saveLegalRequest(tr) {
@@ -796,6 +959,24 @@
   });
 
   serviceRequestRows.addEventListener("click", function (event) {
+    var quoteButton = event.target.closest("[data-send-service-quote]");
+    if (quoteButton) {
+      var quoteRow = quoteButton.closest("tr");
+      var quoteStatus = quoteRow.dataset.quoteStatus;
+      if (quoteStatus === "accepted" && !window.confirm("Klientas jau priėmė šį pasiūlymą. Išsiuntus naują pasiūlymą, ankstesnis priėmimas bus atšauktas ir klientas turės jį patvirtinti dar kartą. Tęsti?")) return;
+      if (quoteStatus === "sent" && !window.confirm("Šis pasiūlymas jau išsiųstas. Naujas pasiūlymas pakeis ankstesnį, todėl klientas turės patvirtinti naują kainą. Tęsti?")) return;
+      quoteButton.disabled = true;
+      sendServiceQuote(quoteButton.dataset.sendServiceQuote, quoteRow).then(function (result) {
+        var successMessage = serviceQuoteSuccessMessage(result);
+        setStatus(successMessage);
+        return loadServiceRequests().catch(function () {
+          setStatus(successMessage + " Sąrašo automatiškai atnaujinti nepavyko. Paspauskite „Atnaujinti“.");
+        });
+      }).catch(function (err) {
+        setStatus(err.message || "Pasiūlymo išsiųsti nepavyko.");
+      }).finally(function () { quoteButton.disabled = false; });
+      return;
+    }
     var button = event.target.closest("[data-save-service-request]");
     if (!button) return;
     var tr = button.closest("tr");
@@ -834,6 +1015,16 @@
     businessSettingsStatus.textContent = "Nustatymai saugomi...";
     saveBusinessSettings().catch(function (err) {
       businessSettingsStatus.textContent = err.message || "Nepavyko išsaugoti nustatymų.";
+    }).finally(function () { button.disabled = false; });
+  });
+
+  servicePricingForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var button = servicePricingForm.querySelector("button[type='submit']");
+    button.disabled = true;
+    servicePricingStatus.textContent = "Kainodara saugoma...";
+    saveServicePricing().catch(function (err) {
+      servicePricingStatus.textContent = err.message || "Kainodaros išsaugoti nepavyko.";
     }).finally(function () { button.disabled = false; });
   });
 
@@ -886,7 +1077,7 @@
     loadShipments().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti siuntimų."); });
   });
   serviceRequestsRefresh.addEventListener("click", function () {
-    loadServiceRequests().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti paslaugų užklausų."); });
+    Promise.all([loadServiceRequests(), loadServicePricing()]).catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti paslaugų užklausų."); });
   });
   legalRequestsRefresh.addEventListener("click", function () {
     loadLegalRequests().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti prašymų."); });

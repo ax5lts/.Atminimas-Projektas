@@ -528,6 +528,47 @@ video {
   min-width: 1080px;
 }
 
+.admin-settings-card {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: #fffdf8;
+}
+
+.admin-settings-card > summary {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.admin-settings-card[open] > summary {
+  margin-bottom: 18px;
+}
+
+.admin-settings-form,
+.admin-settings-form fieldset {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-settings-form fieldset {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.admin-service-table {
+  min-width: 1540px;
+}
+
+.admin-service-table label {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .admin-actions {
   align-items: stretch;
   flex-wrap: wrap;
@@ -4247,12 +4288,57 @@ html {
 .service-estimate > strong {
   color: var(--accent-dark);
   font-size: 1.35rem;
+  text-align: right;
+}
+
+.service-estimate__total {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
 
 .service-estimate > small {
   grid-column: 1 / -1;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.service-honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+.service-quote-box {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid rgba(23, 79, 74, 0.25);
+  border-radius: 14px;
+  background: var(--mint);
+}
+
+.service-quote-box span,
+.service-quote-box small {
+  color: var(--muted);
+}
+
+.service-quote-box strong {
+  color: var(--accent-dark);
+  font-size: 1.45rem;
+}
+
+.service-quote-box p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.user-page-card.is-highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(23, 79, 74, 0.12);
 }
 
 .service-details .service-consent {

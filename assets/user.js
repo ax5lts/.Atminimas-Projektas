@@ -2,9 +2,15 @@
   var form = document.getElementById("user-auth-form");
   var statusEl = document.getElementById("user-status");
   var listEl = document.getElementById("user-pages");
+  var serviceSectionEl = document.getElementById("paslaugos");
+  var serviceListEl = document.getElementById("user-services");
   var logoutButton = document.getElementById("user-logout");
   var createButton = document.getElementById("user-create");
   var guestActions = document.getElementById("user-guest-actions");
+  var pageParams = new URLSearchParams(window.location.search);
+  var requestedServiceId = (pageParams.get("service") || "").trim();
+  var claimRequested = pageParams.get("claim") === "1";
+  var claimAttempted = false;
   var productKey = "atminimas.selected-product.v1";
   var productNames = {
     metal: "Graviruota QR atminimo lentelė",
@@ -28,7 +34,9 @@
   var chosenProduct = selectedProduct();
   if (createButton) createButton.href = "redaktorius.html?product=" + encodeURIComponent(chosenProduct);
   if (guestActions) {
-    var next = "vartotojas.html?product=" + encodeURIComponent(chosenProduct);
+    var next = requestedServiceId
+      ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
+      : "vartotojas.html?product=" + encodeURIComponent(chosenProduct);
     var loginLink = guestActions.querySelector("a[href='prisijungti.html']");
     var registerLink = guestActions.querySelector("a[href='registruotis.html']");
     if (loginLink) loginLink.href = "prisijungti.html?next=" + encodeURIComponent(next);
@@ -45,6 +53,28 @@
 
   function rpcUrl(name) {
     return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/" + encodeURIComponent(name);
+  }
+
+  function functionUrl(name) {
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
+  }
+
+  async function serviceFlow(action, payload) {
+    var response = await fetch(functionUrl("service-flow"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+    });
+    var result = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(result.error || "Paslaugos veiksmo atlikti nepavyko.");
+    return result;
+  }
+
+  async function claimServiceRequest() {
+    if (!claimRequested || !requestedServiceId || claimAttempted) return false;
+    claimAttempted = true;
+    await serviceFlow("claim", { request_id: requestedServiceId });
+    return true;
   }
 
   function html(value) {
@@ -87,6 +117,138 @@
       pristatyta: "pristatyta",
       "atšaukta": "atšaukta"
     }[value] || value || "ruošiama";
+  }
+
+  function serviceName(value) {
+    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapo sutvarkymas" }[value] || value;
+  }
+
+  function serviceQuoteStatus(value) {
+    return {
+      awaiting_admin: "rengiama galutinė kaina",
+      sent: "laukia jūsų sprendimo",
+      accepted: "pasiūlymas priimtas",
+      declined: "pasiūlymas atmestas",
+      expired: "pasiūlymas nebegalioja"
+    }[value] || value || "vertinama";
+  }
+
+  function servicePaymentStatus(value) {
+    return {
+      not_ready: "mokėjimas dar nepradėtas",
+      pending: "galima apmokėti",
+      processing: "mokėjimas pradėtas",
+      paid: "apmokėta",
+      failed: "mokėjimas nepavyko",
+      refunded: "mokėjimas grąžintas",
+      cancelled: "mokėjimas atšauktas"
+    }[value] || value || "";
+  }
+
+  function formatCents(value, currency) {
+    return Number.isInteger(value)
+      ? new Intl.NumberFormat("lt-LT", { style: "currency", currency: currency || "EUR" }).format(value / 100)
+      : "–";
+  }
+
+  function estimateRange(row) {
+    if (!Number.isInteger(row.estimated_total_min_cents) || !Number.isInteger(row.estimated_total_max_cents)) return "Vertinama individualiai";
+    return row.estimated_total_min_cents === row.estimated_total_max_cents
+      ? formatCents(row.estimated_total_min_cents, row.currency)
+      : formatCents(row.estimated_total_min_cents, row.currency) + "–" + formatCents(row.estimated_total_max_cents, row.currency);
+  }
+
+  async function serviceDecision(name, requestId, revision) {
+    var response = await fetch(rpcUrl(name), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify({ p_request_id: requestId, p_quote_revision: Number(revision) })
+    });
+    var raw = await response.text();
+    var result = raw ? JSON.parse(raw) : null;
+    if (!response.ok) throw new Error(typeof result === "string" ? result : "Pasiūlymo būsenos pakeisti nepavyko.");
+    return result;
+  }
+
+  async function startServicePayment(requestId) {
+    var response = await fetch(functionUrl("service-flow"), {
+      method: "POST",
+      headers: AtminimasAuth.headers(true),
+      body: JSON.stringify({ action: "start_payment", request_id: requestId })
+    });
+    var result = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(result.error || "Mokėjimo pradėti nepavyko.");
+    if (!/^https:\/\//i.test(result.checkout_url || "")) throw new Error("Mokėjimo nuoroda negauta.");
+    window.location.href = result.checkout_url;
+  }
+
+  function renderServiceRequests(rows) {
+    if (!serviceSectionEl || !serviceListEl) return;
+    serviceSectionEl.hidden = !rows.length;
+    if (!rows.length) {
+      serviceListEl.innerHTML = "";
+      return;
+    }
+    var requestedId = requestedServiceId;
+    serviceListEl.innerHTML = rows.map(function (row) {
+      var expired = row.quote_status === "expired" || (row.quote_expires_at && new Date(row.quote_expires_at) <= new Date());
+      var services = (row.paslaugos || []).map(serviceName).join(" · ");
+      var hasDistance = row.estimated_round_trip_min_km !== null && row.estimated_round_trip_min_km !== "" &&
+        row.estimated_round_trip_max_km !== null && row.estimated_round_trip_max_km !== "";
+      var distance = hasDistance && Number.isFinite(Number(row.estimated_round_trip_min_km)) && Number.isFinite(Number(row.estimated_round_trip_max_km))
+        ? Number(row.estimated_round_trip_min_km) + "–" + Number(row.estimated_round_trip_max_km) + " km pirmyn ir atgal"
+        : "Kelionės atstumas bus patikrintas rankiniu būdu";
+      var quote = Number.isInteger(row.quote_amount_cents)
+        ? "<div class='service-quote-box'><span>Galutinė pasiūlymo kaina</span><strong>" + html(formatCents(row.quote_amount_cents, row.currency)) + "</strong>" +
+          (row.quote_message ? "<p>" + html(row.quote_message) + "</p>" : "") +
+          (row.quote_expires_at ? "<small>Galioja iki " + html(new Intl.DateTimeFormat("lt-LT", { dateStyle: "long", timeStyle: "short" }).format(new Date(row.quote_expires_at))) + "</small>" : "") + "</div>"
+        : "";
+      var actions = "";
+      if (row.quote_status === "sent" && !expired) {
+        actions = "<div class='actions'><button class='button' type='button' data-service-accept='" + html(row.id) + "' data-quote-revision='" + html(row.quote_revision) + "'>Priimti pasiūlymą</button><button class='button button--ghost' type='button' data-service-decline='" + html(row.id) + "' data-quote-revision='" + html(row.quote_revision) + "'>Atmesti</button></div>";
+      } else if (row.quote_status === "accepted" && !expired && ["pending", "processing", "failed", "cancelled"].indexOf(row.payment_status) !== -1) {
+        actions = "<button class='button user-card-primary' type='button' data-service-payment='" + html(row.id) + "'>" + (row.payment_status === "processing" ? "Tęsti apmokėjimą" : "Apmokėti pasiūlymą") + "</button>";
+      } else if (expired && row.payment_status !== "paid") {
+        actions = "<p class='editor-note'>Pasiūlymo galiojimas baigėsi. Susisiekite su mumis arba palaukite naujo pasiūlymo.</p>";
+      }
+      return "<article class='info-box user-page-card" + (requestedId === row.id ? " is-highlighted" : "") + "' id='service-" + html(row.id) + "'>" +
+        "<div class='user-card-heading'><p class='eyebrow'>Paslaugos užklausa #" + html(String(row.id).slice(0, 8).toUpperCase()) + "</p><span class='user-card-visibility " + (row.payment_status === "paid" ? "is-public" : "") + "'>" + html(row.payment_status === "paid" ? "Apmokėta" : serviceQuoteStatus(expired ? "expired" : row.quote_status)) + "</span></div>" +
+        "<h2>" + html(row.mirusiojo_vardas) + "</h2><p>" + html([row.kapiniu_pavadinimas, row.savivaldybe].filter(Boolean).join(", ")) + "</p>" +
+        "<p class='user-card-product'>" + html(services) + "</p>" +
+        "<div class='user-card-status'><span>Preliminarus įvertis</span><strong>" + html(estimateRange(row)) + "</strong><span>Kelionė</span><strong>" + html(distance) + "</strong><span>Mokėjimas</span><strong>" + html(expired && row.payment_status !== "paid" ? "pasiūlymas nebegalioja" : servicePaymentStatus(row.payment_status)) + "</strong></div>" +
+        quote + actions + "</article>";
+    }).join("");
+  }
+
+  function renderServiceLoadError() {
+    if (!serviceSectionEl || !serviceListEl) return;
+    serviceSectionEl.hidden = false;
+    serviceListEl.innerHTML = "<article class='info-box user-page-card' role='alert'><h2>Paslaugų užklausų įkelti nepavyko</h2><p>Patikrinkite interneto ryšį ir pabandykite dar kartą. Jei problema kartojasi, susisiekite su mumis.</p><button class='button button--ghost' type='button' data-service-retry>Bandykite dar kartą</button></article>";
+  }
+
+  function scrollToRequestedService() {
+    if (!requestedServiceId) return;
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        var target = document.getElementById("service-" + requestedServiceId) || serviceSectionEl;
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+  }
+
+  async function loadMyServiceRequests(ownerId) {
+    try {
+      var response = await fetch(restUrl(
+        "paslaugu_uzklausos",
+        "owner_id=eq." + encodeURIComponent(ownerId) + "&select=id,paslaugos,mirusiojo_vardas,kapiniu_pavadinimas,savivaldybe,kapo_vieta,estimate_status,estimated_round_trip_min_km,estimated_round_trip_max_km,estimated_total_min_cents,estimated_total_max_cents,currency,quote_status,quote_amount_cents,quote_message,quote_revision,quote_sent_at,quote_expires_at,quote_accepted_at,quote_declined_at,payment_status,paid_at,statusas,scheduled_for,completed_at,created_at&order=created_at.desc"
+      ), { headers: AtminimasAuth.headers(false) });
+      if (!response.ok) throw new Error("Paslaugų užklausų užklausa nepavyko.");
+      renderServiceRequests(await response.json());
+      return true;
+    } catch (_error) {
+      renderServiceLoadError();
+      return false;
+    }
   }
 
   function primaryAction(row, order) {
@@ -154,21 +316,41 @@
     return data;
   }
 
-  async function fetchMyPages() {
+  async function fetchMyPages(successMessage) {
     var me = await AtminimasAuth.user();
     if (!me) {
       listEl.innerHTML = "";
+      if (serviceListEl) serviceListEl.innerHTML = "";
+      if (serviceSectionEl) serviceSectionEl.hidden = true;
       logoutButton.hidden = true;
       if (createButton) createButton.hidden = true;
       if (guestActions) guestActions.hidden = false;
-      statusEl.textContent = "Prisijunkite, kad atidarytumėte savo kliento zoną.";
+      statusEl.textContent = requestedServiceId && claimRequested
+        ? "Galutinį pasiūlymą gavote el. paštu. Prisijunkite tuo pačiu el. paštu tik tada, kai norėsite jį priimti ir apmokėti."
+        : "Prisijunkite, kad atidarytumėte savo kliento zoną.";
       return;
     }
 
     logoutButton.hidden = false;
     if (createButton) createButton.hidden = false;
     if (guestActions) guestActions.hidden = true;
-    statusEl.textContent = "Prisijungta: " + me.email;
+    var claimedNow = false;
+    var claimErrorMessage = "";
+    try {
+      claimedNow = await claimServiceRequest();
+    } catch (claimError) {
+      claimErrorMessage = claimError.message || "Pasiūlymo nepavyko priskirti šiai paskyrai.";
+    }
+    statusEl.textContent = successMessage || claimErrorMessage || (claimedNow
+      ? "Pasiūlymas priskirtas jūsų paskyrai. Dabar galite jį priimti ir apmokėti."
+      : "Prisijungta: " + me.email);
+
+    await loadMyServiceRequests(me.id);
+    if (new URLSearchParams(window.location.search).get("payment") === "success") {
+      statusEl.textContent = "Mokėjimas priimtas. Laukiame saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.";
+    } else if (new URLSearchParams(window.location.search).get("payment") === "cancelled") {
+      statusEl.textContent = "Mokėjimas atšauktas. Pasiūlymas išsaugotas, galėsite bandyti dar kartą.";
+    }
 
     var res = await fetch(restUrl(
       "profiliai",
@@ -179,12 +361,14 @@
 
     if (!res.ok) {
       listEl.innerHTML = "<div class='info-box'><h2>Nepavyko įkelti puslapių</h2><p>Pabandykite atnaujinti puslapį. Jei problema kartojasi, susisiekite su mumis.</p></div>";
+      scrollToRequestedService();
       return;
     }
 
     var rows = await res.json();
     if (!rows.length) {
       listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo graviruotos QR atminimo lentelės užsakymo.</p><a class='button' href='redaktorius.html?product=metal'>Užsakyti</a></div>";
+      scrollToRequestedService();
       return;
     }
 
@@ -236,6 +420,7 @@
         "</article>"
       );
     }).join("");
+    scrollToRequestedService();
   }
 
   listEl.addEventListener("click", async function (event) {
@@ -298,10 +483,57 @@
     }
   });
 
+  if (serviceListEl) serviceListEl.addEventListener("click", async function (event) {
+    var retry = event.target.closest("button[data-service-retry]");
+    if (retry) {
+      retry.disabled = true;
+      statusEl.textContent = "Paslaugų užklausos įkeliamos iš naujo...";
+      try {
+        var me = await AtminimasAuth.user();
+        if (!me) throw new Error("Prisijungimo sesija baigėsi. Prisijunkite iš naujo.");
+        var loaded = await loadMyServiceRequests(me.id);
+        statusEl.textContent = loaded
+          ? "Paslaugų užklausos atnaujintos."
+          : "Paslaugų užklausų vis dar nepavyko įkelti. Pabandykite vėliau.";
+        scrollToRequestedService();
+      } catch (error) {
+        statusEl.textContent = error.message || "Paslaugų užklausų įkelti nepavyko.";
+        retry.disabled = false;
+      }
+      return;
+    }
+    var accept = event.target.closest("button[data-service-accept]");
+    var decline = event.target.closest("button[data-service-decline]");
+    var payment = event.target.closest("button[data-service-payment]");
+    var button = accept || decline || payment;
+    if (!button) return;
+    if (decline && !window.confirm("Ar tikrai norite atmesti šį pasiūlymą?")) return;
+    button.disabled = true;
+    try {
+      if (accept) {
+        var accepted = await serviceDecision("accept_my_service_quote", accept.dataset.serviceAccept, accept.dataset.quoteRevision);
+        if (accepted !== "accepted") throw new Error(accepted === "expired" ? "Pasiūlymo galiojimas baigėsi." : "Pasiūlymas pasikeitė. Atnaujinkite puslapį.");
+        await fetchMyPages("Pasiūlymas priimtas. Dabar galite saugiai jį apmokėti.");
+      } else if (decline) {
+        var declined = await serviceDecision("decline_my_service_quote", decline.dataset.serviceDecline, decline.dataset.quoteRevision);
+        if (declined !== "declined") throw new Error("Pasiūlymas pasikeitė. Atnaujinkite puslapį.");
+        await fetchMyPages("Pasiūlymas atmestas.");
+      } else {
+        statusEl.textContent = "Ruošiamas saugus apmokėjimas...";
+        await startServicePayment(payment.dataset.servicePayment);
+      }
+    } catch (error) {
+      statusEl.textContent = error.message || "Veiksmo atlikti nepavyko.";
+      button.disabled = false;
+    }
+  });
+
   logoutButton.addEventListener("click", function () {
     AtminimasAuth.signOut();
     statusEl.textContent = "Atsijungta.";
     listEl.innerHTML = "";
+    if (serviceListEl) serviceListEl.innerHTML = "";
+    if (serviceSectionEl) serviceSectionEl.hidden = true;
     logoutButton.hidden = true;
     if (createButton) createButton.hidden = true;
     if (guestActions) guestActions.hidden = false;

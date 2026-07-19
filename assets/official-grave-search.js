@@ -112,10 +112,12 @@
       decoded.close();
     }
   }
-  function careUrl(name, place, latitude, longitude) {
+  function careUrl(name, place, latitude, longitude, cemetery, municipality) {
     var params = new URLSearchParams();
     if (name) params.set("graveName", name);
     if (place) params.set("gravePlace", place);
+    if (cemetery) params.set("graveCemetery", cemetery);
+    if (municipality) params.set("graveMunicipality", municipality);
     if (latitude != null && latitude !== "") params.set("graveLat", latitude);
     if (longitude != null && longitude !== "") params.set("graveLng", longitude);
     return "index.html?" + params.toString() + "#kitos-paslaugos";
@@ -186,6 +188,7 @@
     var embeddedMap = rich ? mapEmbed(row) : "";
     var saved = isSaved(row);
     var actionData = " data-grave-name='" + html(rawName) + "' data-grave-place='" + html(rawPlace) +
+      "' data-grave-cemetery='" + html(row.cemetery || "") + "' data-grave-municipality='" + html(row.municipality || "") +
       "' data-grave-key='" + html(graveKey(row)) + "' data-grave-lat='" + html(row.latitude == null ? "" : row.latitude) +
       "' data-grave-lng='" + html(row.longitude == null ? "" : row.longitude) + "'";
     return "<details class='grave-list-item'><summary class='grave-list-item__summary'>" +
@@ -208,7 +211,7 @@
         "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“</a>" +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
-        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude)) + "'>Užsakyti priežiūrą</a>" : "") +
+        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti priežiūrą</a>" : "") +
         "</div>" : "") +
       "</div></details>";
   }
@@ -368,7 +371,7 @@
       savedList.innerHTML = saved.map(function (item) {
         var location = item.latitude && item.longitude ? item.latitude + "," + item.longitude : item.place;
         var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(location || item.name);
-        var serviceUrl = careUrl(item.name, item.place, item.latitude, item.longitude);
+        var serviceUrl = careUrl(item.name, item.place, item.latitude, item.longitude, item.cemetery, item.municipality);
         return "<article data-saved-grave-key='" + html(item.key) + "'><div><strong>" + html(item.name) + "</strong><span>" +
           html(item.place || "Vieta nenurodyta") + "</span></div><div class='actions'><a class='button button--ghost' target='_blank' rel='noopener' href='" +
           html(url) + "'>Atidaryti</a><a class='button button--ghost' href='" + html(serviceUrl) + "'>Užsakyti priežiūrą</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
@@ -463,6 +466,8 @@
         key: box.dataset.graveKey,
         name: box.dataset.graveName,
         place: box.dataset.gravePlace,
+        cemetery: box.dataset.graveCemetery || null,
+        municipality: box.dataset.graveMunicipality || null,
         latitude: box.dataset.graveLat || null,
         longitude: box.dataset.graveLng || null
       };
