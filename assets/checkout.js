@@ -22,6 +22,14 @@
   function rest(path) { return cfg().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + path; }
   function functionUrl(name) { return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + name; }
 
+  function checkoutReturnUrl() {
+    return "apmokejimas.html?order=" + encodeURIComponent(orderId);
+  }
+
+  function redirectToLogin() {
+    window.location.replace("prisijungti.html?next=" + encodeURIComponent(checkoutReturnUrl()));
+  }
+
   function money(cents, currency) {
     if (!Number.isInteger(cents)) return "–";
     return new Intl.NumberFormat("lt-LT", { style: "currency", currency: currency || "EUR" }).format(cents / 100);
@@ -121,8 +129,7 @@
     lockerStatus.textContent = "Įveskite miestą ir pasirinkite jį iš pasiūlymų.";
   }
 
-  async function prefillAccount() {
-    var me = await AtminimasAuth.user();
+  async function prefillAccount(me) {
     if (!me) return;
     if (!form.elements.recipient_email.value) form.elements.recipient_email.value = me.email || "";
     if (!form.elements.recipient_name.value) {
@@ -131,12 +138,22 @@
   }
 
   async function loadOrder() {
+    if (!orderId) throw new Error("Trūksta užsakymo numerio.");
     if (!AtminimasAuth.accessToken()) {
-      window.location.replace("prisijungti.html");
+      redirectToLogin();
       return;
     }
-    if (!orderId) throw new Error("Trūksta užsakymo numerio.");
+    var me = await AtminimasAuth.user();
+    if (!me) {
+      redirectToLogin();
+      return;
+    }
     var response = await fetch(rest("uzsakymai?id=eq." + encodeURIComponent(orderId) + "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,subtotal_cents,shipping_cents,total_cents,currency&limit=1"), { headers: AtminimasAuth.headers(false) });
+    if (response.status === 401) {
+      AtminimasAuth.signOut();
+      redirectToLogin();
+      return;
+    }
     if (!response.ok) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var rows = await response.json();
     if (!rows.length) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
@@ -152,7 +169,7 @@
       carrierSelect.value = order.carrier;
       await loadLockers(order.carrier, order.city, order.parcel_terminal);
     }
-    await prefillAccount();
+    await prefillAccount(me);
     if (order.shipping_status && order.shipping_status !== "laukiama_duomenu") statusEl.textContent = "Pristatymo duomenys jau išsaugoti. Galite juos atnaujinti.";
     if (params.get("payment") === "success" && !order.apmoketa) statusEl.textContent = "Mokėjimas priimtas. Laukiama saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.";
     if (params.get("payment") === "cancelled") statusEl.textContent = "Mokėjimas atšauktas. Užsakymas išsaugotas, galite bandyti dar kartą.";

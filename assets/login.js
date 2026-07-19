@@ -1,17 +1,18 @@
 (function () {
   var form = document.getElementById("login-form");
   var status = document.getElementById("login-status");
+  var requestedNext = (new URLSearchParams(window.location.search).get("next") || "").trim();
+  var hasExplicitNext = /^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(requestedNext);
 
   function nextPage() {
-    var value = (new URLSearchParams(window.location.search).get("next") || "").trim();
-    if (/^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(value)) return value;
+    if (hasExplicitNext) return requestedNext;
     return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "index.html#kitos-paslaugos" : "vartotojas.html";
   }
 
   var next = nextPage();
 
   async function destination() {
-    return await AtminimasAuth.isAdmin() ? "admin.html" : next;
+    return !hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next;
   }
   document.querySelectorAll("a[href='registruotis.html']").forEach(function (link) {
     if (next !== "vartotojas.html") link.href = "registruotis.html?next=" + encodeURIComponent(next);

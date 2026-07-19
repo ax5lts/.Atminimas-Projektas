@@ -824,6 +824,46 @@ class AtminimasSmokeTests(unittest.TestCase):
         # so rendering it exercises backwards-compatible conversion.
         self.assertIn('top: "91%"', demo)
 
+    def test_guest_builds_locally_and_signs_in_only_before_payment(self):
+        editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        checkout_page = (ROOT / "apmokejimas.html").read_text(encoding="utf-8")
+        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+        login_page = (ROOT / "prisijungti.html").read_text(encoding="utf-8")
+        login = (ROOT / "assets" / "login.js").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260719130126_guest_editor_auth_boundary.sql").read_text(encoding="utf-8")
+        update_grants = (ROOT / "supabase" / "migrations" / "20260719130334_restore_profile_update_columns.sql").read_text(encoding="utf-8")
+
+        self.assertIn("Kurti galite neprisijungę", editor_page)
+        self.assertIn("prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą", editor_page)
+        self.assertIn('if (!isDemoMode && editId && !isSignedIn())', editor)
+        self.assertNotIn('if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken())', editor)
+        self.assertIn("async function persistDraftBeforeLogin()", editor)
+        self.assertIn("redirectToLoginForOrder", editor)
+        self.assertIn('editorParams.get("resume") === "order"', editor)
+        self.assertIn('await putDraftFile("captions", captions)', editor)
+        self.assertIn('await getDraftFile("captions")', editor)
+        self.assertIn('store.delete(draftFileKey("captions"))', editor)
+        self.assertGreaterEqual(editor.count("await discardCurrentDraft();"), 2)
+        self.assertIn('var clientUrl = "vartotojas.html"', editor)
+
+        self.assertIn("function checkoutReturnUrl()", checkout)
+        self.assertIn('"prisijungti.html?next=" + encodeURIComponent(checkoutReturnUrl())', checkout)
+        self.assertIn("var me = await AtminimasAuth.user()", checkout)
+        self.assertIn("hasExplicitNext", login)
+        self.assertIn('!hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next', login)
+        self.assertIn("Kurti galite ir neprisijungę", login_page)
+        self.assertIn("assets/checkout.js?v=20260719-2", checkout_page)
+
+        lower_migration = migration.lower()
+        self.assertIn("revoke all privileges on table public.profiliai from anon", lower_migration)
+        self.assertIn("grant select on table public.profiliai to anon", lower_migration)
+        self.assertIn("for insert\n  to authenticated", lower_migration)
+        self.assertIn("owner_id = (select auth.uid())", lower_migration)
+        self.assertIn("coalesce(aktyvus, false) = false", lower_migration)
+        self.assertIn("apmoketa = false", lower_migration)
+        self.assertIn("grant update (aktyvus, statusas, apmoketa)", update_grants.lower())
+
     def test_main_customer_flows_are_simplified(self):
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor_js = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")

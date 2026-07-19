@@ -19,7 +19,9 @@
   var orderCode = document.getElementById("editor-order-code");
   var stage = document.getElementById("editor-preview-stage");
   var clearDraftButton = document.getElementById("editor-clear-draft");
+  var submitButton = form.querySelector("button[type='submit']");
   var draftStateEl = document.getElementById("editor-draft-state");
+  var accountNoteEl = document.getElementById("editor-account-note");
   var stepProgressEl = document.getElementById("editor-step-progress");
   var saveProgressEl = document.getElementById("editor-save-progress");
   var photoOrderEl = document.getElementById("editor-photo-order");
@@ -69,6 +71,7 @@
   var processedPhotos = [];
   var cropPromises = [];
   var savedVideoFile = null;
+  var savedCaptionsFile = null;
   var editingMedia = [];
   var isRestoringDraft = false;
   var draftSaveTimer = null;
@@ -76,6 +79,7 @@
   var stageFitMayShrink = false;
   var editorParams = new URLSearchParams(window.location.search);
   var editId = (editorParams.get("edit") || "").trim();
+  var resumeOrder = editorParams.get("resume") === "order";
   var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
   var isDemoMode = demoId === "maironis" || demoId === "jonas";
   var DRAFT_KEY = editId
@@ -137,6 +141,18 @@
     : (editId
       ? "Redaguojamas jūsų atminimo puslapis."
       : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote);
+
+  function isSignedIn() {
+    return !!(window.AtminimasAuth && AtminimasAuth.accessToken());
+  }
+
+  function editorOrderReturnUrl() {
+    return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=order";
+  }
+
+  function redirectToLoginForOrder() {
+    window.location.href = "prisijungti.html?next=" + encodeURIComponent(editorOrderReturnUrl());
+  }
 
   function setDraftState(message, state) {
     if (!draftStateEl) return;
@@ -570,6 +586,7 @@
       var store = tx.objectStore(DRAFT_STORE);
       for (var i = 0; i < MAX_PHOTOS; i++) store.delete(draftFileKey("photo-" + i));
       store.delete(draftFileKey("video"));
+      store.delete(draftFileKey("captions"));
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -634,7 +651,7 @@
   }
 
   function saveDraftNow() {
-    if (isRestoringDraft) return;
+    if (isRestoringDraft) return false;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         form: draftFormData(),
@@ -645,9 +662,11 @@
         hour: "2-digit",
         minute: "2-digit"
       }).format(new Date()), "saved");
+      return true;
     } catch (err) {
       console.warn("Draft save failed", err);
       setDraftState("Juodraščio nepavyko išsaugoti", "error");
+      return false;
     }
   }
 
@@ -756,6 +775,23 @@
       if (processedPhotos[i]) await putDraftFile("photo-" + i, processedPhotos[i]);
       else await deleteDraftFile("photo-" + i);
     }
+  }
+
+  async function persistDraftBeforeLogin() {
+    clearTimeout(draftSaveTimer);
+    await Promise.all(cropPromises);
+    var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
+    var captions = (captionsInput.files && captionsInput.files[0]) ? captionsInput.files[0] : savedCaptionsFile;
+    var hasMedia = processedPhotos.some(Boolean) || !!video || !!captions;
+    if (hasMedia && !window.indexedDB) {
+      throw new Error("Ši naršyklė negali saugiai išlaikyti pasirinktų failų. Prisijunkite prieš pasirinkdami failus.");
+    }
+    await persistProcessedPhotoOrder();
+    if (video) await putDraftFile("video", video);
+    else await deleteDraftFile("video");
+    if (captions) await putDraftFile("captions", captions);
+    else await deleteDraftFile("captions");
+    if (!saveDraftNow()) throw new Error("Juodraščio nepavyko išsaugoti šiame įrenginyje.");
   }
 
   function swapPhotoOrder(from, to) {
@@ -880,12 +916,14 @@
       previewVideo.hidden = false;
       if (empty) empty.hidden = true;
     }
+    var captions = await getDraftFile("captions");
+    if (captions) savedCaptionsFile = captions;
     scheduleStageFit(true);
   }
 
   async function restoreDraft() {
     var raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return;
+    if (!raw) return false;
     isRestoringDraft = true;
     try {
       var draft = JSON.parse(raw);
@@ -894,8 +932,10 @@
       await restoreDraftMedia();
       statusEl.textContent = "Atkurta paskutinė neišsaugota versija.";
       setDraftState("Atkurtas ankstesnis juodraštis", "saved");
+      return true;
     } catch (err) {
       console.warn("Draft restore failed", err);
+      return false;
     } finally {
       isRestoringDraft = false;
     }
@@ -1671,6 +1711,17 @@
     scheduleStageFit(true);
     scheduleDraftSave();
   });
+  captionsInput.addEventListener("change", function () {
+    var file = captionsInput.files && captionsInput.files[0];
+    savedCaptionsFile = file || null;
+    if (file) {
+      statusEl.textContent = "Subtitrai pasirinkti: " + file.name;
+      putDraftFile("captions", file).catch(function (err) { console.warn(err); });
+    } else {
+      deleteDraftFile("captions").catch(function (err) { console.warn(err); });
+    }
+    scheduleDraftSave();
+  });
 
   if (clearDraftButton) {
     clearDraftButton.addEventListener("click", function () {
@@ -1694,7 +1745,9 @@
       }, 0);
       return;
     }
+    var signedIn = isSignedIn();
     var invalid = Array.from(form.querySelectorAll("input, textarea, select")).find(function (field) {
+      if (!signedIn && field.type === "checkbox") return false;
       return !field.checkValidity();
     });
     if (invalid) {
@@ -1704,8 +1757,24 @@
       invalid.focus();
       return;
     }
+    if (!signedIn) {
+      submitButton.disabled = true;
+      statusEl.textContent = "Išsaugome juodraštį prieš prisijungimą…";
+      try {
+        await persistDraftBeforeLogin();
+        setDraftState("Juodraštis paruoštas tęsti po prisijungimo", "saved");
+        redirectToLoginForOrder();
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = err.message || "Juodraščio nepavyko paruošti prisijungimui.";
+        setDraftState("Juodraščio nepavyko išsaugoti", "error");
+      } finally {
+        submitButton.disabled = false;
+      }
+      return;
+    }
     fitStageToContent(true);
-    var submit = form.querySelector("button[type='submit']");
+    var submit = submitButton;
     var data = formData();
     showSaveProgress(10, "Ruošiamos nuotraukos…");
     submit.disabled = true;
@@ -1723,7 +1792,7 @@
     resultBox.hidden = true;
 
     try {
-      var captions = captionsInput && captionsInput.files ? captionsInput.files[0] : null;
+      var captions = (captionsInput.files && captionsInput.files[0]) ? captionsInput.files[0] : savedCaptionsFile;
       function onUploadProgress(done, total) {
         var fraction = total ? done / total : 1;
         showSaveProgress(28 + fraction * 58, total ? "Įkeliami failai: " + done + " iš " + total + "…" : "Saugomas puslapis…");
@@ -1762,12 +1831,14 @@
       }
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
-      var clientUrl = "klientai.html?slug=" + encodeURIComponent(result.identifier);
+      var clientUrl = "vartotojas.html";
+      await discardCurrentDraft();
       statusEl.textContent = "Puslapis sukurtas ir išsaugotas kaip privatus. Paskelbti galėsite kliento zonoje.";
       previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
       checkoutLink.href = "apmokejimas.html?order=" + encodeURIComponent(order.id || "");
       clientLink.href = clientUrl;
+      clientLink.textContent = "Kliento zona";
       qrLink.href = order.qr_kodas_url;
       orderCode.textContent = order.id ? "Užsakymo numeris: " + String(order.id).slice(0, 8) : "Užsakymas sukurtas";
       resultBox.hidden = false;
@@ -1785,22 +1856,44 @@
   });
 
   async function initEditor() {
-    if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken()) {
-      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite " + (editId ? "redaguoti" : "kurti") + " puslapio.";
-      form.querySelector("button[type='submit']").disabled = true;
+    if (!isDemoMode && editId && !isSignedIn()) {
+      statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite redaguoti puslapio.";
+      submitButton.disabled = true;
       setTimeout(function () {
-        var next = editId ? "redaktorius.html?edit=" + encodeURIComponent(editId) : "redaktorius.html?product=" + productType;
+        var next = "redaktorius.html?edit=" + encodeURIComponent(editId);
         window.location.href = "prisijungti.html?next=" + encodeURIComponent(next);
       }, 900);
       return;
+    }
+    if (isDemoMode) {
+      if (accountNoteEl) accountNoteEl.hidden = true;
+      submitButton.textContent = "Atidaryti galutinį pavyzdį";
+    } else if (editId) {
+      if (accountNoteEl) accountNoteEl.hidden = true;
+      submitButton.textContent = "Išsaugoti pakeitimus";
+    } else if (isSignedIn()) {
+      if (accountNoteEl) accountNoteEl.hidden = true;
+      submitButton.textContent = "Sukurti puslapį ir tęsti";
+    } else {
+      submitButton.textContent = "Prisijungti ir tęsti užsakymą";
     }
     initializeResponsiveStage();
     setupDatePickers();
     if (isDemoMode) loadDemoProfile();
     else await loadProfileForEditing();
     syncDatePickersFromHidden();
-    await restoreDraft();
+    var restoredDraft = await restoreDraft();
     syncDatePickersFromHidden();
+    if (!isDemoMode && !editId && resumeOrder && isSignedIn()) {
+      currentEditorStep = "preview";
+      statusEl.textContent = restoredDraft
+        ? "Prisijungėte. Juodraštis atkurtas – dar kartą patvirtinkite sąlygas ir tęskite užsakymą."
+        : "Prisijungėte, tačiau šiame įrenginyje juodraštis nerastas. Užpildykite puslapį ir tęskite užsakymą.";
+      if (accountNoteEl) {
+        accountNoteEl.hidden = false;
+        accountNoteEl.textContent = "Prisijungimas patvirtintas. Prieš išsaugodami dar kartą patikrinkite puslapį ir pažymėkite privalomus patvirtinimus.";
+      }
+    }
     setupColorPicker();
     syncPreview();
     refreshResponsiveStage(true);
