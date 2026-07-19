@@ -39,6 +39,11 @@
   var MAX_STORY_WORDS = 1000;
   var PREVIEW_STORY_WORDS = 80;
   var DATE_MIN_YEAR = 1800;
+  var LEGACY_STAGE_HEIGHT_PCT = 355;
+  var MIN_STAGE_HEIGHT_PCT = 160;
+  var STAGE_BOTTOM_GAP_PCT = 12;
+  var MAX_STAGE_HEIGHT_PCT = 1200;
+  var MAX_PIECE_HEIGHT_PCT = 180;
   var DATE_MONTHS = [
     "Sausis", "Vasaris", "Kovas", "Balandis", "Gegužė", "Birželis",
     "Liepa", "Rugpjūtis", "Rugsėjis", "Spalis", "Lapkritis", "Gruodis"
@@ -67,6 +72,8 @@
   var editingMedia = [];
   var isRestoringDraft = false;
   var draftSaveTimer = null;
+  var stageFitFrame = null;
+  var stageFitMayShrink = false;
   var editorParams = new URLSearchParams(window.location.search);
   var editId = (editorParams.get("edit") || "").trim();
   var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
@@ -586,11 +593,19 @@
       if (backgroundInput) backgroundInput.value = layout.__stage.background;
       if (backgroundValue) backgroundValue.textContent = layout.__stage.background;
     }
+    if (layout.__stage && layout.__stage.heightPct) {
+      setStageHeightPct(parseFloat(layout.__stage.heightPct));
+    }
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       var saved = layout[piece.dataset.piece];
       if (!saved) return;
       if (saved.left) piece.style.left = saved.left;
-      if (saved.top) piece.style.top = saved.top;
+      var savedTopPct = parseFloat(saved.topPct);
+      if (Number.isFinite(savedTopPct)) {
+        setPieceTopPct(piece, savedTopPct);
+      } else if (saved.top) {
+        setPieceTopPct(piece, legacyTopToWidthPct(saved.top));
+      }
       if (saved.width) piece.style.width = saved.width;
       if (saved.heightPct) setPieceHeightPct(piece, parseFloat(saved.heightPct));
       if (saved.fit) piece.dataset.fit = saved.fit;
@@ -598,6 +613,7 @@
       if (img && saved.objectPosition) img.style.objectPosition = saved.objectPosition;
       if (img && saved.fit === "crop") img.style.objectFit = "cover";
     });
+    scheduleStageFit(true);
   }
 
   function draftFormData() {
@@ -711,9 +727,13 @@
       }
       slot.src = url;
       slot.hidden = false;
-      if (photoOrderMode === "files") slot.onload = function () { setFrameToImageRatio(this, this); };
+      if (photoOrderMode === "files") slot.onload = function () {
+        setFrameToImageRatio(this, this);
+        scheduleStageFit(true);
+      };
       if (empty) empty.hidden = true;
     }
+    scheduleStageFit(true);
   }
 
   function movePhotoFields(from, to) {
@@ -860,6 +880,7 @@
       previewVideo.hidden = false;
       if (empty) empty.hidden = true;
     }
+    scheduleStageFit(true);
   }
 
   async function restoreDraft() {
@@ -915,6 +936,7 @@
       previewVideo.hidden = false;
       if (videoEmpty) videoEmpty.hidden = true;
     }
+    scheduleStageFit(true);
   }
 
   async function loadProfileForEditing() {
@@ -1080,6 +1102,7 @@
     var width = wrap.getBoundingClientRect().width || 120;
     var height = Math.max(54, Math.round(width * img.naturalHeight / img.naturalWidth));
     setPieceHeightPct(wrap, heightPctFromPx(height));
+    scheduleStageFit(true);
   }
 
   async function syncPhotos() {
@@ -1114,6 +1137,7 @@
     await Promise.all(cropPromises);
     renderPhotoOrder();
     refreshOrderedPhotoPreviews();
+    scheduleStageFit(true);
     statusEl.textContent = allFiles.length > MAX_PHOTOS
       ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
       : (files.length ? "Paruošta nuotraukų: " + files.length + ". Eiliškumą galite keisti tempdami." : "");
@@ -1123,28 +1147,126 @@
     return Math.max(0, Math.min(100, (value / total) * 100));
   }
 
+  function layoutNumber(value) {
+    var number = Number(value);
+    return Number.isFinite(number) ? Math.round(number * 1000) / 1000 : 0;
+  }
+
   function stageWidth() {
     return stage.getBoundingClientRect().width || 520;
   }
 
+  function legacyTopToWidthPct(value) {
+    var legacyTop = parseFloat(value || "0");
+    return Number.isFinite(legacyTop) ? legacyTop * LEGACY_STAGE_HEIGHT_PCT / 100 : 0;
+  }
+
+  function pieceTopPct(piece) {
+    var saved = parseFloat(piece.dataset.topPct || "");
+    if (Number.isFinite(saved)) return saved;
+    saved = legacyTopToWidthPct(piece.style.top);
+    piece.dataset.topPct = String(layoutNumber(saved));
+    return saved;
+  }
+
+  function topPctFromPx(value, width) {
+    var percent = (value / Math.max(1, width || stageWidth())) * 100;
+    return Math.max(0, Math.min(MAX_STAGE_HEIGHT_PCT - MAX_PIECE_HEIGHT_PCT - STAGE_BOTTOM_GAP_PCT, percent));
+  }
+
+  function setPieceTopPct(piece, topPct, width) {
+    var next = Math.max(0, Math.min(MAX_STAGE_HEIGHT_PCT - MAX_PIECE_HEIGHT_PCT - STAGE_BOTTOM_GAP_PCT, Number(topPct) || 0));
+    var basis = width || stageWidth();
+    piece.dataset.topPct = String(layoutNumber(next));
+    piece.style.top = Math.round(basis * next / 100) + "px";
+  }
+
   function heightPxFromPct(heightPct) {
-    return Math.max(24, Math.round(stageWidth() * heightPct / 100));
+    var value = Number(heightPct);
+    if (!Number.isFinite(value)) value = 20;
+    return Math.max(24, Math.round(stageWidth() * value / 100));
   }
 
   function heightPctFromPx(value) {
-    return Math.max(4, Math.min(180, (value / stageWidth()) * 100));
+    return Math.max(4, Math.min(MAX_PIECE_HEIGHT_PCT, (value / stageWidth()) * 100));
   }
 
   function setPieceHeightPct(piece, heightPct) {
-    var next = Math.max(4, Math.min(180, heightPct));
-    piece.dataset.heightPct = String(next);
+    var value = Number(heightPct);
+    if (!Number.isFinite(value)) value = 20;
+    var next = Math.max(4, Math.min(MAX_PIECE_HEIGHT_PCT, value));
+    piece.dataset.heightPct = String(layoutNumber(next));
     piece.style.height = heightPxFromPct(next) + "px";
   }
 
-  function refreshProportionalHeights() {
-    stage.querySelectorAll(".editor-piece[data-height-pct]").forEach(function (piece) {
-      setPieceHeightPct(piece, parseFloat(piece.dataset.heightPct || "20"));
+  function setStageHeightPct(heightPct, width) {
+    var next = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, Number(heightPct) || MIN_STAGE_HEIGHT_PCT));
+    var basis = width || stageWidth();
+    stage.dataset.heightPct = String(layoutNumber(next));
+    stage.style.height = Math.round(basis * next / 100) + "px";
+    return next;
+  }
+
+  function pieceAffectsStageHeight(piece) {
+    if (piece.classList.contains("editor-photo-slot")) {
+      var image = piece.querySelector("img");
+      return !!(image && !image.hidden && image.getAttribute("src"));
+    }
+    if (piece.classList.contains("editor-video-slot")) {
+      var video = piece.querySelector("video");
+      return !!(video && !video.hidden && video.getAttribute("src"));
+    }
+    return true;
+  }
+
+  function desiredStageHeightPct(forcedPiece) {
+    var width = stageWidth();
+    var bottom = 0;
+    stage.querySelectorAll(".editor-piece").forEach(function (piece) {
+      if (piece !== forcedPiece && !pieceAffectsStageHeight(piece)) return;
+      bottom = Math.max(bottom, piece.offsetTop + piece.offsetHeight);
     });
+    var desired = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
+    return Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, desired));
+  }
+
+  function fitStageToContent(allowShrink, forcedPiece) {
+    if (stage.getBoundingClientRect().width < 1) {
+      return parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
+    }
+    var desired = desiredStageHeightPct(forcedPiece);
+    var current = parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
+    if (!allowShrink) desired = Math.max(current, desired);
+    return setStageHeightPct(desired);
+  }
+
+  function scheduleStageFit(allowShrink) {
+    stageFitMayShrink = stageFitMayShrink || !!allowShrink;
+    if (stageFitFrame !== null) return;
+    stageFitFrame = window.requestAnimationFrame(function () {
+      var mayShrink = stageFitMayShrink;
+      stageFitFrame = null;
+      stageFitMayShrink = false;
+      fitStageToContent(mayShrink);
+    });
+  }
+
+  function initializeResponsiveStage() {
+    var width = stageWidth();
+    stage.querySelectorAll(".editor-piece").forEach(function (piece) {
+      setPieceTopPct(piece, pieceTopPct(piece), width);
+    });
+    setStageHeightPct(LEGACY_STAGE_HEIGHT_PCT, width);
+  }
+
+  function refreshResponsiveStage(allowShrink) {
+    var width = stageWidth();
+    stage.querySelectorAll(".editor-piece").forEach(function (piece) {
+      setPieceTopPct(piece, pieceTopPct(piece), width);
+      if (piece.dataset.heightPct) setPieceHeightPct(piece, parseFloat(piece.dataset.heightPct || "20"));
+    });
+    setStageHeightPct(parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT, width);
+    fitStageToContent(allowShrink !== false);
   }
 
   function selectPiece(piece) {
@@ -1274,7 +1396,7 @@
     function openPreview() {
       document.body.classList.add("editor-preview-open");
       if (close) close.focus();
-      refreshProportionalHeights();
+      window.requestAnimationFrame(function () { refreshResponsiveStage(true); });
     }
     function closePreview() {
       document.body.classList.remove("editor-preview-open");
@@ -1319,12 +1441,13 @@
 
         function move(moveEvent) {
           var left = pct(moveEvent.clientX - stageRect.left - offsetX, stageRect.width);
-          var top = pct(moveEvent.clientY - stageRect.top - offsetY, stageRect.height);
           piece.style.left = left + "%";
-          piece.style.top = top + "%";
+          setPieceTopPct(piece, topPctFromPx(moveEvent.clientY - stageRect.top - offsetY, stageRect.width), stageRect.width);
+          fitStageToContent(false, piece);
         }
 
         function up() {
+          fitStageToContent(true);
           scheduleDraftSave();
           piece.removeEventListener("pointermove", move);
           piece.removeEventListener("pointerup", up);
@@ -1371,10 +1494,12 @@
           piece.style.width = Math.max(14, Math.min(94, pct(nextWidth, stageRect.width))) + "%";
           setPieceHeightPct(piece, heightPctFromPx(nextHeight));
           if (fromLeft) piece.style.left = pct(startLeft + dx, stageRect.width) + "%";
-          if (fromTop) piece.style.top = pct(startTop + dy, stageRect.height) + "%";
+          if (fromTop) setPieceTopPct(piece, topPctFromPx(startTop + dy, stageRect.width), stageRect.width);
+          fitStageToContent(false, piece);
         }
 
         function up() {
+          fitStageToContent(true);
           scheduleDraftSave();
           handle.removeEventListener("pointermove", move);
           handle.removeEventListener("pointerup", up);
@@ -1424,11 +1549,13 @@
             var fromTop = handle.classList.contains("editor-stretch-top");
             var nextHeight = Math.max(48, startHeight + (fromTop ? startY - moveEvent.clientY : moveEvent.clientY - startY));
             setPieceHeightPct(piece, heightPctFromPx(nextHeight));
-            if (fromTop) piece.style.top = pct(startTop + moveEvent.clientY - startY, stageRect.height) + "%";
+            if (fromTop) setPieceTopPct(piece, topPctFromPx(startTop + moveEvent.clientY - startY, stageRect.width), stageRect.width);
           }
+          fitStageToContent(false, piece);
         }
 
         function up() {
+          fitStageToContent(true);
           scheduleDraftSave();
           handle.removeEventListener("pointermove", move);
           handle.removeEventListener("pointerup", up);
@@ -1486,14 +1613,23 @@
   }
 
   function collectLayout() {
+    var canMeasureStage = stage.getBoundingClientRect().width >= 1;
     var layout = {
-      __stage: { background: backgroundInput ? backgroundInput.value : "#ffffff" }
+      __stage: {
+        background: backgroundInput ? backgroundInput.value : "#ffffff",
+        heightPct: canMeasureStage
+          ? String(layoutNumber(parseFloat(stage.dataset.heightPct || "") || MIN_STAGE_HEIGHT_PCT))
+          : "",
+        layoutVersion: 2
+      }
     };
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       var img = piece.querySelector && piece.querySelector("img");
+      var topPct = pieceTopPct(piece);
       layout[piece.dataset.piece] = {
         left: piece.style.left,
-        top: piece.style.top,
+        top: String(layoutNumber(topPct / LEGACY_STAGE_HEIGHT_PCT * 100)) + "%",
+        topPct: String(layoutNumber(topPct)),
         width: piece.style.width,
         heightPct: piece.dataset.heightPct || "",
         fit: piece.dataset.fit || "",
@@ -1505,9 +1641,11 @@
 
   form.addEventListener("input", function () {
     syncPreview();
+    scheduleStageFit(false);
     scheduleDraftSave();
   });
-  window.addEventListener("resize", refreshProportionalHeights);
+  form.addEventListener("focusout", function () { scheduleStageFit(true); });
+  window.addEventListener("resize", function () { refreshResponsiveStage(true); });
   photosInput.addEventListener("change", syncPhotos);
   videoInput.addEventListener("change", function () {
     var file = videoInput.files && videoInput.files[0];
@@ -1520,6 +1658,7 @@
       if (empty) empty.hidden = false;
       statusEl.textContent = "";
       deleteDraftFile("video").catch(function (err) { console.warn(err); });
+      scheduleStageFit(true);
       scheduleDraftSave();
       return;
     }
@@ -1529,6 +1668,7 @@
     if (empty) empty.hidden = true;
     statusEl.textContent = "Video pasirinktas: " + file.name;
     putDraftFile("video", file).catch(function (err) { console.warn(err); });
+    scheduleStageFit(true);
     scheduleDraftSave();
   });
 
@@ -1564,6 +1704,7 @@
       invalid.focus();
       return;
     }
+    fitStageToContent(true);
     var submit = form.querySelector("button[type='submit']");
     var data = formData();
     showSaveProgress(10, "Ruošiamos nuotraukos…");
@@ -1653,6 +1794,7 @@
       }, 900);
       return;
     }
+    initializeResponsiveStage();
     setupDatePickers();
     if (isDemoMode) loadDemoProfile();
     else await loadProfileForEditing();
@@ -1661,7 +1803,7 @@
     syncDatePickersFromHidden();
     setupColorPicker();
     syncPreview();
-    refreshProportionalHeights();
+    refreshResponsiveStage(true);
     setupTransformModeButtons();
     setupAdvancedLayout();
     setupEditorSectionButtons();

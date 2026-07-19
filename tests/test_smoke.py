@@ -797,6 +797,33 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn(".editor-date-picker__fields", styles)
         self.assertIn(".editor-date-picker.has-error", styles)
 
+    def test_editor_and_memorial_auto_fit_dynamic_stage_height(self):
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        memorial = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        demo = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
+
+        self.assertIn("var MIN_STAGE_HEIGHT_PCT = 160", editor)
+        self.assertIn("function fitStageToContent(allowShrink, forcedPiece)", editor)
+        self.assertIn("fitStageToContent(false, piece)", editor)
+        self.assertIn("fitStageToContent(true)", editor)
+        self.assertIn("topPct: String(layoutNumber(topPct))", editor)
+        self.assertIn("heightPct: canMeasureStage", editor)
+        self.assertIn("layoutVersion: 2", editor)
+        self.assertIn("legacyTopToWidthPct", editor)
+        self.assertNotIn('piece.style.top = top + "%"', editor)
+        self.assertIn("Puslapio apačia prisitaiko automatiškai", editor_page)
+
+        self.assertIn("legacyTopToWidthPct", memorial)
+        self.assertIn("element.dataset.topPct", memorial)
+        self.assertIn("bottom = Math.max(bottom, element.offsetTop + element.offsetHeight)", memorial)
+        self.assertIn("Math.max(heightPct, Math.max(MIN_STAGE_HEIGHT_PCT", memorial)
+        self.assertIn("view.style.height = Math.round(width * heightPct / 100) + \"px\"", memorial)
+
+        # The bundled example intentionally remains on the old coordinate shape,
+        # so rendering it exercises backwards-compatible conversion.
+        self.assertIn('top: "91%"', demo)
+
     def test_main_customer_flows_are_simplified(self):
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor_js = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")

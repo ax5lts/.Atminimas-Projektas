@@ -3361,7 +3361,7 @@ video {
 
   .editor-phone-preview {
     width: min(420px, 100%);
-    min-height: 620px;
+    min-height: 0;
   }
 
   .editor-form input,
@@ -5290,7 +5290,7 @@ body[data-loading]::after {
 
   .editor-preview-open .editor-phone-preview {
     width: min(420px, 100%);
-    min-height: 680px;
+    min-height: 0;
   }
 
   .editor-db-panel {

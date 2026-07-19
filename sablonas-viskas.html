@@ -6,7 +6,7 @@
 <meta name="description" content="Artimo žmogaus atminimo puslapis su gyvenimo istorija, nuotraukomis ir vaizdo įrašu.">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260719-3">
+<link rel="stylesheet" href="css/styles.css?v=20260719-4">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -109,6 +109,11 @@
     "photo-4": { left: "66%", top: "60%", width: "26%", heightPct: "18" },
     video: { left: "8%", top: "75%", width: "84%", heightPct: "47" }
   };
+  var LEGACY_STAGE_HEIGHT_PCT = 355;
+  var MIN_STAGE_HEIGHT_PCT = 160;
+  var STAGE_BOTTOM_GAP_PCT = 12;
+  var MAX_STAGE_HEIGHT_PCT = 1200;
+  var MAX_PIECE_HEIGHT_PCT = 180;
 
   var galleryIndex = 0;
   var galleryReturnFocus = null;
@@ -159,13 +164,31 @@
     return Object.assign({}, DEFAULT_LAYOUT[name] || {}, layout[name] || {});
   }
 
+  function layoutNumber(value) {
+    var number = Number(value);
+    return Number.isFinite(number) ? Math.round(number * 1000) / 1000 : 0;
+  }
+
+  function legacyTopToWidthPct(value) {
+    var legacyTop = parseFloat(value || "0");
+    return Number.isFinite(legacyTop) ? legacyTop * LEGACY_STAGE_HEIGHT_PCT / 100 : 0;
+  }
+
   function applyPieceStyle(element, saved) {
     if (!saved) return;
     if (saved.left) element.style.left = saved.left;
-    if (saved.top) element.style.top = saved.top;
+    var topPct = parseFloat(saved.topPct);
+    if (!Number.isFinite(topPct)) topPct = legacyTopToWidthPct(saved.top);
+    if (Number.isFinite(topPct)) {
+      topPct = Math.max(0, Math.min(MAX_STAGE_HEIGHT_PCT - MAX_PIECE_HEIGHT_PCT - STAGE_BOTTOM_GAP_PCT, topPct));
+      element.dataset.topPct = String(layoutNumber(topPct));
+    }
     if (saved.width) element.style.width = saved.width;
-    if (saved.heightPct) element.dataset.heightPct = saved.heightPct;
-    else if (saved.height) element.style.height = saved.height;
+    var savedHeightPct = parseFloat(saved.heightPct);
+    if (Number.isFinite(savedHeightPct)) {
+      savedHeightPct = Math.max(4, Math.min(MAX_PIECE_HEIGHT_PCT, savedHeightPct));
+      element.dataset.heightPct = String(layoutNumber(savedHeightPct));
+    } else if (saved.height) element.style.height = saved.height;
     if (saved.fit) element.dataset.fit = saved.fit;
   }
 
@@ -177,10 +200,25 @@
 
   function applyResponsiveBuilderHeights(view) {
     var width = view.getBoundingClientRect().width || 560;
-    view.querySelectorAll(".builder-piece[data-height-pct]").forEach(function (element) {
-      var percent = parseFloat(element.dataset.heightPct || "0");
-      if (percent > 0) element.style.height = Math.round(width * percent / 100) + "px";
+    var bottom = 0;
+    view.querySelectorAll(".builder-piece").forEach(function (element) {
+      var topPct = parseFloat(element.dataset.topPct || "0");
+      if (Number.isFinite(topPct)) element.style.top = Math.round(width * topPct / 100) + "px";
+      var heightPct = parseFloat(element.dataset.heightPct || "0");
+      if (heightPct > 0) {
+        heightPct = Math.max(4, Math.min(MAX_PIECE_HEIGHT_PCT, heightPct));
+        element.style.height = Math.round(width * heightPct / 100) + "px";
+      }
+      bottom = Math.max(bottom, element.offsetTop + element.offsetHeight);
     });
+    var heightPct = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
+    heightPct = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, heightPct));
+    var savedHeightPct = parseFloat(view.dataset.savedHeightPct || "");
+    if (Number.isFinite(savedHeightPct)) {
+      heightPct = Math.max(heightPct, Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, savedHeightPct)));
+    }
+    view.dataset.heightPct = String(layoutNumber(heightPct));
+    view.style.height = Math.round(width * heightPct / 100) + "px";
   }
 
   function fitBuilderName(title) {
@@ -304,6 +342,7 @@
     view.className = "builder-view";
     var stageBackground = applyMemorialBackground(layout.__stage && layout.__stage.background);
     view.style.backgroundColor = stageBackground;
+    if (layout.__stage && layout.__stage.heightPct) view.dataset.savedHeightPct = layout.__stage.heightPct;
 
     var headerSaved = mergedPiece(layout, "header");
     var header = document.createElement("header");
