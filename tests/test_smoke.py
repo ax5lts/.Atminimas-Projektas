@@ -651,6 +651,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         editor_script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         memorial_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
         demo_script = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
         self.assertIn("maironis-pavyzdys", home)
         self.assertIn("maironis-pavyzdys", shop)
@@ -667,6 +668,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("Viešoji sritis (Public Domain)", demo_script)
         self.assertIn("Nuotraukų šaltiniai", memorial_page)
         self.assertIn("buildMediaSources(allImages)", memorial_page)
+        self.assertIn('root.style.setProperty("--memorial-page-background", background)', memorial_page)
+        self.assertIn("var stageBackground = applyMemorialBackground", memorial_page)
+        self.assertGreaterEqual(styles.count("var(--memorial-page-background, #f2ede4)"), 3)
         self.assertNotIn("Jonas gimė 1948", demo_script)
         self.assertNotIn("assets/demo-jonas-portretas.jpg", demo_script)
 

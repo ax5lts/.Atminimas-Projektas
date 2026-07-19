@@ -2399,10 +2399,10 @@ video {
   min-height: 100vh;
   width: 98%;
   margin: 1% auto 0;
-  background: #E7F6F6;
-  border-top: 1px solid rgba(61, 83, 72, 0.38);
-  border-right: 1px solid rgba(61, 83, 72, 0.38);
-  border-left: 1px solid rgba(61, 83, 72, 0.38);
+  background-color: var(--memorial-page-background, #f2ede4);
+  border-top: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.38));
+  border-right: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.38));
+  border-left: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.38));
   box-sizing: border-box;
   font-family: Georgia, "Times New Roman", serif;
 }
@@ -2414,8 +2414,8 @@ video {
   display: flex;
   justify-content: center;
   padding: 0.7rem 1rem;
-  background: rgba(231, 246, 246, 0.96);
-  border-bottom: 1px solid rgba(61, 83, 72, 0.2);
+  background-color: var(--memorial-page-background, #f2ede4);
+  border-bottom: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.2));
   backdrop-filter: blur(8px);
 }
 
@@ -2423,13 +2423,13 @@ video {
   display: inline-flex;
   align-items: baseline;
   gap: 0.65rem;
-  color: #233c33;
+  color: var(--memorial-site-ink, #233c33);
   text-decoration: none;
 }
 
 .memorial-site-link:hover,
 .memorial-site-link:focus-visible {
-  color: #0f6d55;
+  color: var(--memorial-site-hover, #0f6d55);
 }
 
 .memorial-site-link:focus-visible {
@@ -2458,7 +2458,7 @@ video {
 
 .memorial-bg {
   min-height: 100%;
-  background: #E7F6F6;
+  background-color: var(--memorial-page-background, #f2ede4);
 }
 
 .kraunama,
