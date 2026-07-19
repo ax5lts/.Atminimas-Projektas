@@ -223,7 +223,7 @@
       profilis_id: identifier,
       puslapio_url: pageUrl,
       qr_kodas_url: qrUrl,
-      product_type: input && input.product_type === "asa" ? "asa" : "metal",
+      product_type: input && ["asa", "steel"].indexOf(input.product_type) !== -1 ? input.product_type : "metal",
       busena: "sukurtas",
       apmoketa: !!(input && input.apmoketa)
     });

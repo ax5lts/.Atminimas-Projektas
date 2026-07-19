@@ -6,18 +6,23 @@
   var createButton = document.getElementById("user-create");
   var guestActions = document.getElementById("user-guest-actions");
   var productKey = "atminimas.selected-product.v1";
+  var productNames = {
+    metal: "Graviruota QR atminimo lentelė",
+    steel: "Graviruota plieno QR atminimo lentelė",
+    asa: "ASA 3D spausdinta QR atminimo lentelė"
+  };
 
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
     var stored = sessionStorage.getItem(productKey);
-    var value = requested === "asa" || requested === "metal" ? requested : stored;
-    value = value === "asa" ? "asa" : "metal";
+    var value = productNames[requested] ? requested : stored;
+    value = productNames[value] ? value : "metal";
     sessionStorage.setItem(productKey, value);
     return value;
   }
 
   function productName(value) {
-    return value === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
+    return productNames[value] || productNames.metal;
   }
 
   var chosenProduct = selectedProduct();

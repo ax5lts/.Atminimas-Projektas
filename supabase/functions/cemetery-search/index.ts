@@ -45,13 +45,14 @@ function literal(value: string): string {
 }
 
 function variants(value: string): string[] {
-  if (/[ĄČĘĖĮŠŲŪŽ]/i.test(value)) return [value.toUpperCase()];
+  const lowered = value.toLocaleLowerCase("lt-LT");
+  if (/[ąčęėįšųūž]/i.test(lowered)) return [lowered];
   const choices: Record<string, string[]> = {
-    A: ["A", "Ą"], C: ["C", "Č"], E: ["E", "Ę", "Ė"], I: ["I", "Į"],
-    S: ["S", "Š"], U: ["U", "Ų", "Ū"], Z: ["Z", "Ž"],
+    a: ["a", "ą"], c: ["c", "č"], e: ["e", "ę", "ė"], i: ["i", "į"],
+    s: ["s", "š"], u: ["u", "ų", "ū"], z: ["z", "ž"],
   };
   let result = [""];
-  for (const char of value.toUpperCase()) {
+  for (const char of lowered) {
     const next: string[] = [];
     for (const prefix of result) {
       for (const replacement of choices[char] || [char]) {
@@ -65,16 +66,22 @@ function variants(value: string): string[] {
   return [...new Set(result)];
 }
 
+function containsIgnoreCase(field: string, value: string): string {
+  // Spinta lower() taikoma pačiam laukui, todėl contains() nebepriklauso nuo
+  // duomenų teikėjo naudoto didžiųjų / mažųjų raidžių registro.
+  return `lower(${field}).contains(${literal(value)})`;
+}
+
 function containsEither(token: string): string {
   const expressions: string[] = [];
   for (const value of variants(token)) {
-    expressions.push(`vardas.contains(${literal(value)})`, `pavarde.contains(${literal(value)})`);
+    expressions.push(containsIgnoreCase("vardas", value), containsIgnoreCase("pavarde", value));
   }
   return `(${expressions.join("|")})`;
 }
 
 function containsField(field: string, value: string): string {
-  const expressions = variants(value).map((item) => `${field}.contains(${literal(item)})`);
+  const expressions = variants(value).map((item) => containsIgnoreCase(field, item));
   return expressions.length === 1 ? expressions[0] : `(${expressions.join("|")})`;
 }
 

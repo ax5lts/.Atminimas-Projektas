@@ -20,6 +20,21 @@
       mounting: business.mounting || "–",
       safety: business.safetyWarnings || "–"
     },
+    steel: {
+      kind: "Plieno lentelė",
+      title: "Graviruota plieno QR atminimo lentelė",
+      image: "assets/qr-plienas-480.webp",
+      imageSet: "assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w",
+      alt: "Graviruota plieno QR atminimo lentelė",
+      price: "–",
+      vat: "–",
+      copy: "Ant plieno graviruota QR atminimo lentelė nukreipia į asmeninį atminimo puslapį su nuotraukomis, vaizdo įrašu, gyvenimo datomis ir epitafija.",
+      type: "Graviruota plieno QR atminimo lentelė",
+      material: "Plienas",
+      dimensions: "–",
+      mounting: "–",
+      safety: "–"
+    },
     asa: {
       kind: "3D spausdintas variantas",
       title: "ASA 3D spausdinta QR atminimo lentelė",

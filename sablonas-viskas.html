@@ -6,7 +6,7 @@
 <meta name="description" content="Artimo žmogaus atminimo puslapis su gyvenimo istorija, nuotraukomis ir vaizdo įrašu.">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260719-2">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -17,6 +17,13 @@
   </a>
 </header>
 <div class="memorial-bg">
+  <aside class="memorial-demo-notice" id="memorial-demo-notice" hidden>
+    <div>
+      <strong>Demonstracinis atminimo puslapis</strong>
+      <span>Jono Mačiulio-Maironio biografija ir autentiškų istorinių nuotraukų aprašymai paremti muziejų bei viešų kultūros paveldo archyvų duomenimis.</span>
+    </div>
+    <a href="redaktorius.html?demo=maironis">Pamatyti redaktoriuje</a>
+  </aside>
   <p class="kraunama" id="kraunama">Kraunamas atminimo puslapis...</p>
   <p class="duomenu-busena" id="duomenu-busena" hidden></p>
   <p class="klaida" id="klaida" hidden></p>
@@ -88,8 +95,9 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260716-3"></script>
-<script src="assets/atminimas-duomenys.js?v=20260716-3"></script>
-<script src="assets/memorial-actions.js?v=20260716-1"></script>
+<script src="assets/demo-jonas.js?v=20260719-2"></script>
+<script src="assets/atminimas-duomenys.js?v=20260719-1"></script>
+<script src="assets/memorial-actions.js?v=20260716-2"></script>
 <script>
 (function () {
   var DEFAULT_LAYOUT = {
@@ -163,7 +171,7 @@
   function fitBuilderName(title) {
     var size = 58;
     title.style.fontSize = size + "px";
-    while (size > 20 && title.scrollWidth > title.clientWidth) {
+    while (size > 16 && title.scrollWidth > title.clientWidth) {
       size -= 2;
       title.style.fontSize = size + "px";
     }
@@ -242,6 +250,35 @@
     return section;
   }
 
+  function buildMediaSources(images) {
+    var sourced = images.filter(function (item) { return item.sourceUrl; });
+    if (!sourced.length) return null;
+    var section = document.createElement("section");
+    section.className = "memorial-photo-sources";
+    var heading = document.createElement("h2");
+    heading.textContent = "Nuotraukų šaltiniai";
+    var list = document.createElement("ol");
+    sourced.forEach(function (item) {
+      var entry = document.createElement("li");
+      var description = document.createElement("strong");
+      description.textContent = item.caption || item.alt || "Istorinė nuotrauka";
+      var source = document.createElement("a");
+      source.href = item.sourceUrl;
+      source.target = "_blank";
+      source.rel = "noopener";
+      source.textContent = item.sourceName || "Atidaryti šaltinį";
+      var license = document.createElement("span");
+      license.textContent = item.license || "";
+      entry.appendChild(description);
+      entry.appendChild(source);
+      if (license.textContent) entry.appendChild(license);
+      list.appendChild(entry);
+    });
+    section.appendChild(heading);
+    section.appendChild(list);
+    return section;
+  }
+
   function renderBuilderLayout(atminimas, media, layout) {
     document.getElementById("antmastis").hidden = true;
     document.getElementById("nuotraukos").hidden = true;
@@ -315,9 +352,12 @@
     contentRoot.appendChild(view);
     if (storyWordCount > 80) contentRoot.appendChild(buildStorySection(fullStory));
     if (allImages.length > 4) contentRoot.appendChild(buildStoryGallery(allImages.slice(4), 4, allImages));
-    fitBuilderName(title);
-    applyResponsiveBuilderHeights(view);
-    window.addEventListener("resize", function () { applyResponsiveBuilderHeights(view); });
+    var mediaSources = buildMediaSources(allImages);
+    if (mediaSources) contentRoot.appendChild(mediaSources);
+    window.addEventListener("resize", function () {
+      fitBuilderName(title);
+      applyResponsiveBuilderHeights(view);
+    });
     bindBuilderGallery(view, allImages);
   }
 
@@ -399,7 +439,17 @@
     }
     document.getElementById("kraunama").hidden = true;
     document.getElementById("turinys").hidden = false;
-    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas);
+    var builderView = document.getElementById("builder-view");
+    if (builderView) {
+      var builderTitle = builderView.querySelector("h1");
+      if (builderTitle) fitBuilderName(builderTitle);
+      applyResponsiveBuilderHeights(builderView);
+    }
+    if (atminimas.demo) {
+      document.getElementById("memorial-demo-notice").hidden = false;
+      document.title = [atminimas.vardas, atminimas.pavarde].filter(Boolean).join(" ") + " – demonstracinis atminimo puslapis";
+    }
+    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas, { demo: !!atminimas.demo });
   }
 
   function fillGallery(images) {
@@ -538,8 +588,13 @@
     initGallery();
     var params = new URLSearchParams(window.location.search);
     var identifier = (params.get("id") || params.get("slug") || params.get("s") || "").trim();
-    if (!identifier || identifier === "demo") {
+    if (!identifier) {
       window.location.replace("index.html");
+      return;
+    }
+
+    if (window.AtminimasDemo && AtminimasDemo.isMaironisIdentifier(identifier)) {
+      renderPage({ atminimas: AtminimasDemo.maironis.profile }, "");
       return;
     }
 

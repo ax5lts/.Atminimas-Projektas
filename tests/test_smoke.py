@@ -89,6 +89,11 @@ class AtminimasSmokeTests(unittest.TestCase):
             ROOT / "assets" / "cloudinary.js",
             ROOT / "assets" / "qr-asa.png",
             ROOT / "assets" / "qr-atminimo-lentele.png",
+            ROOT / "assets" / "qr-plienas.png",
+            ROOT / "assets" / "demo-jonas-portretas.jpg",
+            ROOT / "assets" / "demo-jonas-seima.jpg",
+            ROOT / "assets" / "demo-jonas-dirbtuves.jpg",
+            ROOT / "assets" / "demo-jonas-sodas.jpg",
         ):
             with self.subTest(path=path.name):
                 self.assertFalse(path.exists())
@@ -115,6 +120,7 @@ class AtminimasSmokeTests(unittest.TestCase):
                 self.assertEqual(len(version), 14)
         self.assertIn("20260611152136_connect_profiliai_public_form.sql", migration_names)
         self.assertIn("20260713204058_restore_asa_3d_product.sql", migration_names)
+        self.assertIn("20260719090808_add_steel_product.sql", migration_names)
 
         qr = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
         lockers = (ROOT / "supabase" / "functions" / "parcel-lockers" / "index.ts").read_text(encoding="utf-8")
@@ -317,16 +323,21 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("owner_id = (select auth.uid())", sql)
         self.assertNotRegex(sql.lower(), r"grant\s+[^;]*\bto\s+anon\b")
 
-    def test_shop_offers_metal_and_asa_3d_plaques(self):
+    def test_shop_offers_metal_steel_and_asa_3d_plaques(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
+        self.assertIn('value="steel"', html)
         self.assertIn('value="asa"', html)
         self.assertIn('src="assets/qr-atminimo-lentele-480.webp"', html)
+        self.assertIn('src="assets/qr-plienas-480.webp"', html)
         self.assertIn('src="assets/qr-asa-480.webp"', html)
         self.assertIn("Graviruota QR atminimo lentelė", html)
+        self.assertIn("Graviruota plieno QR atminimo lentelė", html)
         self.assertIn("ASA 3D spausdinta QR atminimo lentelė", html)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele.webp").stat().st_size, 100_000)
+        self.assertLess((ROOT / "assets" / "qr-plienas-480.webp").stat().st_size, 30_000)
+        self.assertLess((ROOT / "assets" / "qr-plienas.webp").stat().st_size, 100_000)
         self.assertLess((ROOT / "assets" / "qr-asa-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-asa.webp").stat().st_size, 100_000)
 
@@ -359,14 +370,18 @@ class AtminimasSmokeTests(unittest.TestCase):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         self.assertIn("atminimas.selected-product.v1", shop)
+        self.assertIn("steel: {", shop)
         self.assertIn("redaktorius.html?product=", user)
+        self.assertIn("steel: {", editor)
         self.assertIn("data.product_type = productType", editor)
-        self.assertIn('input.product_type === "asa" ? "asa" : "metal"', api)
+        self.assertIn('["asa", "steel"].indexOf(input.product_type)', api)
+        self.assertIn("steel_price", admin)
         self.assertIn("product_type", admin)
 
-        sql = (ROOT / "supabase" / "migrations" / "20260713204058_restore_asa_3d_product.sql").read_text(encoding="utf-8")
-        self.assertIn("check (product_type in ('metal', 'asa'))", sql.lower())
-        self.assertIn("asa 3d spausdinta qr atminimo lentelė", sql.lower())
+        sql = (ROOT / "supabase" / "migrations" / "20260719090808_add_steel_product.sql").read_text(encoding="utf-8")
+        self.assertIn("check (id in ('metal', 'steel', 'asa'))", sql.lower())
+        self.assertIn("check (product_type in ('metal', 'steel', 'asa'))", sql.lower())
+        self.assertIn("graviruota plieno qr atminimo lentelė", sql.lower())
 
     def test_admin_has_separate_all_orders_dashboard(self):
         html = (ROOT / "admin.html").read_text(encoding="utf-8")
@@ -389,7 +404,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260716-5', html)
+        self.assertIn('assets/admin.js?v=20260719-1', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)
@@ -572,12 +587,13 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(page=name):
                 self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
                 self.assertIn('src="assets/loading.js?v=20260707-1"', html)
-        for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
+        for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-plienas.webp", "qr-plienas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
             with self.subTest(image=image):
                 self.assertTrue((ROOT / "assets" / image).is_file())
                 self.assertLess((ROOT / "assets" / image).stat().st_size, 100_000)
         served = (ROOT / "index.html").read_text(encoding="utf-8") + (ROOT / "parduotuve.html").read_text(encoding="utf-8") + (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
         self.assertNotIn("qr-atminimo-lentele.png", served)
+        self.assertNotIn("qr-plienas.png", served)
         self.assertNotIn("qr-asa.png", served)
 
     def test_memorial_media_is_mobile_optimized(self):
@@ -589,6 +605,43 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("1200 / Math.max(img.naturalWidth, img.naturalHeight)", editor)
         self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
         self.assertIn('"image/webp", 0.82', editor)
+
+    def test_maironis_demo_is_available_in_editor_and_public_page(self):
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
+        editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
+        editor_script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        memorial_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        demo_script = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
+
+        self.assertIn("maironis-pavyzdys", home)
+        self.assertIn("maironis-pavyzdys", shop)
+        self.assertIn('<a href="parduotuve.html">Parduotuvė</a>\n        <a href="sablonas-viskas.html?slug=maironis-pavyzdys">Pavyzdys</a>', home)
+        self.assertIn("Peržiūrėti Maironio puslapio pavyzdį", shop)
+        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', editor_page)
+        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', memorial_page)
+        self.assertIn('demoId === "maironis" || demoId === "jonas"', editor_script)
+        self.assertIn("AtminimasDemo.isMaironisIdentifier", memorial_page)
+        self.assertLess(memorial_page.index('document.getElementById("turinys").hidden = false'), memorial_page.index("if (builderTitle) fitBuilderName(builderTitle)"))
+        self.assertIn("maironis, tikrasis vardas jonas mačiulis", demo_script.lower())
+        self.assertIn('gimimo_data: "1862-11-02"', demo_script)
+        self.assertIn('mirties_data: "1932-06-28"', demo_script)
+        self.assertIn("Viešoji sritis (Public Domain)", demo_script)
+        self.assertIn("Nuotraukų šaltiniai", memorial_page)
+        self.assertIn("buildMediaSources(allImages)", memorial_page)
+        self.assertNotIn("Jonas gimė 1948", demo_script)
+        self.assertNotIn("assets/demo-jonas-portretas.jpg", demo_script)
+
+        for image in (
+            "maironis-portretas-1900.jpg",
+            "maironis-portretas-1908.jpg",
+            "maironis-darbo-kabinete-1912.jpg",
+            "maironis-siluvoje-1912.jpg",
+        ):
+            with self.subTest(image=image):
+                path = ROOT / "assets" / image
+                self.assertTrue(path.is_file())
+                self.assertLess(path.stat().st_size, 400_000)
 
     def test_editor_is_responsive_and_has_touch_color_wheel(self):
         page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")

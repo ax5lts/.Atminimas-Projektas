@@ -126,7 +126,9 @@
   }
 
   function productName(value) {
-    return value === "asa" ? "ASA 3D spausdinta QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
+    if (value === "asa") return "ASA 3D spausdinta QR atminimo lentelė";
+    if (value === "steel") return "Graviruota plieno QR atminimo lentelė";
+    return "Graviruota QR atminimo lentelė";
   }
 
   function orderCanBeDeleted(order) {
@@ -367,6 +369,7 @@
     var products = Object.fromEntries(results[1].map(function (row) { return [row.id, row]; }));
     var shipping = Object.fromEntries(results[2].map(function (row) { return [row.carrier, row]; }));
     businessSettingsForm.elements.metal_price.value = centsToInput(products.metal && products.metal.price_cents);
+    businessSettingsForm.elements.steel_price.value = centsToInput(products.steel && products.steel.price_cents);
     businessSettingsForm.elements.asa_price.value = centsToInput(products.asa && products.asa.price_cents);
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
@@ -393,6 +396,7 @@
     });
     var prices = [
       ["product_catalog", "id", "metal", inputToCents(values.metal_price)],
+      ["product_catalog", "id", "steel", inputToCents(values.steel_price)],
       ["product_catalog", "id", "asa", inputToCents(values.asa_price)],
       ["shipping_catalog", "carrier", "Omniva", inputToCents(values.omniva_price)],
       ["shipping_catalog", "carrier", "LP Express", inputToCents(values.lp_express_price)],

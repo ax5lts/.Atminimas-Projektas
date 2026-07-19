@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
-<meta name="description" content="Pasirinkite graviruotą metalo arba ASA 3D spausdintą QR atminimo lentelę.">
+<meta name="description" content="Pasirinkite graviruotą metalo, plieno arba ASA 3D spausdintą QR atminimo lentelę.">
 <title>QR atminimo lentelės - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-3">
+<link rel="stylesheet" href="css/styles.css?v=20260719-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -34,7 +34,7 @@
     <header class="shop-heading">
       <p class="eyebrow">Pasirinkite gamybos būdą</p>
       <h1>QR atminimo lentelės</h1>
-      <p>Graviruota metalo ir ASA 3D spausdinta lentelės nukreipia į tą patį individualų atminimo puslapį.</p>
+      <p>Graviruotos metalo ir plieno lentelės bei ASA 3D spausdinta lentelė nukreipia į tą patį individualų atminimo puslapį.</p>
     </header>
 
     <fieldset class="product-selector" id="product-selector">
@@ -46,6 +46,14 @@
         <span class="product-choice__content">
           <span><strong>Graviruota QR atminimo lentelė</strong><small>Patvari metalo lentelė lauko sąlygoms</small></span>
           <span class="product-choice__price" data-metal-price>–</span>
+        </span>
+      </label>
+      <label class="product-choice">
+        <input type="radio" name="product_type" value="steel">
+        <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
+        <span class="product-choice__content">
+          <span><strong>Graviruota plieno QR atminimo lentelė</strong><small>Tvirtas plieno variantas lauko sąlygoms</small></span>
+          <span class="product-choice__price">–</span>
         </span>
       </label>
       <label class="product-choice">
@@ -83,7 +91,7 @@
 
           <div class="actions">
             <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Rinktis ir kurti puslapį</a>
-            <a class="button button--ghost" href="klientai.html">Atidaryti pagal QR kodą</a>
+            <a class="button button--ghost" href="sablonas-viskas.html?slug=maironis-pavyzdys">Peržiūrėti Maironio puslapio pavyzdį</a>
           </div>
         </article>
       </div>
@@ -178,7 +186,7 @@
 
 <script src="assets/business-config.js"></script>
 <script src="assets/business-details.js"></script>
-<script src="assets/shop.js?v=20260707-1"></script>
+<script src="assets/shop.js?v=20260719-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

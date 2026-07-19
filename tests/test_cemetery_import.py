@@ -143,6 +143,12 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertNotIn("Authorization", edge)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", edge)
 
+    def test_data_gov_name_search_ignores_letter_case(self):
+        edge = (ROOT.parent / "supabase" / "functions" / "cemetery-search" / "index.ts").read_text(encoding="utf-8")
+        self.assertIn('toLocaleLowerCase("lt-LT")', edge)
+        self.assertIn('return `lower(${field}).contains(${literal(value)})`', edge)
+        self.assertNotIn("return [value.toUpperCase()]", edge)
+
     def test_scheduled_database_import_is_disabled(self):
         self.assertFalse((ROOT.parent / ".github" / "workflows" / "cemetery-import.yml").exists())
 

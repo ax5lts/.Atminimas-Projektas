@@ -142,7 +142,9 @@
     if (!rows.length) throw new Error("Užsakymas nerastas arba nepriklauso šiai paskyrai.");
     var order = rows[0];
     updatePayment(order);
-    orderEl.textContent = order.product_type === "asa" ? "ASA QR atminimo lentelė" : "Graviruota QR atminimo lentelė";
+    orderEl.textContent = order.product_type === "asa"
+      ? "ASA QR atminimo lentelė"
+      : (order.product_type === "steel" ? "Graviruota plieno QR atminimo lentelė" : "Graviruota QR atminimo lentelė");
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
     });
