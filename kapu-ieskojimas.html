@@ -6,7 +6,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="Kapavietės paieška pagal mirusiojo vardą ir pavardę.">
 <title>Kapų ieškojimas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-3">
+<link rel="stylesheet" href="css/styles.css?v=20260719-2">
 </head>
 <body>
 <div class="site-shell">
@@ -53,14 +53,40 @@
       <div class="grave-results__heading"><h2 id="results-title">Paieškos rezultatai</h2><span data-grave-count></span></div>
       <div class="grave-result-grid" data-grave-results></div>
       <nav class="grave-pagination" data-grave-pagination hidden aria-label="Paieškos puslapiai"><button class="button button--ghost" type="button" data-page-prev>Ankstesnis</button><span data-page-label></span><button class="button button--ghost" type="button" data-page-next>Kitas</button></nav>
-      <p class="muted grave-source">Duomenų šaltinis: <a href="https://data.gov.lt/datasets/2779/" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, Valstybės duomenų agentūra. Licencija <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a>.</p>
+      <p class="muted grave-source">Kapaviečių duomenų šaltinis: <a href="https://data.gov.lt/datasets/2779/" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, Valstybės duomenų agentūra. Licencija <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a>. Nuotraukos nėra šio oficialaus rinkinio dalis – jas atskirai pateikia teisę turintys naudotojai, o prieš viešinimą jos patikrinamos.</p>
     </section>
   </main>
+
+  <dialog class="grave-photo-dialog" id="grave-photo-dialog" aria-labelledby="grave-photo-dialog-title">
+    <form class="grave-photo-form" id="grave-photo-form">
+      <button class="grave-photo-dialog__close" type="button" data-photo-dialog-close aria-label="Uždaryti">×</button>
+      <div>
+        <p class="eyebrow">Tikra kapavietės nuotrauka</p>
+        <h2 id="grave-photo-dialog-title">Pridėti kapavietės nuotrauką</h2>
+        <p class="muted" data-photo-grave-label></p>
+      </div>
+      <label>Nuotrauka
+        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+        <small>JPG, PNG arba WEBP. Nuotrauka sumažinama iki 2400 px, o vietos ir fotoaparato EXIF duomenys pašalinami.</small>
+      </label>
+      <label>Kaip atpažinti kapavietę?
+        <textarea name="description" rows="3" minlength="5" maxlength="500" required placeholder="Pvz., tamsaus granito paminklas, dvi vazos, kairėje auga tuja"></textarea>
+      </label>
+      <label class="grave-photo-consent">
+        <input name="rights" type="checkbox" value="confirmed" required>
+        <span>Patvirtinu, kad pats padariau nuotrauką arba turiu teisę ją pateikti, joje nėra atpažįstamų pašalinių žmonių ar automobilių numerių ir sutinku, kad patvirtinta nuotrauka būtų viešai rodoma prie šios kapavietės.</span>
+      </label>
+      <p class="muted">Nuotraukos iš kitų svetainių nekopijuokite be jų autoriaus ar teisių turėtojo leidimo. Taikomos <a href="taisykles.html" target="_blank">naudojimo taisyklės</a> ir <a href="privatumas.html" target="_blank">privatumo politika</a>.</p>
+      <div class="actions"><button class="button" type="submit">Pateikti peržiūrai</button><button class="button button--ghost" type="button" data-photo-dialog-close>Atšaukti</button></div>
+      <p class="form-status" data-photo-upload-status role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
 
   <footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><span class="site-footer__support">Pastebėjote netikslumą? Praneškite mums.</span><nav class="legal-links" aria-label="Teisinė informacija"><a href="privatumas.html">Privatumas</a><a href="pranesti.html">Pranešti apie turinį</a></nav></div></footer>
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
-<script src="assets/official-grave-search.js?v=20260716-3"></script>
+<script src="assets/auth.js?v=20260716-3"></script>
+<script src="assets/official-grave-search.js?v=20260719-2"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>
 </html>

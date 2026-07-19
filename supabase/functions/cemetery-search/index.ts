@@ -195,8 +195,11 @@ function resultRow(row: any, code: string) {
   const birthDate = text(row.gimimo_data) || null;
   const deathDate = text(row.mirties_data) || null;
   const burialDate = text(row.laidojimo_data) || null;
+  const recordId = text(row._id || row.vda_id || `${code}:${firstName}:${lastName}`, 300);
+  const graveSourceId = text(row.kapo_id || row.grave_id || recordId, 300);
   return {
-    id: text(row._id || row.vda_id || `${code}:${firstName}:${lastName}`, 300),
+    id: recordId,
+    grave_source_id: graveSourceId,
     first_name: firstName || null,
     last_name: lastName || null,
     full_name: [firstName, lastName].filter(Boolean).join(" "),

@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Admin - Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260716-1">
+<link rel="stylesheet" href="css/styles.css?v=20260719-2">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -178,6 +178,11 @@
       </form>
       <div class="admin-toolbar"><label>Ieškoti įrašuose<input type="search" id="grave-admin-search" placeholder="Vardas, pavardė, kapinės"></label><button class="button button--ghost" id="grave-admin-refresh" type="button">Atnaujinti</button></div>
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Asmuo</th><th>Kapavietė</th><th>Būsena</th><th>Veiksmai</th></tr></thead><tbody id="grave-admin-rows"></tbody></table></div>
+      <div class="admin-subsection" aria-labelledby="grave-photo-review-title">
+        <div class="admin-toolbar"><div><p class="eyebrow">Naudotojų pateikimai</p><h2 id="grave-photo-review-title">Kapaviečių nuotraukų peržiūra</h2><p>Nuotrauka viešai rodoma tik ją peržiūrėjus ir patvirtinus.</p></div><button class="button button--ghost" id="grave-photo-review-refresh" type="button">Atnaujinti</button></div>
+        <p class="form-status" id="grave-photo-review-status" role="status" aria-live="polite"></p>
+        <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Nuotrauka</th><th>Kapavietė</th><th>Aprašymas</th><th>Būsena</th><th>Veiksmai</th></tr></thead><tbody id="grave-photo-review-rows"></tbody></table></div>
+      </div>
     </section>
   </main>
 
@@ -194,6 +199,7 @@
 <script src="assets/auth.js?v=20260716-3"></script>
 <script src="assets/admin.js?v=20260719-1"></script>
 <script src="assets/graves-admin.js?v=20260712-1"></script>
+<script src="assets/grave-photo-admin.js?v=20260719-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

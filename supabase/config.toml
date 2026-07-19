@@ -25,6 +25,9 @@ verify_jwt = false
 [functions.cemetery-search]
 verify_jwt = false
 
+[functions.grave-photo]
+verify_jwt = false
+
 [functions.profile-manage]
 verify_jwt = true
 
