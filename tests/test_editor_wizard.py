@@ -63,6 +63,33 @@ class EditorWizardTests(unittest.TestCase):
             r"@media \(min-width: 861px\)\s*\{[^}]*\.editor-step-actions[^}]*display:\s*none",
         )
 
+    def test_mobile_final_actions_do_not_cover_the_scrollable_content(self):
+        self.assertRegex(
+            self.styles,
+            r"\.editor-final-actions \{\s*"
+            r"position: static;\s*"
+            r"bottom: auto;\s*"
+            r"flex-direction: column;\s*"
+            r"\}",
+        )
+        self.assertRegex(
+            self.styles,
+            r"\.editor-final-actions \.button \{\s*"
+            r"flex: 0 0 auto;\s*"
+            r"width: 100%;\s*"
+            r"\}",
+        )
+
+    def test_narrow_mobile_navigation_stays_on_one_scrollable_row(self):
+        self.assertRegex(
+            self.styles,
+            r"\.editor-topbar__nav \{\s*"
+            r"grid-column: 1 / -1;\s*"
+            r"display: flex;\s*"
+            r"flex-wrap: nowrap;\s*"
+            r"overflow-x: auto;",
+        )
+
     def test_video_limit_and_session_are_checked_before_upload(self):
         self.assertIn("iki 50 MB", self.page)
         self.assertIn('id="editor-video-help"', self.page)

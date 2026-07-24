@@ -5627,7 +5627,14 @@ body[data-loading]::after {
   }
 
   .editor-final-actions {
+    position: static;
+    bottom: auto;
     flex-direction: column;
+  }
+
+  .editor-final-actions .button {
+    flex: 0 0 auto;
+    width: 100%;
   }
 }
 
@@ -5639,6 +5646,7 @@ body[data-loading]::after {
   .editor-topbar__nav {
     grid-column: 1 / -1;
     display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
     padding-bottom: 4px;
     white-space: nowrap;
