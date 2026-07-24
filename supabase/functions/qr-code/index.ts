@@ -1,4 +1,5 @@
 import QRCode from "npm:qrcode@1.5.4";
+import { publicSiteUrl } from "../_shared/core.ts";
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "GET") {
@@ -17,12 +18,14 @@ Deno.serve(async (request: Request) => {
 
   try {
     const target = new URL(value);
+    const expected = new URL("sablonas-viskas.html", publicSiteUrl());
     const slug = target.searchParams.get("slug");
     if (
-      !["http:", "https:"].includes(target.protocol) ||
-      !target.pathname.endsWith("/sablonas-viskas.html") ||
+      target.protocol !== "https:" ||
+      target.origin !== expected.origin ||
+      target.pathname !== expected.pathname ||
       !slug ||
-      slug.length > 100
+      !/^[a-z0-9][a-z0-9-]{0,99}$/.test(slug)
     ) {
       return new Response("Unsupported QR target", { status: 400 });
     }
@@ -40,7 +43,8 @@ Deno.serve(async (request: Request) => {
       headers: {
         "Content-Type": "image/svg+xml; charset=utf-8",
         "Cache-Control": "public, max-age=86400",
-        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
+        "Content-Security-Policy":
+          "default-src 'none'; style-src 'unsafe-inline'",
         "X-Content-Type-Options": "nosniff",
       },
     });

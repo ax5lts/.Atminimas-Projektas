@@ -33,6 +33,68 @@ class StoreAuthUsabilityTests(unittest.TestCase):
         self.assertIn('id="register-resend"', page)
         self.assertIn("confirmation.focus({ preventScroll: true })", register)
         self.assertIn("AtminimasAuth.resendSignupConfirmation(pendingEmail)", register)
+        self.assertIn("(result.user && result.user.email) || data.email", register)
+        self.assertNotIn("|| email;", register)
+        self.assertIn('resendButton.setAttribute("aria-busy", "true")', register)
+        self.assertIn("setResendBusy(false)", register)
+        self.assertNotIn("} finally {\n      setBusy(false);", register)
+
+    def test_auth_validation_waits_for_blur_or_submit(self):
+        validator = (ROOT / "assets" / "form-validation.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        pages = {
+            "prisijungti.html": "assets/login.js",
+            "registruotis.html": "assets/register.js",
+            "slaptazodis.html": "assets/password-reset.js",
+        }
+
+        for filename, page_script in pages.items():
+            with self.subTest(page=filename):
+                page = (ROOT / filename).read_text(encoding="utf-8")
+                self.assertIn("data-friendly-validation", page)
+                self.assertNotIn("data-friendly-validation novalidate", page)
+                self.assertIn("assets/form-validation.js?v=", page)
+                self.assertLess(page.index("assets/form-validation.js"), page.index(page_script))
+
+        self.assertIn("form.noValidate = true", validator)
+        self.assertIn('form.addEventListener("input"', validator)
+        self.assertIn('form.addEventListener("focusout"', validator)
+        self.assertIn('form.addEventListener("submit"', validator)
+        self.assertIn('field.dataset.wasEdited = "true"', validator)
+        self.assertIn('field.dataset.wasEdited !== "true"', validator)
+        self.assertIn('field.dataset.validateLive = "true"', validator)
+        self.assertIn('field.dataset.validateLive === "true"', validator)
+        self.assertIn('field.matches(".password-toggle")', validator)
+        self.assertIn('toggleControl.querySelector("input")', validator)
+        self.assertIn("field.value.length < field.minLength", validator)
+        self.assertIn('"Įrašykite bent " + field.minLength + " simbolių."', validator)
+        self.assertIn("clearFieldError(field)", validator)
+        self.assertIn('field.setAttribute("aria-invalid", "true")', validator)
+        self.assertIn('field.setAttribute("aria-describedby"', validator)
+        self.assertIn("event.stopImmediatePropagation()", validator)
+        self.assertNotIn("reportValidity", validator)
+        self.assertIn(".form-field-error", styles)
+        self.assertIn(".form-field-suggestion", styles)
+        self.assertIn(".form-field.has-success", styles)
+        self.assertIn('[aria-invalid="true"]', styles)
+        self.assertIn('.form-status[data-state="error"]', styles)
+        self.assertIn('function suggestedEmail(value)', validator)
+        self.assertIn('"gamil.com": "gmail.com"', validator)
+        self.assertIn('fixButton.textContent = "Pataisyti"', validator)
+        self.assertIn('keepButton.textContent = "Palikti kaip įvesta"', validator)
+        self.assertIn("showFieldSuccess(field)", validator)
+
+    def test_auth_password_rules_and_visibility_are_consistent(self):
+        login_page = (ROOT / "prisijungti.html").read_text(encoding="utf-8")
+        reset_script = (ROOT / "assets" / "password-reset.js").read_text(encoding="utf-8")
+        validator = (ROOT / "assets" / "form-validation.js").read_text(encoding="utf-8")
+
+        self.assertNotIn('autocomplete="current-password" minlength=', login_page)
+        self.assertIn("bent 12 ženklų slaptažodį", reset_script)
+        self.assertIn('toggle.textContent = "Rodyti"', validator)
+        self.assertIn('toggle.textContent = show ? "Slėpti" : "Rodyti"', validator)
+        self.assertIn('toggle.setAttribute("aria-pressed"', validator)
+        self.assertIn('field.name === "password" || field.type === "password"', validator)
 
     def test_editor_data_requests_use_fresh_session(self):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
@@ -48,6 +110,7 @@ class StoreAuthUsabilityTests(unittest.TestCase):
         script = (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
         self.assertIn('metal: { id: "metal", available: false', catalog)
         self.assertIn('class="shop-journey"', shop)
+        self.assertIn('aria-current="step"', shop)
         self.assertIn('id="shop-catalog-retry"', shop)
         self.assertIn('class="product-order-summary"', shop)
         self.assertIn('createLink.setAttribute("aria-disabled", "true")', script)

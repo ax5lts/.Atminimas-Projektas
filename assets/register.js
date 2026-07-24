@@ -8,6 +8,28 @@
   var loginLink = document.getElementById("register-login-link");
   var pendingEmail = "";
 
+  function setStatus(element, message, state) {
+    if (window.AtminimasForms) AtminimasForms.setStatus(element, message, state);
+    else element.textContent = message || "";
+  }
+
+  function setBusy(busy, label) {
+    if (window.AtminimasForms) AtminimasForms.setBusy(form, busy, label || "Kuriama paskyra…");
+    else form.querySelector("button[type='submit']").disabled = busy;
+  }
+
+  function setResendBusy(busy) {
+    if (!resendButton.dataset.idleText) resendButton.dataset.idleText = resendButton.textContent.trim();
+    resendButton.disabled = busy;
+    if (busy) {
+      resendButton.setAttribute("aria-busy", "true");
+      resendButton.textContent = "Siunčiama…";
+    } else {
+      resendButton.removeAttribute("aria-busy");
+      resendButton.textContent = resendButton.dataset.idleText;
+    }
+  }
+
   function nextPage() {
     var value = (new URLSearchParams(window.location.search).get("next") || "").trim();
     if (/^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(value)) return value;
@@ -24,44 +46,44 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
-    var button = form.querySelector("button[type='submit']");
     var data = Object.fromEntries(new FormData(form).entries());
-    button.disabled = true;
-    status.textContent = "Kuriama paskyra...";
+    data.email = String(data.email || "").trim();
+    setBusy(true, "Kuriama paskyra…");
+    setStatus(status, "Saugiai kuriame jūsų paskyrą…", "loading");
     try {
       var result = await AtminimasAuth.signUp(data.email, data.password, data.name);
       if (result.access_token) {
         window.location.href = next;
         return;
       }
-      pendingEmail = (data.user && data.user.email) || email;
+      pendingEmail = (result.user && result.user.email) || data.email;
       confirmationEmail.textContent = pendingEmail;
       confirmation.hidden = false;
       form.hidden = true;
-      status.textContent = "";
+      setStatus(status, "", "");
       form.reset();
       window.requestAnimationFrame(function () {
         confirmation.focus({ preventScroll: true });
         confirmation.scrollIntoView({ block: "center" });
       });
+      setBusy(false);
     } catch (error) {
-      status.textContent = error.message || "Nepavyko sukurti paskyros.";
-    } finally {
-      button.disabled = false;
+      setStatus(status, error.message || "Nepavyko sukurti paskyros.", "error");
+      setBusy(false);
     }
   });
 
   resendButton.addEventListener("click", async function () {
     if (!pendingEmail) return;
-    resendButton.disabled = true;
-    resendStatus.textContent = "Siunčiame naują patvirtinimo laišką…";
+    setResendBusy(true);
+    setStatus(resendStatus, "Siunčiame naują patvirtinimo laišką…", "loading");
     try {
       await AtminimasAuth.resendSignupConfirmation(pendingEmail);
-      resendStatus.textContent = "Laiškas išsiųstas. Patikrinkite gautuosius ir šlamšto aplanką.";
+      setStatus(resendStatus, "Laiškas išsiųstas. Patikrinkite gautuosius ir šlamšto aplanką.", "success");
     } catch (error) {
-      resendStatus.textContent = error.message || "Laiško išsiųsti nepavyko. Palaukite ir bandykite dar kartą.";
+      setStatus(resendStatus, error.message || "Laiško išsiųsti nepavyko. Palaukite ir bandykite dar kartą.", "error");
     } finally {
-      resendButton.disabled = false;
+      setResendBusy(false);
     }
   });
 })();

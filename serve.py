@@ -11,7 +11,7 @@ PUBLIC_ROOT_SUFFIXES = {".html", ".ico", ".jpg", ".jpeg", ".png", ".webp", ".mp4
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-        "form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+        "form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob: https://*.supabase.co; "
         "media-src 'self' blob: https://*.supabase.co; "
         "connect-src 'self' https://*.supabase.co; "
@@ -22,18 +22,31 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(self)",
     "X-Frame-Options": "DENY",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-site",
+    "X-Permitted-Cross-Domain-Policies": "none",
 }
 
 
 def is_public_path(raw_path):
-    path = unquote(urlsplit(raw_path).path).replace("\\", "/")
+    path = urlsplit(raw_path).path
+    previous = None
+    while path != previous:
+        previous = path
+        path = unquote(path)
+    path = path.replace("\\", "/")
     if path in ("", "/"):
         return True
 
     relative = path.lstrip("/")
-    candidate = PurePosixPath(relative)
-    if not candidate.parts or any(part in ("", ".", "..") for part in candidate.parts):
+    raw_parts = relative.split("/")
+    if (
+        not raw_parts
+        or any(part in ("", ".", "..") for part in raw_parts)
+        or any(ord(char) < 32 or ord(char) == 127 for char in relative)
+    ):
         return False
+    candidate = PurePosixPath(relative)
     if len(candidate.parts) == 1:
         return candidate.suffix.lower() in PUBLIC_ROOT_SUFFIXES
     return candidate.parts[0] in PUBLIC_DIRECTORIES
@@ -44,13 +57,20 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
         if not is_public_path(self.path):
             self.send_error(404)
             return
-        super().do_GET()
+        try:
+            super().do_GET()
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            # Naršyklė arba testas gali nutraukti didelio failo atsisiuntimą.
+            pass
 
     def do_HEAD(self):
         if not is_public_path(self.path):
             self.send_error(404)
             return
-        super().do_HEAD()
+        try:
+            super().do_HEAD()
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            pass
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")

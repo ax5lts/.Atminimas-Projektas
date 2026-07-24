@@ -90,6 +90,8 @@
     : (isDemoMode ? "demo-maironis-" : "create-");
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
+  var DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  var draftSavedAtMs = 0;
   var PRODUCT_KEY = "atminimas.selected-product.v1";
   var productSummary = document.getElementById("editor-product-summary");
   var productUnavailable = document.getElementById("editor-product-unavailable");
@@ -487,7 +489,8 @@
         file: file,
         name: file.name,
         type: file.type,
-        lastModified: file.lastModified || Date.now()
+        lastModified: file.lastModified || Date.now(),
+        savedAt: Date.now()
       });
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
@@ -509,11 +512,17 @@
     var db = await openDraftDb();
     if (!db) return null;
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(DRAFT_STORE, "readonly");
-      var request = tx.objectStore(DRAFT_STORE).get(draftFileKey(key));
+      var tx = db.transaction(DRAFT_STORE, "readwrite");
+      var store = tx.objectStore(DRAFT_STORE);
+      var request = store.get(draftFileKey(key));
       request.onsuccess = function () {
         var item = request.result;
         if (!item || !item.file) return resolve(null);
+        var retainedAt = Math.max(Number(item.savedAt) || 0, draftSavedAtMs);
+        if (!retainedAt || Date.now() - retainedAt > DRAFT_TTL_MS) {
+          store.delete(draftFileKey(key));
+          return resolve(null);
+        }
         if (item.file instanceof File) return resolve(item.file);
         resolve(new File([item.file], item.name || key, {
           type: item.type || item.file.type || "",
@@ -540,12 +549,14 @@
 
   async function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
+    draftSavedAtMs = 0;
     await clearDraftFiles();
     window.location.reload();
   }
 
   async function discardCurrentDraft() {
     localStorage.removeItem(DRAFT_KEY);
+    draftSavedAtMs = 0;
     await clearDraftFiles();
   }
 
@@ -597,16 +608,18 @@
   function saveDraftNow() {
     if (isRestoringDraft) return false;
     try {
+      var savedAt = new Date();
+      draftSavedAtMs = savedAt.getTime();
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         form: draftFormData(),
         layout: collectLayout(),
         step: currentEditorStep,
-        savedAt: new Date().toISOString()
+        savedAt: savedAt.toISOString()
       }));
       setDraftState("Juodraštis išsaugotas " + new Intl.DateTimeFormat("lt-LT", {
         hour: "2-digit",
         minute: "2-digit"
-      }).format(new Date()), "saved");
+      }).format(savedAt), "saved");
       return true;
     } catch (err) {
       console.warn("Draft save failed", err);
@@ -874,10 +887,26 @@
 
   async function restoreDraft() {
     var raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return false;
+    if (!raw) {
+      try {
+        await clearDraftFiles();
+      } catch (err) {
+        console.warn("Orphaned draft cleanup failed", err);
+      }
+      return false;
+    }
     isRestoringDraft = true;
     try {
       var draft = JSON.parse(raw);
+      var savedAt = Date.parse(draft.savedAt || "");
+      if (!Number.isFinite(savedAt) || Date.now() - savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(DRAFT_KEY);
+        draftSavedAtMs = 0;
+        await clearDraftFiles();
+        setDraftState("Pasenęs juodraštis pašalintas", "");
+        return false;
+      }
+      draftSavedAtMs = savedAt;
       if (editorSteps.indexOf(draft.step) >= 0) currentEditorStep = draft.step;
       restoreDraftFields(draft.form);
       applyLayout(draft.layout);
@@ -887,6 +916,13 @@
       return true;
     } catch (err) {
       console.warn("Draft restore failed", err);
+      localStorage.removeItem(DRAFT_KEY);
+      draftSavedAtMs = 0;
+      try {
+        await clearDraftFiles();
+      } catch (cleanupError) {
+        console.warn("Invalid draft cleanup failed", cleanupError);
+      }
       return false;
     } finally {
       isRestoringDraft = false;

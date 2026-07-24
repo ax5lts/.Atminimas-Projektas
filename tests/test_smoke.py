@@ -78,7 +78,10 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_legacy_runtime_assets_are_removed(self):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
-        memorial = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        memorial = (
+            (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+            + (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
+        )
         security = (ROOT / "serve.py").read_text(encoding="utf-8")
         self.assertNotIn('"sablonas-viskas"', api)
         self.assertNotIn('"atminimai"', api)
@@ -125,7 +128,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         qr = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
         lockers = (ROOT / "supabase" / "functions" / "parcel-lockers" / "index.ts").read_text(encoding="utf-8")
         self.assertIn('npm:qrcode@1.5.4', qr)
-        self.assertIn('target.pathname.endsWith("/sablonas-viskas.html")', qr)
+        self.assertIn('new URL("sablonas-viskas.html", publicSiteUrl())', qr)
+        self.assertIn("target.origin !== expected.origin", qr)
+        self.assertIn("target.pathname !== expected.pathname", qr)
         self.assertIn('"lp-express"', lockers)
         self.assertIn("slice(0, 1500)", lockers)
 
@@ -168,6 +173,8 @@ class AtminimasSmokeTests(unittest.TestCase):
             "/app.py",
             "/serve.py",
             "/.gitignore",
+            "/assets/%252e%252e/SECURITY.md",
+            "/assets/%252e%252e/.git/config",
         ):
             with self.subTest(path=path):
                 with self.assertRaises(urllib.error.HTTPError) as error:
@@ -223,15 +230,25 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.assertEqual(response.status, 200)
             self.assertIsInstance(json.loads(response.read().decode("utf-8")), dict)
 
-        with self.supabase_request("/rest/v1/profiliai?select=id&aktyvus=eq.true&limit=1") as response:
-            self.assertIn(response.status, (200, 206))
-            self.assertIsInstance(json.loads(response.read().decode("utf-8")), list)
+        try:
+            with self.supabase_request(
+                "/rest/v1/profiliai?select=id&aktyvus=eq.true&limit=1"
+            ) as response:
+                self.assertIn(response.status, (200, 206))
+                self.assertIsInstance(json.loads(response.read().decode("utf-8")), list)
+        except urllib.error.HTTPError as error:
+            # After the security migration, public profile reads intentionally
+            # go through profile-content instead of PostgREST.
+            self.assertIn(error.code, (401, 403))
 
     def test_private_rows_are_not_visible_anonymously(self):
-        with self.supabase_request(
-            "/rest/v1/profiliai?select=id&aktyvus=eq.false&limit=1"
-        ) as response:
-            self.assertEqual(json.loads(response.read().decode("utf-8")), [])
+        try:
+            with self.supabase_request(
+                "/rest/v1/profiliai?select=id&aktyvus=eq.false&limit=1"
+            ) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), [])
+        except urllib.error.HTTPError as error:
+            self.assertIn(error.code, (401, 403))
 
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.supabase_request("/rest/v1/uzsakymai?select=id&limit=1")
@@ -280,8 +297,12 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_homepage_has_qr_and_multi_service_flows(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn('href="#qr-paslauga">Pirkti QR kodą</a>', html)
+        self.assertIn('href="parduotuve.html">Rinktis lentelę</a>', html)
         self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
+        self.assertIn('class="landing-proof"', html)
+        self.assertIn("Pradėkite nemokėdami", html)
+        self.assertIn("Puslapis iš pradžių privatus", html)
+        self.assertIn("Pamatykite tikrą pavyzdį", html)
         self.assertEqual(html.count('name="services"'), 3)
         for service in ("zvakes", "geles", "kapu_tvarkymas"):
             self.assertIn('value="{0}"'.format(service), html)
@@ -551,8 +572,11 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("if (!isOwner && !isAdmin)", manage)
         self.assertIn('action === "delete_order"', manage)
         self.assertIn("Apmokėto arba apskaitoje naudojamo užsakymo ištrinti negalima", manage)
-        self.assertIn('.from("uzsakymai").delete().eq("id", orderId)', manage)
-        self.assertIn('.from("invoice_documents")', manage)
+        self.assertRegex(
+            manage,
+            r'\.from\("uzsakymai"\)\s*\.delete\(\)\.eq\("id",\s*orderId\)',
+        )
+        self.assertRegex(manage, r'\.from\(\s*"invoice_documents",?\s*\)')
         self.assertIn("deleted_orders", manage)
         self.assertIn("mustRetainOrder", manage)
 
@@ -560,7 +584,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         html = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
-        public_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        public_page = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
         self.assertIn("MAX_PHOTOS = 8", editor)
         self.assertIn("MAX_STORY_WORDS = 1000", editor)
         self.assertIn('name="photo_caption_8"', html)
@@ -698,11 +722,21 @@ class AtminimasSmokeTests(unittest.TestCase):
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
         self.assertIn('functionUrl("payment-create")', checkout)
         self.assertNotIn("STRIPE_SECRET_KEY", checkout)
-        self.assertIn('.select("id,profilis_id,total_cents,currency', payment)
-        self.assertIn('params.set("line_items[0][price_data][unit_amount]", String(order.total_cents))', payment)
+        self.assertRegex(
+            payment,
+            r'\.select\(\s*"id,profilis_id,total_cents,currency',
+        )
+        self.assertRegex(
+            payment,
+            r'params\.set\(\s*"line_items\[0\]\[price_data\]\[unit_amount\]",\s*'
+            r"String\(order\.total_cents\),?\s*\)",
+        )
         self.assertIn('request.headers.get("stripe-signature")', webhook)
         self.assertIn("crypto.subtle.sign", webhook)
-        self.assertIn('client.rpc("process_stripe_payment_event"', webhook)
+        self.assertRegex(
+            webhook,
+            r'client\.rpc\(\s*"process_stripe_payment_event"',
+        )
         transactional = (ROOT / "supabase" / "migrations" / "20260707164658_transactional_payment_webhook.sql").read_text(encoding="utf-8")
         self.assertIn("where id = p_order_id for update", transactional.lower())
         self.assertIn("p_amount_cents = ord.total_cents", transactional)
@@ -764,7 +798,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertNotIn("qr-asa.png", served)
 
     def test_memorial_media_is_mobile_optimized(self):
-        page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        page = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         self.assertIn('image.loading = "lazy"', page)
         self.assertIn('image.decoding = "async"', page)
@@ -778,7 +812,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor_script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
-        memorial_page = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        memorial_markup = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        memorial_page = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
         demo_script = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
@@ -787,7 +822,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('<a href="parduotuve.html">Parduotuvė</a>\n        <a href="sablonas-viskas.html?slug=maironis-pavyzdys">Pavyzdys</a>', home)
         self.assertIn("Peržiūrėti Maironio puslapio pavyzdį", shop)
         self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', editor_page)
-        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', memorial_page)
+        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', memorial_markup)
         self.assertIn('demoId === "maironis" || demoId === "jonas"', editor_script)
         self.assertIn("AtminimasDemo.isMaironisIdentifier", memorial_page)
         self.assertLess(memorial_page.index('document.getElementById("turinys").hidden = false'), memorial_page.index("if (builderTitle) fitBuilderName(builderTitle)"))
@@ -858,7 +893,10 @@ class AtminimasSmokeTests(unittest.TestCase):
 
         self.assertIn("const isOwner = profile.owner_id === user.id", function)
         self.assertIn("if (!isOwner && !isAdmin)", function)
-        self.assertIn('.storage.from("atminimas").remove', function)
+        self.assertRegex(
+            function,
+            r'\.storage\.from\(\s*"atminimas",?\s*\)\.remove',
+        )
         self.assertIn('action === "delete"', function)
         self.assertIn("retained_order", function)
         self.assertIn("add column if not exists deleted_at", migration.lower())
@@ -876,7 +914,10 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('id="password-update-form"', page)
         self.assertIn('/recover?redirect_to=', script)
         self.assertIn('method: "PUT"', script)
-        self.assertIn('Authorization: "Bearer " + accessToken', script)
+        self.assertRegex(
+            script,
+            r'Authorization:\s*"Bearer "\s*\+\s*(?:accessToken|recoveryToken)',
+        )
         self.assertIn('site_url = "https://ax5lts.github.io/.Atminimas-Projektas/"', config)
         self.assertNotIn('site_url = "http://127.0.0.1:3000"', config)
 
@@ -935,7 +976,7 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_editor_and_memorial_auto_fit_dynamic_stage_height(self):
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
-        memorial = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
+        memorial = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
         demo = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
 
         self.assertIn("var MIN_STAGE_HEIGHT_PCT = 160", editor)

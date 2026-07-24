@@ -11,7 +11,11 @@ Kode nėra ir neturi būti tikrų API raktų. Prieš diegiant automatizavimą re
 
 ## Siuntų adapterio sutartis
 
-Supabase į `SHIPMENT_ADAPTER_URL` siunčia autentifikuotą `POST` su `action: "create"` arba `action: "sync"`, vežėju ir užsakymo duomenimis. Adapteris turi grąžinti:
+Supabase į `SHIPMENT_ADAPTER_URL` siunčia autentifikuotą `POST` su `action:
+"create"` arba `action: "sync"`, vežėju ir tik pristatymui būtinu užsakymo
+laukų rinkiniu. Atminimo tekstas, profilio savininko ID, mokėjimo nuorodos ir
+kiti pristatymui nereikalingi duomenys adapteriui neperduodami. Adapteris turi
+grąžinti:
 
 ```json
 {

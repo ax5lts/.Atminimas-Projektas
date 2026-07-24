@@ -1,9 +1,18 @@
-import { handleOptions, json, requireUser } from "../_shared/core.ts";
+import {
+  env,
+  handleOptions,
+  json,
+  publicSiteUrl,
+  readJson,
+  RequestError,
+  requireUser,
+  safeProfileLayout,
+  userClient,
+} from "../_shared/core.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.110.1";
 
 type MediaItem = {
   type?: string;
-  url?: string;
   path?: string;
   alt?: string;
   caption?: string | null;
@@ -11,30 +20,76 @@ type MediaItem = {
   order?: number;
 };
 
-const text = (value: unknown, max: number) => String(value ?? "").trim().slice(0, max) || null;
+const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
+const MEDIA_TYPES = new Set(["image", "video", "captions"]);
+const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
+  image: /^photo-[1-8]\.(?:jpg|jpeg|png|webp)$/,
+  video: /^video\.(?:mp4|mov)$/,
+  captions: /^captions\.vtt$/,
+};
+const text = (value: unknown, max: number) =>
+  String(value ?? "").trim().slice(0, max) || null;
 
-function safeMedia(value: unknown): MediaItem[] {
+function mediaPath(
+  raw: unknown,
+  ownerId: string,
+  profileId: string,
+  mediaType: string,
+) {
+  const path = String(raw || "").trim();
+  const segments = path.split("/");
+  if (
+    !path ||
+    path.length > 700 ||
+    path.includes("\\") ||
+    segments.length !== 3 ||
+    segments.some((segment) =>
+      !segment || segment === "." || segment === ".."
+    ) ||
+    segments[0] !== ownerId ||
+    segments[1] !== profileId ||
+    !MEDIA_FILE_PATTERNS[mediaType]?.test(segments[2])
+  ) return "";
+  return path;
+}
+
+function safeMedia(
+  value: unknown,
+  ownerId: string,
+  profileId: string,
+): MediaItem[] {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 10).flatMap((raw) => {
     const item = raw as MediaItem;
-    const type = ["image", "video", "captions"].includes(String(item.type)) ? String(item.type) : "";
-    const path = String(item.path || "").replace(/^\/+/, "");
-    const url = String(item.url || "");
-    if (!type || !path || !url.startsWith("https://")) return [];
+    const type = MEDIA_TYPES.has(String(item.type)) ? String(item.type) : "";
+    const path = mediaPath(item.path, ownerId, profileId, type);
+    if (!type || !path) return [];
     return [{
       type,
-      path: path.slice(0, 700),
-      url: url.slice(0, 1200),
+      path,
       alt: text(item.alt, 180) || undefined,
       caption: text(item.caption, 240),
       language: text(item.language, 12) || undefined,
-      order: Number.isFinite(Number(item.order)) ? Number(item.order) : 1,
+      order: Number.isFinite(Number(item.order))
+        ? Math.min(10, Math.max(1, Math.trunc(Number(item.order))))
+        : 1,
     }];
   });
 }
 
-function mediaPaths(value: unknown) {
-  return safeMedia(value).map((item) => item.path || "").filter(Boolean);
+function mediaPaths(value: unknown, ownerId: string | null, profileId: string) {
+  if (!ownerId || !Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const media = item as MediaItem;
+      return mediaPath(
+        media?.path,
+        ownerId,
+        profileId,
+        String(media?.type || ""),
+      );
+    })
+    .filter(Boolean);
 }
 
 async function adminAccess(client: SupabaseClient, userId: string) {
@@ -51,17 +106,23 @@ async function adminAccess(client: SupabaseClient, userId: string) {
 Deno.serve(async (request: Request) => {
   const options = handleOptions(request);
   if (options) return options;
-  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
 
   try {
-    const { client, user } = await requireUser(request);
-    const body = await request.json();
+    const { client, user, token } = await requireUser(request);
+    const body = await readJson(request, 256_000);
     const action = String(body.action || "");
 
     if (action === "delete_order") {
       const orderId = String(body.order_id || "").trim();
-      if (!/^[0-9a-f-]{36}$/i.test(orderId)) return json({ error: "Neteisingas užsakymo numeris" }, 400);
-      if (!await adminAccess(client, user.id)) return json({ error: "Veiksmas leidžiamas tik administratoriui" }, 403);
+      if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
+        return json({ error: "Neteisingas užsakymo numeris" }, 400);
+      }
+      if (!await adminAccess(client, user.id)) {
+        return json({ error: "Veiksmas leidžiamas tik administratoriui" }, 403);
+      }
 
       const { data: order, error: orderError } = await client
         .from("uzsakymai")
@@ -77,18 +138,31 @@ Deno.serve(async (request: Request) => {
         .eq("order_id", orderId)
         .maybeSingle();
       if (invoiceError) throw invoiceError;
-      if (order.apmoketa || order.payment_status === "paid" || order.payment_status === "processing" ||
-          order.customer_approved_at || invoice) {
-        return json({ error: "Apmokėto arba apskaitoje naudojamo užsakymo ištrinti negalima" }, 409);
+      if (
+        order.apmoketa || order.payment_status === "paid" ||
+        order.payment_status === "processing" ||
+        order.customer_approved_at || invoice
+      ) {
+        return json({
+          error:
+            "Apmokėto arba apskaitoje naudojamo užsakymo ištrinti negalima",
+        }, 409);
       }
 
-      const { error: deleteOrderError } = await client.from("uzsakymai").delete().eq("id", orderId);
+      const { error: deleteOrderError } = await client.from("uzsakymai")
+        .delete().eq("id", orderId);
       if (deleteOrderError) throw deleteOrderError;
-      return json({ ok: true, deleted_order: orderId, profile_id: order.profilis_id });
+      return json({
+        ok: true,
+        deleted_order: orderId,
+        profile_id: order.profilis_id,
+      });
     }
 
     const profileId = String(body.profile_id || "").trim();
-    if (!profileId || profileId.length > 100) return json({ error: "Neteisingas puslapio kodas" }, 400);
+    if (!PROFILE_ID_PATTERN.test(profileId)) {
+      return json({ error: "Neteisingas puslapio kodas" }, 400);
+    }
 
     const { data: profile, error: profileError } = await client
       .from("profiliai")
@@ -109,11 +183,65 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Puslapis nerastas" }, 404);
     }
 
+    if (action === "create_order") {
+      if (!isOwner) {
+        return json(
+          { error: "Užsakymą gali sukurti tik puslapio savininkas" },
+          403,
+        );
+      }
+      const productType = String(body.product_type || "");
+      if (productType !== "metal" && productType !== "asa") {
+        return json({ error: "Neteisingas produkto tipas" }, 400);
+      }
+      const { data: product, error: productError } = await client
+        .from("product_catalog")
+        .select("id")
+        .eq("id", productType)
+        .eq("enabled", true)
+        .not("price_cents", "is", null)
+        .maybeSingle();
+      if (productError) throw productError;
+      if (!product) {
+        return json({ error: "Šio produkto šiuo metu užsakyti negalima" }, 409);
+      }
+
+      const page = new URL("sablonas-viskas.html", publicSiteUrl());
+      page.searchParams.set("slug", profileId);
+      const pageUrl = page.href;
+      const qrUrl = `${
+        env("SUPABASE_URL").replace(/\/$/, "")
+      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}`;
+      const { data: order, error: orderError } = await client
+        .from("uzsakymai")
+        .insert({
+          profilis_id: profileId,
+          puslapio_url: pageUrl,
+          qr_kodas_url: qrUrl,
+          product_type: productType,
+          busena: "sukurtas",
+          apmoketa: false,
+        })
+        .select("id,profilis_id,puslapio_url,qr_kodas_url,busena")
+        .single();
+      if (orderError) throw orderError;
+      return json(order, 201);
+    }
+
     if (action === "update") {
-      if (!isOwner) return json({ error: "Redaguoti gali tik puslapio savininkas" }, 403);
-      const input = body.profile || {};
-      const media = safeMedia(body.media);
-      const layout = body.layout && typeof body.layout === "object" && !Array.isArray(body.layout) ? body.layout : {};
+      if (!isOwner) {
+        return json({ error: "Redaguoti gali tik puslapio savininkas" }, 403);
+      }
+      const input = body.profile && typeof body.profile === "object" &&
+          !Array.isArray(body.profile)
+        ? body.profile as Record<string, unknown>
+        : {};
+      const media = safeMedia(
+        body.media,
+        String(profile.owner_id || ""),
+        profileId,
+      );
+      const layout = safeProfileLayout(body.layout);
       const payload = {
         vardas: text(input.vardas, 120),
         pavarde: text(input.pavarde, 120),
@@ -126,14 +254,21 @@ Deno.serve(async (request: Request) => {
       };
       if (!payload.vardas) return json({ error: "Įrašykite vardą" }, 400);
 
-      const { error: updateError } = await client.from("profiliai").update(payload).eq("id", profileId);
+      const { error: updateError } = await client.from("profiliai").update(
+        payload,
+      ).eq("id", profileId);
       if (updateError) throw updateError;
 
-      const keep = new Set(mediaPaths(media));
-      const stale = mediaPaths(profile.media_json).filter((path) => !keep.has(path));
+      const keep = new Set(mediaPaths(media, profile.owner_id, profileId));
+      const stale = mediaPaths(profile.media_json, profile.owner_id, profileId)
+        .filter((path) => !keep.has(path));
       if (stale.length) {
-        const { error: storageError } = await client.storage.from("atminimas").remove(stale);
-        if (storageError) console.error("Stale media cleanup failed", storageError);
+        const { error: storageError } = await userClient(token).storage.from(
+          "atminimas",
+        ).remove(stale);
+        if (storageError) {
+          console.error("Stale media cleanup failed", storageError);
+        }
       }
       return json({ ok: true, profile_id: profileId });
     }
@@ -156,7 +291,8 @@ Deno.serve(async (request: Request) => {
         hasInvoice = Boolean(invoices && invoices.length);
       }
       const mustRetainOrder = (orders || []).some((order) =>
-        order.apmoketa || order.payment_status === "paid" || order.payment_status === "processing" || order.customer_approved_at
+        order.apmoketa || order.payment_status === "paid" ||
+        order.payment_status === "processing" || order.customer_approved_at
       ) || hasInvoice;
 
       if (mustRetainOrder) {
@@ -172,16 +308,26 @@ Deno.serve(async (request: Request) => {
           aktyvus: false,
           deleted_at: new Date().toISOString(),
         }).eq("id", profileId);
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          throw deleteError;
+        }
       } else {
-        const { error: deleteError } = await client.from("profiliai").delete().eq("id", profileId);
-        if (deleteError) throw deleteError;
+        const { error: deleteError } = await client.from("profiliai").delete()
+          .eq("id", profileId);
+        if (deleteError) {
+          throw deleteError;
+        }
       }
 
-      const paths = mediaPaths(profile.media_json);
+      const paths = mediaPaths(profile.media_json, profile.owner_id, profileId);
       if (paths.length) {
-        const { error: storageError } = await client.storage.from("atminimas").remove(paths);
-        if (storageError) console.error("Deleted profile media cleanup failed", storageError);
+        const storage = isOwner ? userClient(token).storage : client.storage;
+        const { error: storageError } = await storage.from("atminimas").remove(
+          paths,
+        );
+        if (storageError) {
+          console.error("Deleted profile media cleanup failed", storageError);
+        }
       }
       return json({
         ok: true,
@@ -192,6 +338,14 @@ Deno.serve(async (request: Request) => {
 
     return json({ error: "Nežinomas veiksmas" }, 400);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Nepavyko pakeisti puslapio" }, 500);
+    const message = error instanceof Error ? error.message : "";
+    if (error instanceof RequestError) {
+      return json({ error: error.message }, error.status);
+    }
+    if (/^(Authentication required|Invalid session)$/i.test(message)) {
+      return json({ error: "Prisijungimo sesija nebegalioja" }, 401);
+    }
+    console.error("profile-manage failed", error);
+    return json({ error: "Nepavyko pakeisti puslapio" }, 500);
   }
 });

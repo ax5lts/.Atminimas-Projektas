@@ -5,9 +5,20 @@
   var hasExplicitNext = /^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(requestedNext);
   var confirmationNoticeKey = "atminimas.auth.confirmation-notice.v1";
   var confirmationNotice = sessionStorage.getItem(confirmationNoticeKey);
+
+  function setStatus(message, state) {
+    if (window.AtminimasForms) AtminimasForms.setStatus(status, message, state);
+    else status.textContent = message || "";
+  }
+
+  function setBusy(busy) {
+    if (window.AtminimasForms) AtminimasForms.setBusy(form, busy, "Jungiamasi…");
+    else form.querySelector("button[type='submit']").disabled = busy;
+  }
+
   if (confirmationNotice) {
     sessionStorage.removeItem(confirmationNoticeKey);
-    status.textContent = confirmationNotice;
+    setStatus(confirmationNotice, "success");
   }
 
   function nextPage() {
@@ -29,23 +40,23 @@
       window.location.replace(page);
     }).catch(function () {
       AtminimasAuth.signOut();
-      status.textContent = "Sesija nebegalioja. Prisijunkite dar kartą.";
+      setStatus("Sesija nebegalioja. Prisijunkite dar kartą.", "error");
     });
     return;
   }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
-    var button = form.querySelector("button[type='submit']");
     var data = Object.fromEntries(new FormData(form).entries());
-    button.disabled = true;
-    status.textContent = "Jungiamasi...";
+    data.email = String(data.email || "").trim();
+    setBusy(true);
+    setStatus("Tikriname prisijungimo duomenis…", "loading");
     try {
       await AtminimasAuth.signIn(data.email, data.password);
       window.location.href = await destination();
     } catch (error) {
-      status.textContent = error.message || "Nepavyko prisijungti.";
-      button.disabled = false;
+      setStatus(error.message || "Nepavyko prisijungti.", "error");
+      setBusy(false);
     }
   });
 })();

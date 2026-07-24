@@ -4,24 +4,15 @@
   function apiHeaders() {
     return {
       apikey: config.SUPABASE_ANON_KEY,
-      Authorization: "Bearer " + config.SUPABASE_ANON_KEY,
       Accept: "application/json",
-      "Content-Type": "application/json",
-      Prefer: "return=minimal"
+      "Content-Type": "application/json"
     };
-  }
-
-  function reference(prefix) {
-    var random = window.crypto && window.crypto.randomUUID
-      ? window.crypto.randomUUID().split("-")[0]
-      : Math.random().toString(36).slice(2, 10);
-    return prefix + "-" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + "-" + random.toUpperCase();
   }
 
   function receiptText(title, ref, values) {
     var lines = [title, "Registracijos numeris: " + ref, "Pateikta: " + new Date().toISOString(), ""];
     Object.keys(values).forEach(function (key) {
-      if (key === "reference_code") return;
+      if (key === "reference_code" || key === "form_type" || key === "website") return;
       lines.push(key + ": " + String(values[key]));
     });
     return lines.join("\n");
@@ -43,25 +34,34 @@
       if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) return;
       var status = form.querySelector("[role='status']");
       var button = form.querySelector("button[type='submit']");
-      var table = form.dataset.legalForm;
-      var prefix = table === "atsisakymai" ? "ATS" : "PRN";
-      var ref = reference(prefix);
       var data = Object.fromEntries(new FormData(form).entries());
-      data.reference_code = ref;
+      data.form_type = form.dataset.legalForm;
       delete data.confirmation;
       button.disabled = true;
-      status.textContent = "Pateikiama...";
+      status.textContent = "Pateikiama…";
       try {
-        var response = await fetch(config.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + table, {
-          method: "POST",
-          headers: apiHeaders(),
-          body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error("Serveris grąžino " + response.status);
+        var response = await fetch(
+          config.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/legal-submission",
+          {
+            method: "POST",
+            headers: apiHeaders(),
+            body: JSON.stringify(data)
+          }
+        );
+        var result = await response.json().catch(function () { return {}; });
+        if (!response.ok || !result.reference_code) {
+          throw new Error(result.error || "Pateikti nepavyko");
+        }
+        var ref = result.reference_code;
+        data.reference_code = ref;
         status.textContent = "Gauta. Registracijos numeris: " + ref + ".";
-        showDownload(status.parentElement, receiptText(form.dataset.receiptTitle, ref, data), ref + ".txt");
+        showDownload(
+          status.parentElement,
+          receiptText(form.dataset.receiptTitle, ref, data),
+          ref + ".txt"
+        );
         form.reset();
-      } catch (error) {
+      } catch (_error) {
         status.textContent = "Nepavyko pateikti. Bandykite vėliau arba kreipkitės rekvizituose nurodytu el. paštu.";
       } finally {
         button.disabled = false;

@@ -8,6 +8,19 @@
   var accessToken = hash.get("access_token") || "";
   var recoveryType = hash.get("type") || "";
   var hashError = hash.get("error_description") || "";
+  if (window.location.hash && window.history && window.history.replaceState) {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+
+  function setStatus(message, state) {
+    if (window.AtminimasForms) AtminimasForms.setStatus(status, message, state);
+    else status.textContent = message || "";
+  }
+
+  function setBusy(form, busy, label) {
+    if (window.AtminimasForms) AtminimasForms.setBusy(form, busy, label);
+    else form.querySelector("button[type='submit']").disabled = busy;
+  }
 
   function authUrl(path) {
     return config.SUPABASE_URL.replace(/\/$/, "") + "/auth/v1" + path;
@@ -33,68 +46,75 @@
   }
 
   async function updatePassword(password) {
+    var recoveryToken = accessToken;
     var response = await fetch(authUrl("/user"), {
       method: "PUT",
       headers: {
         apikey: config.SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + accessToken,
+        Authorization: "Bearer " + recoveryToken,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ password: password })
     });
     var data = await responseData(response);
     if (!response.ok) throw new Error(data.msg || data.message || data.error_description || "Nepavyko pakeisti slaptažodžio.");
+    await fetch(authUrl("/logout"), {
+      method: "POST",
+      headers: {
+        apikey: config.SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + recoveryToken
+      }
+    }).catch(function () {
+      // Slaptažodis jau pakeistas; senų sesijų atšaukimo klaida neturi jo atkurti.
+    });
   }
 
   if (accessToken && recoveryType === "recovery") {
     requestForm.hidden = true;
     updateForm.hidden = false;
-    intro.textContent = "Įrašykite naują, bent 8 ženklų slaptažodį.";
+    intro.textContent = "Įrašykite naują, bent 12 ženklų slaptažodį.";
   } else if (hashError) {
-    status.textContent = "Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.";
-    history.replaceState(null, "", window.location.pathname);
+    setStatus("Atkūrimo nuoroda nebegalioja. Paprašykite naujos nuorodos.", "error");
   }
 
   requestForm.addEventListener("submit", async function (event) {
     event.preventDefault();
-    var button = requestForm.querySelector("button[type='submit']");
     var email = String(new FormData(requestForm).get("email") || "").trim();
-    button.disabled = true;
-    status.textContent = "Siunčiamas laiškas...";
+    setBusy(requestForm, true, "Siunčiamas laiškas…");
+    setStatus("Ruošiame saugią atkūrimo nuorodą…", "loading");
     try {
       await sendRecovery(email);
       requestForm.reset();
-      status.textContent = "Jei tokia paskyra yra, atkūrimo nuoroda išsiųsta el. paštu.";
+      setStatus("Jei tokia paskyra yra, atkūrimo nuoroda išsiųsta el. paštu.", "success");
     } catch (error) {
-      status.textContent = /rate limit/i.test(error.message)
+      setStatus(/rate limit/i.test(error.message)
         ? "Per daug bandymų. Palaukite ir pabandykite dar kartą."
-        : (error.message || "Nepavyko išsiųsti laiško.");
+        : (error.message || "Nepavyko išsiųsti laiško."), "error");
     } finally {
-      button.disabled = false;
+      setBusy(requestForm, false);
     }
   });
 
   updateForm.addEventListener("submit", async function (event) {
     event.preventDefault();
-    var button = updateForm.querySelector("button[type='submit']");
     var data = Object.fromEntries(new FormData(updateForm).entries());
     if (data.password !== data.password_confirm) {
-      status.textContent = "Slaptažodžiai nesutampa.";
+      setStatus("Slaptažodžiai nesutampa.", "error");
       return;
     }
-    button.disabled = true;
-    status.textContent = "Slaptažodis keičiamas...";
+    setBusy(updateForm, true, "Išsaugoma…");
+    setStatus("Saugiai keičiame slaptažodį…", "loading");
     try {
       await updatePassword(data.password);
       accessToken = "";
-      history.replaceState(null, "", window.location.pathname);
       updateForm.reset();
       updateForm.hidden = true;
       intro.textContent = "Slaptažodis pakeistas. Dabar galite prisijungti.";
       status.innerHTML = "Slaptažodis pakeistas. <a href='prisijungti.html'>Prisijungti</a>";
+      status.dataset.state = "success";
     } catch (error) {
-      status.textContent = error.message || "Nepavyko pakeisti slaptažodžio. Paprašykite naujos atkūrimo nuorodos.";
-      button.disabled = false;
+      setStatus(error.message || "Nepavyko pakeisti slaptažodžio. Paprašykite naujos atkūrimo nuorodos.", "error");
+      setBusy(updateForm, false);
     }
   });
 })();

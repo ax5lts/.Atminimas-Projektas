@@ -2,11 +2,13 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; frame-src https://www.openstreetmap.org">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="Pasirinkite graviruotą plieno QR atminimo lentelę ir peržiūrėkite ASA 3D varianto prieinamumą.">
 <title>QR atminimo lentelės - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260724-1">
+<link rel="stylesheet" href="css/styles.css?v=20260724-5">
 <link rel="stylesheet" href="css/shop-ux.css?v=20260724-1">
 </head>
 <body data-loading>
@@ -39,7 +41,7 @@
     </header>
 
     <ol class="shop-journey" aria-label="Užsakymo eiga">
-      <li class="is-current"><span>1</span><strong>Pasirinkite lentelę</strong><small>Esate čia</small></li>
+      <li class="is-current" aria-current="step"><span>1</span><strong>Pasirinkite lentelę</strong><small>Esate čia</small></li>
       <li><span>2</span><strong>Sukurkite puslapį</strong><small>Galima neprisijungus</small></li>
       <li><span>3</span><strong>Pasirinkite pristatymą</strong><small>Matysite visą kainą</small></li>
       <li><span>4</span><strong>Saugiai apmokėkite</strong><small>Tada patvirtinsite gamybą</small></li>

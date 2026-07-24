@@ -1,15 +1,21 @@
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const PHOTO_BUCKET = "grave-photo-submissions";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+  "";
+const SUBMISSION_BUCKET = "grave-photo-submissions";
+const MANUAL_GRAVE_BUCKET = "kapavietes";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers":
+    "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
 };
 
 type PhotoRow = {
+  bucket: string;
   storage_path: string;
   mime_type: string;
 };
@@ -21,6 +27,8 @@ function jsonResponse(body: unknown, status: number) {
       ...corsHeaders,
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff",
     },
   });
@@ -59,32 +67,111 @@ async function isAdmin(request: Request): Promise<boolean> {
     role: "eq.admin",
     limit: "1",
   });
-  const roleResponse = await fetch(`${SUPABASE_URL}/rest/v1/user_roles?${params}`, {
-    headers: serviceHeaders(),
-  });
+  const roleResponse = await fetch(
+    `${SUPABASE_URL}/rest/v1/user_roles?${params}`,
+    {
+      headers: serviceHeaders(),
+    },
+  );
   if (!roleResponse.ok) return false;
   const roles = await roleResponse.json().catch(() => []);
   return Array.isArray(roles) && roles.length > 0;
 }
 
-async function findPhoto(url: URL, request: Request): Promise<PhotoRow | null | Response> {
+async function findPhoto(
+  url: URL,
+  request: Request,
+): Promise<PhotoRow | null | Response> {
   const reviewId = (url.searchParams.get("review_id") || "").trim();
+  const manualId = (url.searchParams.get("manual_id") || "").trim();
+  if (reviewId && manualId) {
+    return jsonResponse({
+      error: "Nurodykite tik vieną nuotraukos identifikatorių.",
+    }, 400);
+  }
+
+  if (manualId) {
+    if (!UUID_PATTERN.test(manualId)) {
+      return jsonResponse(
+        { error: "Neteisingas kapavietės identifikatorius." },
+        400,
+      );
+    }
+    const manualParams = new URLSearchParams({
+      select: "id,nuotraukos_kelias,statusas",
+      id: `eq.${manualId}`,
+      statusas: "eq.paskelbtas",
+      limit: "1",
+    });
+    const manualResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/kapavietes?${manualParams}`,
+      { headers: serviceHeaders() },
+    );
+    if (!manualResponse.ok) {
+      console.error(
+        "manual grave photo lookup failed",
+        manualResponse.status,
+        await manualResponse.text(),
+      );
+      return jsonResponse({ error: "Nuotraukos patikrinti nepavyko." }, 502);
+    }
+    const manualRows = await manualResponse.json().catch(() => []);
+    const row = Array.isArray(manualRows) ? manualRows[0] : null;
+    const path = String(row?.nuotraukos_kelias || "");
+    const escapedId = manualId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = path.match(
+      new RegExp(`^${escapedId}/[A-Za-z0-9._-]+\\.(jpe?g|png|webp)$`, "i"),
+    );
+    if (!row || row.statusas !== "paskelbtas") return null;
+    if (match) {
+      const extension = match[1].toLowerCase();
+      return {
+        bucket: MANUAL_GRAVE_BUCKET,
+        storage_path: path,
+        mime_type: extension === "png"
+          ? "image/png"
+          : extension === "webp"
+          ? "image/webp"
+          : "image/jpeg",
+      };
+    }
+
+    // If there is no administrator-uploaded primary image, fall back to the
+    // newest approved community submission for this published grave.
+    url.searchParams.set("source_model", "manual");
+    url.searchParams.set("grave_source_id", manualId);
+  }
+
   const params = new URLSearchParams({
     select: "storage_path,mime_type",
     limit: "1",
   });
 
   if (reviewId) {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId)) {
-      return jsonResponse({ error: "Neteisingas nuotraukos identifikatorius." }, 400);
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(reviewId)
+    ) {
+      return jsonResponse(
+        { error: "Neteisingas nuotraukos identifikatorius." },
+        400,
+      );
     }
-    if (!await isAdmin(request)) return jsonResponse({ error: "Reikia administratoriaus teisių." }, 403);
+    if (!await isAdmin(request)) {
+      return jsonResponse({ error: "Reikia administratoriaus teisių." }, 403);
+    }
     params.set("id", `eq.${reviewId}`);
   } else {
     const sourceModel = (url.searchParams.get("source_model") || "").trim();
     const graveId = (url.searchParams.get("grave_source_id") || "").trim();
-    if (!/^[A-Za-z0-9_-]{1,100}$/.test(sourceModel) || !graveId || graveId.length > 300) {
-      return jsonResponse({ error: "Trūksta kapavietės identifikatoriaus." }, 400);
+    if (
+      !/^[A-Za-z0-9_-]{1,100}$/.test(sourceModel) || !graveId ||
+      graveId.length > 300
+    ) {
+      return jsonResponse(
+        { error: "Trūksta kapavietės identifikatoriaus." },
+        400,
+      );
     }
     params.set("source_model", `eq.${sourceModel}`);
     params.set("grave_source_id", `eq.${graveId}`);
@@ -92,19 +179,30 @@ async function findPhoto(url: URL, request: Request): Promise<PhotoRow | null | 
     params.set("order", "reviewed_at.desc.nullslast");
   }
 
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/grave_photo_submissions?${params}`, {
-    headers: serviceHeaders(),
-  });
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/grave_photo_submissions?${params}`,
+    {
+      headers: serviceHeaders(),
+    },
+  );
   if (!response.ok) {
-    console.error("grave photo lookup failed", response.status, await response.text());
+    console.error(
+      "grave photo lookup failed",
+      response.status,
+      await response.text(),
+    );
     return jsonResponse({ error: "Nuotraukos patikrinti nepavyko." }, 502);
   }
   const rows = await response.json().catch(() => []);
-  return Array.isArray(rows) && rows[0] ? rows[0] as PhotoRow : null;
+  return Array.isArray(rows) && rows[0]
+    ? { ...rows[0], bucket: SUBMISSION_BUCKET } as PhotoRow
+    : null;
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return jsonResponse({ error: "Leidžiami tik GET ir HEAD metodai." }, 405);
   }
@@ -115,26 +213,41 @@ Deno.serve(async (request: Request) => {
   const url = new URL(request.url);
   const found = await findPhoto(url, request);
   if (found instanceof Response) return found;
-  if (!found) return jsonResponse({ error: "Patvirtintos kapavietės nuotraukos nėra." }, 404);
+  if (!found) {
+    return jsonResponse(
+      { error: "Patvirtintos kapavietės nuotraukos nėra." },
+      404,
+    );
+  }
 
   const objectResponse = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(PHOTO_BUCKET)}/${storagePath(found.storage_path)}`,
+    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(found.bucket)}/${
+      storagePath(found.storage_path)
+    }`,
     { headers: serviceHeaders() },
   );
   if (!objectResponse.ok || !objectResponse.body) {
-    console.error("grave photo object missing", objectResponse.status, found.storage_path);
+    console.error(
+      "grave photo object missing",
+      objectResponse.status,
+      found.storage_path,
+    );
     return jsonResponse({ error: "Nuotraukos failas nepasiekiamas." }, 404);
   }
 
   const review = url.searchParams.has("review_id");
   const headers = new Headers({
     ...corsHeaders,
-    "Content-Type": found.mime_type || objectResponse.headers.get("content-type") || "image/jpeg",
+    "Content-Type": found.mime_type ||
+      objectResponse.headers.get("content-type") || "image/jpeg",
     "Cache-Control": review ? "private, no-store" : "public, max-age=300",
     "Cross-Origin-Resource-Policy": "cross-origin",
     "X-Content-Type-Options": "nosniff",
   });
   const length = objectResponse.headers.get("content-length");
   if (length) headers.set("Content-Length", length);
-  return new Response(request.method === "HEAD" ? null : objectResponse.body, { status: 200, headers });
+  return new Response(request.method === "HEAD" ? null : objectResponse.body, {
+    status: 200,
+    headers,
+  });
 });

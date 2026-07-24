@@ -41,11 +41,6 @@
     return cfg.SUPABASE_URL.replace(/\/$/, "") + "/storage/v1/object/" + encodeURIComponent(bucket) + "/" + path.split("/").map(encodeURIComponent).join("/");
   }
 
-  function publicStorageUrl(bucket, path) {
-    var cfg = getConfig();
-    return cfg.SUPABASE_URL.replace(/\/$/, "") + "/storage/v1/object/public/" + encodeURIComponent(bucket) + "/" + path.split("/").map(encodeURIComponent).join("/");
-  }
-
   async function fetchJson(url) {
     var res = await apiFetch(url, { headers: headers() });
     if (!res.ok) {
@@ -91,7 +86,15 @@
 
   function uniqueIdentifier(vardas, pavarde) {
     var base = slugify([vardas, pavarde].filter(Boolean).join(" "));
-    return base + "-" + Date.now().toString(36);
+    var bytes = new Uint8Array(12);
+    if (!global.crypto || !global.crypto.getRandomValues) {
+      throw new Error("Ši naršyklė nepalaiko saugaus puslapio kodo kūrimo.");
+    }
+    global.crypto.getRandomValues(bytes);
+    var suffix = Array.from(bytes).map(function (byte) {
+      return byte.toString(16).padStart(2, "0");
+    }).join("");
+    return base + "-" + suffix;
   }
 
   function fileExt(file) {
@@ -112,7 +115,7 @@
     if (!res.ok) {
       throw new Error("Failo įkelti nepavyko (" + res.status + ").");
     }
-    return publicStorageUrl(bucket, path);
+    return storageObjectUrl(bucket, path);
   }
 
   async function uploadBuilderMedia(identifier, files, upsert, onProgress) {
@@ -177,18 +180,27 @@
   }
 
   async function loadAtminimasBySlug(identifier) {
-    var rows = await fetchJson(
-      restUrl("profiliai", "id=eq." + encodeURIComponent(identifier) + "&select=*&limit=1")
+    var res = await apiFetch(
+      functionUrl("profile-content") + "?profile_id=" + encodeURIComponent(identifier),
+      { headers: headers(), cache: "no-store" }
     );
-    if (!rows || !rows.length) {
+    var data = await res.json().catch(function () { return {}; });
+    if (res.status === 404) {
       throw new Error("Atminimo puslapis nerastas.");
     }
-    return { atminimas: rows[0] };
+    if (!res.ok || !data.atminimas) {
+      throw new Error("Atminimo puslapio įkelti nepavyko.");
+    }
+    return { atminimas: data.atminimas, can_manage: !!data.can_manage };
   }
 
   async function createAtminimas(input, options) {
     var vardas = (input.vardas || "").trim();
     var pavarde = (input.pavarde || "").trim();
+    var ownerId = global.AtminimasAuth && global.AtminimasAuth.userId
+      ? global.AtminimasAuth.userId()
+      : "";
+    if (!ownerId) throw new Error("Puslapiui išsaugoti būtina prisijungti.");
     var customId = (input.id || input.slug || "").trim();
     var identifier = customId ? slugify(customId) : uniqueIdentifier(vardas, pavarde);
     var fullName = [vardas, pavarde].filter(Boolean).join(" ");
@@ -209,6 +221,7 @@
 
     await postJson("profiliai", {
       id: identifier,
+      owner_id: ownerId,
       vardas: vardas,
       pavarde: pavarde,
       gimimo_data: input.gimimo_data || null,
@@ -224,21 +237,16 @@
   }
 
   async function createUzsakymas(identifier, input) {
-    var pageUrl = absoluteUrl("sablonas-viskas.html?slug=" + encodeURIComponent(identifier));
-    var qrUrl = qrImageUrl(pageUrl);
-    var row = await postJson("uzsakymai", {
-      profilis_id: identifier,
-      puslapio_url: pageUrl,
-      qr_kodas_url: qrUrl,
-      product_type: input && input.product_type === "asa" ? "asa" : "metal",
-      busena: "sukurtas",
-      apmoketa: !!(input && input.apmoketa)
+    var row = await manageProfile({
+      action: "create_order",
+      profile_id: identifier,
+      product_type: input && input.product_type === "asa" ? "asa" : "metal"
     });
     return {
       id: row.id,
       profilis_id: identifier,
-      puslapio_url: row.puslapio_url || pageUrl,
-      qr_kodas_url: row.qr_kodas_url || qrUrl,
+      puslapio_url: row.puslapio_url,
+      qr_kodas_url: row.qr_kodas_url,
       busena: row.busena || "sukurtas"
     };
   }

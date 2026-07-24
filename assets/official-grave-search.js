@@ -47,12 +47,12 @@
   }
   function apiBase() { return config().SUPABASE_URL.replace(/\/$/, ""); }
   function encodedPath(path) { return String(path || "").split("/").map(encodeURIComponent).join("/"); }
-  function publicStorageUrl(bucket, path) {
-    return apiBase() + "/storage/v1/object/public/" + encodeURIComponent(bucket) + "/" + encodedPath(path);
-  }
   function gravePhotoUrl(sourceModel, graveSourceId) {
     var params = new URLSearchParams({ source_model: sourceModel, grave_source_id: graveSourceId });
     return apiBase() + "/functions/v1/grave-photo?" + params.toString();
+  }
+  function manualGravePhotoUrl(id) {
+    return apiBase() + "/functions/v1/grave-photo?manual_id=" + encodeURIComponent(id);
   }
   function storageObjectUrl(bucket, path) {
     return apiBase() + "/storage/v1/object/" + encodeURIComponent(bucket) + "/" + encodedPath(path);
@@ -155,7 +155,7 @@
     var sourceModel = row.source_model || "";
     var graveSourceId = row.grave_source_id || row.id || "";
     if (!sourceModel || !graveSourceId) return "";
-    var source = row.photo_url || gravePhotoUrl(sourceModel, graveSourceId);
+    var source = row.photo_proxy_url || row.photo_url || gravePhotoUrl(sourceModel, graveSourceId);
     var known = Boolean(row.photo_url);
     var alt = "Kapavietė, kurioje palaidotas " + rawName + (row.cemetery ? ", " + row.cemetery : "");
     var data = " data-photo-source-model='" + html(sourceModel) + "' data-photo-grave-id='" + html(graveSourceId) +
@@ -221,7 +221,7 @@
       death_date: row.mirties_data, birth_year: row.gimimo_metai, death_year: row.mirties_metai,
       cemetery: row.kapiniu_pavadinimas, municipality: row.miestas, section: row.sektorius,
       row_name: row.eile, place_number: row.kapo_numeris, latitude: row.platuma, longitude: row.ilguma,
-      photo_url: row.nuotraukos_kelias ? publicStorageUrl("kapavietes", row.nuotraukos_kelias) : "" };
+      photo_proxy_url: manualGravePhotoUrl(row.id) };
   }
   function edgeUrl() {
     if (config().CEMETERY_SEARCH_API_URL) return config().CEMETERY_SEARCH_API_URL;

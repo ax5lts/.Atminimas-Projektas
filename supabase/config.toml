@@ -7,6 +7,15 @@ project_id = "atminimas_Projektas"
 [functions.payment-webhook]
 verify_jwt = false
 
+[functions.payment-create]
+verify_jwt = true
+
+[functions.document-download]
+verify_jwt = true
+
+[functions.shipping-create]
+verify_jwt = true
+
 [functions.automation-worker]
 verify_jwt = false
 
@@ -30,6 +39,12 @@ verify_jwt = false
 
 [functions.profile-manage]
 verify_jwt = true
+
+[functions.profile-content]
+verify_jwt = false
+
+[functions.legal-submission]
+verify_jwt = false
 
 [functions.memorial-engagement]
 verify_jwt = false
@@ -215,7 +230,7 @@ enable_manual_linking = false
 minimum_password_length = 12
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "lower_upper_letters_digits_symbols"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -237,7 +252,7 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+sign_in_sign_ups = 10
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
@@ -260,7 +275,7 @@ enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).

@@ -6,6 +6,14 @@
   var refreshTimer = null;
   var REFRESH_SKEW_MS = 90 * 1000;
 
+  function removeLegacySession() {
+    try {
+      global.localStorage.removeItem(SESSION_KEY);
+    } catch (_err) {
+      // Saugykla gali būti išjungta naršyklės privatumo režime.
+    }
+  }
+
   function cfg() {
     var config = global.ATMINIMAS_CONFIG;
     if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
@@ -24,7 +32,7 @@
 
   function session() {
     try {
-      return JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+      return JSON.parse(global.sessionStorage.getItem(SESSION_KEY) || "null");
     } catch (_err) {
       return null;
     }
@@ -71,14 +79,16 @@
 
   function saveSession(value) {
     if (!value || !value.access_token) return;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(value));
+    global.sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+    removeLegacySession();
     scheduleRefresh(value);
   }
 
   function clearSession() {
     if (refreshTimer) global.clearTimeout(refreshTimer);
     refreshTimer = null;
-    localStorage.removeItem(SESSION_KEY);
+    global.sessionStorage.removeItem(SESSION_KEY);
+    removeLegacySession();
   }
 
   function accessToken() {
@@ -101,7 +111,7 @@
       return "El. paštas dar nepatvirtintas. Atidarykite gautą laišką ir paspauskite patvirtinimo nuorodą.";
     }
     if (/user already registered/i.test(message)) {
-      return "Paskyra su šiuo el. paštu jau užregistruota.";
+      return "Jei šiuo el. paštu galima registruotis, patvirtinimo laiškas bus išsiųstas.";
     }
     if (/password should be at least/i.test(message)) {
       return "Slaptažodis per trumpas.";
@@ -139,6 +149,9 @@
       var message = data.msg || data.error_description || data.message || "Prisijungti nepavyko.";
       var error = new Error(translatedAuthMessage(message));
       error.status = res.status;
+      error.code = data.error_code || data.code || "";
+      error.existingAccount = /user already registered/i.test(message) ||
+        /user_already_exists|email_exists/i.test(error.code);
       throw error;
     }
     return data;
@@ -266,14 +279,20 @@
 
   async function signUp(email, password, name) {
     var confirmationState = createConfirmationState();
-    var data = await authFetch("/auth/v1/signup?redirect_to=" + encodeURIComponent(emailRedirectUrl(confirmationState)), {
-      method: "POST",
-      body: JSON.stringify({
-        email: email,
-        password: password,
-        data: { name: name || "" }
-      })
-    });
+    var data;
+    try {
+      data = await authFetch("/auth/v1/signup?redirect_to=" + encodeURIComponent(emailRedirectUrl(confirmationState)), {
+        method: "POST",
+        body: JSON.stringify({
+          email: email,
+          password: password,
+          data: { name: name || "" }
+        })
+      });
+    } catch (error) {
+      if (!error || !error.existingAccount) throw error;
+      data = { user: { email: email } };
+    }
     if (data.access_token) {
       localStorage.removeItem(CONFIRMATION_STATE_KEY);
       saveSession(data);
@@ -360,11 +379,9 @@
     }
   }
 
+  removeLegacySession();
   consumeSessionFromUrl();
   scheduleRefresh(session());
-  global.addEventListener("storage", function (event) {
-    if (event.key === SESSION_KEY) scheduleRefresh(session());
-  });
   if (global.document) {
     global.document.addEventListener("visibilitychange", function () {
       if (global.document.visibilityState === "visible") {

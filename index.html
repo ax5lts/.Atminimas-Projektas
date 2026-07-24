@@ -2,11 +2,13 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; frame-src https://www.openstreetmap.org">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260719-3">
+<link rel="stylesheet" href="css/styles.css?v=20260724-5">
 </head>
 <body class="home-page" data-loading>
 <div class="site-shell">
@@ -31,6 +33,10 @@
   <main class="site-main home-main">
     <section class="landing-intro" id="pradzia" aria-labelledby="landing-title">
       <div class="landing-intro__glow" aria-hidden="true"></div>
+      <picture class="landing-intro__product" aria-hidden="true">
+        <source media="(max-width: 560px)" srcset="assets/qr-plienas-480.webp">
+        <img src="assets/qr-plienas.webp" alt="" width="1086" height="1448" decoding="async" fetchpriority="high">
+      </picture>
       <div class="landing-intro__content">
         <p class="eyebrow landing-intro__eyebrow">Prisiminimas, kuris išlieka</p>
         <h1 class="landing-title" id="landing-title" aria-label="Atminimas">
@@ -38,7 +44,7 @@
         </h1>
         <p class="landing-intro__lead">Skaitmeninis atminimas ir rūpestinga kapavietės priežiūra vienoje vietoje.</p>
         <div class="actions landing-intro__actions">
-          <a class="button" href="#qr-paslauga">Pirkti QR kodą</a>
+          <a class="button" href="parduotuve.html">Rinktis lentelę</a>
           <a class="button button--ghost" href="#kitos-paslaugos">Kitos paslaugos</a>
         </div>
       </div>
@@ -46,6 +52,21 @@
         <span aria-hidden="true"></span>
       </a>
     </section>
+
+    <ul class="landing-proof" aria-label="Kodėl pradėti paprasta">
+      <li>
+        <span aria-hidden="true">01</span>
+        <div><strong>Pradėkite nemokėdami</strong><small>Pirmiausia ramiai sukurkite ir peržiūrėkite puslapį.</small></div>
+      </li>
+      <li>
+        <span aria-hidden="true">02</span>
+        <div><strong>Puslapis iš pradžių privatus</strong><small>Juodraštį galėsite patikrinti prieš tęsdami užsakymą.</small></div>
+      </li>
+      <li>
+        <span aria-hidden="true">03</span>
+        <div><strong><a href="sablonas-viskas.html?slug=maironis-pavyzdys">Pamatykite tikrą pavyzdį</a></strong><small>Pažiūrėkite, kaip atminimo puslapis atrodo telefone.</small></div>
+      </li>
+    </ul>
 
     <section class="home-section home-grave-search" aria-labelledby="home-grave-title">
       <div class="home-grave-search__copy">
@@ -306,10 +327,10 @@
   </footer>
 </div>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
-<script src="assets/auth.js?v=20260724-2"></script>
+<script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
 <script src="assets/home.js?v=20260719-5"></script>
-<script src="assets/official-grave-search.js?v=20260719-3"></script>
+<script src="assets/official-grave-search.js?v=20260724-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260724-1"></script>
 </body>
