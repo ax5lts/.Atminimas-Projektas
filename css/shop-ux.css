@@ -1,0 +1,152 @@
+.shop-journey {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 30px;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-journey li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid #ded8cb;
+  border-radius: 14px;
+  background: #fffdf8;
+}
+
+.shop-journey li > span {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eee9df;
+  color: #3e3a35;
+  font-weight: 800;
+}
+
+.shop-journey strong,
+.shop-journey small {
+  overflow-wrap: anywhere;
+}
+
+.shop-journey strong {
+  font-size: 0.92rem;
+}
+
+.shop-journey small {
+  color: #6b665e;
+  line-height: 1.3;
+}
+
+.shop-journey .is-current {
+  border-color: #174f4a;
+  background: #f2f8f5;
+}
+
+.shop-journey .is-current > span {
+  background: #174f4a;
+  color: #fff;
+}
+
+.shop-catalog-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -10px 0 28px;
+  padding: 14px 16px;
+  border: 1px solid #c98f35;
+  border-radius: 14px;
+  background: #fff8e9;
+}
+
+.shop-catalog-status[hidden] {
+  display: none;
+}
+
+.shop-catalog-status p {
+  margin: 0;
+}
+
+.product-order-summary {
+  display: grid;
+  gap: 0;
+  margin: 20px 0;
+  border: 1px solid #ded8cb;
+  border-radius: 14px;
+  background: #fffdf8;
+  overflow: hidden;
+}
+
+.product-order-summary > div {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 14px;
+}
+
+.product-order-summary > div + div {
+  border-top: 1px solid #ebe6dc;
+}
+
+.product-order-summary span {
+  color: #6b665e;
+}
+
+.product-order-summary strong {
+  max-width: 60%;
+  text-align: right;
+}
+
+.product-action-note {
+  margin: 12px 0 0;
+  color: #5f5a53;
+  font-size: 0.92rem;
+}
+
+#product-create-link[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .shop-journey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .shop-journey {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .shop-journey li {
+    padding: 10px 12px;
+  }
+
+  .shop-catalog-status,
+  .product-order-summary > div {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .shop-catalog-status .button {
+    width: 100%;
+  }
+
+  .product-order-summary strong {
+    max-width: none;
+    text-align: left;
+  }
+}

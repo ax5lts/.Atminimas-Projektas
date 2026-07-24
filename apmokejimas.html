@@ -1,17 +1,47 @@
 <!DOCTYPE html>
 <html lang="lt">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg"><meta name="description" content="Atminimas užsakymo pristatymo ir apmokėjimo duomenys"><meta name="robots" content="noindex,nofollow"><title>Pristatymas ir apmokėjimas - Atminimas</title><link rel="stylesheet" href="css/styles.css?v=20260716-3"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg"><meta name="description" content="Atminimas užsakymo pristatymo ir apmokėjimo duomenys"><meta name="robots" content="noindex,nofollow"><title>Pristatymas ir apmokėjimas - Atminimas</title><link rel="stylesheet" href="css/styles.css?v=20260716-3"><link rel="stylesheet" href="css/checkout-ux.css?v=20260724-1"></head>
 <body data-loading><div class="site-shell">
 <header class="site-header"><div class="site-header__inner"><a class="brand" href="index.html"><span class="brand__mark"><img src="assets/atminimas-candle.jpg" alt=""></span><span class="brand__name">Atminimas</span></a><nav class="site-nav" aria-label="Pagrindinė navigacija"><a href="vartotojas.html">Kliento zona</a><a href="taisykles.html">Taisyklės</a></nav></div></header>
 <main class="site-main checkout-page">
   <header class="legal-page__header"><p class="eyebrow">Paskutinis žingsnis</p><h1>Kur pristatyti?</h1><p>Pasirinkite paštomatą, patikrinkite sumą ir tęskite vienu mygtuku.</p></header>
+  <section class="checkout-success" id="payment-success" aria-labelledby="payment-success-title" tabindex="-1" hidden>
+    <span class="checkout-success__mark" aria-hidden="true">✓</span>
+    <div>
+      <p class="eyebrow">Mokėjimo būsena</p>
+      <h2 id="payment-success-title">Mokėjimas gautas</h2>
+      <p id="payment-success-message">Tikriname saugų mokėjimo patvirtinimą. Užsakymo būseną visada matysite kliento zonoje.</p>
+      <a class="button" id="payment-success-action" href="vartotojas.html#user-pages">Atidaryti kliento zoną</a>
+    </div>
+  </section>
   <section class="checkout-grid">
     <form class="legal-form checkout-form" id="delivery-form">
       <h2>Pristatymas į paštomatą</h2>
-      <label>Vežėjas<select name="carrier" required><option value="">Pasirinkite</option><option value="Omniva">Omniva</option><option value="LP Express">LP Express</option><option value="DPD">DPD</option></select></label>
-      <label>Miestas / savivaldybė<input name="city" type="search" list="checkout-city-list" autocomplete="address-level2" placeholder="Pradėkite rašyti miestą" required disabled><datalist id="checkout-city-list"></datalist></label>
-      <label>Paštomatas<select name="parcel_terminal" required disabled><option value="">Pirmiausia pasirinkite miestą</option></select></label>
-      <p class="editor-note" id="locker-status" role="status" aria-live="polite"></p>
+      <label for="checkout-carrier">Vežėjas
+        <select id="checkout-carrier" name="carrier" required disabled aria-describedby="shipping-options-status">
+          <option value="">Kraunami pristatymo būdai…</option>
+        </select>
+      </label>
+      <div class="checkout-inline-state" id="shipping-options-state">
+        <p id="shipping-options-status" role="status" aria-live="polite">Tikriname galimus pristatymo būdus ir galutines kainas.</p>
+        <button class="button button--ghost checkout-retry" id="shipping-options-retry" type="button" hidden>Bandykite dar kartą</button>
+      </div>
+      <label for="checkout-city">Miestas / savivaldybė
+        <input id="checkout-city" name="city" type="search" list="checkout-city-list" autocomplete="address-level2" placeholder="Pirmiausia pasirinkite vežėją" required disabled>
+        <datalist id="checkout-city-list"></datalist>
+      </label>
+      <label for="checkout-locker-search">Paštomato paieška
+        <input id="checkout-locker-search" type="search" autocomplete="off" placeholder="Ieškokite pagal pavadinimą ar adresą" aria-controls="checkout-terminal" disabled>
+      </label>
+      <label for="checkout-terminal">Paštomatas
+        <select id="checkout-terminal" name="parcel_terminal" required disabled aria-describedby="locker-status">
+          <option value="">Pirmiausia pasirinkite vežėją</option>
+        </select>
+      </label>
+      <div class="checkout-inline-state" id="locker-state">
+        <p class="editor-note" id="locker-status" role="status" aria-live="polite"></p>
+        <button class="button button--ghost checkout-retry" id="locker-retry" type="button" hidden>Bandykite dar kartą</button>
+      </div>
       <h2>Gavėjas</h2>
       <label>Vardas ir pavardė<input name="recipient_name" autocomplete="name" required maxlength="160"></label>
       <label>Telefonas<input type="tel" name="recipient_phone" autocomplete="tel" required maxlength="40" placeholder="+370..."></label>
@@ -28,5 +58,5 @@
   </section>
 </main>
 <footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><nav class="legal-links"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a></nav></div></footer>
-</div><script src="assets/supabase-config.js"></script><script src="assets/business-config.js"></script><script src="assets/auth.js?v=20260716-3"></script><script src="assets/business-details.js"></script><script src="assets/checkout.js?v=20260724-1"></script><script src="assets/loading.js?v=20260707-1"></script><script src="assets/site-ui.js?v=20260716-1"></script>
+</div><script src="assets/supabase-config.js"></script><script src="assets/business-config.js"></script><script src="assets/auth.js?v=20260724-2"></script><script src="assets/business-details.js"></script><script src="assets/checkout.js?v=20260724-2"></script><script src="assets/loading.js?v=20260707-1"></script><script src="assets/site-ui.js?v=20260716-1"></script>
 </body></html>

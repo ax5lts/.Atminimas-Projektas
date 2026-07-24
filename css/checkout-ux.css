@@ -1,0 +1,140 @@
+.checkout-success {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin: 0 0 24px;
+  padding: 24px;
+  border: 1px solid #a9c9b9;
+  border-radius: 18px;
+  background: #f1f8f3;
+  box-shadow: var(--shadow);
+  scroll-margin-top: 92px;
+}
+
+.checkout-success:focus {
+  outline: 3px solid #315f49;
+  outline-offset: 3px;
+}
+
+.checkout-success__mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: #24533c;
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.checkout-success .eyebrow {
+  margin: 0 0 4px;
+  color: #315f49;
+}
+
+.checkout-success h2 {
+  margin: 0 0 8px;
+}
+
+.checkout-success p:not(.eyebrow) {
+  max-width: 68ch;
+  margin: 0 0 16px;
+  color: #33443b;
+  line-height: 1.55;
+}
+
+.checkout-inline-state {
+  display: grid;
+  gap: 10px;
+  margin: -4px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #faf8f2;
+}
+
+.checkout-inline-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.checkout-inline-state[data-state="loading"] {
+  border-color: #d9cfb9;
+  background: #fffbef;
+}
+
+.checkout-inline-state[data-state="ready"] {
+  border-color: #b9d0c4;
+  background: #f5faf7;
+}
+
+.checkout-inline-state[data-state="ready"] p {
+  color: #315f49;
+}
+
+.checkout-inline-state[data-state="error"] {
+  border-color: #d8aaa3;
+  background: #fff5f3;
+}
+
+.checkout-inline-state[data-state="error"] p {
+  color: #743b34;
+}
+
+.checkout-retry {
+  width: fit-content;
+  min-height: 40px;
+  padding: 8px 13px;
+}
+
+.checkout-form input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.checkout-form select:disabled,
+.checkout-form input:disabled {
+  cursor: not-allowed;
+  color: #706d66;
+  background: #f2f0eb;
+  opacity: 1;
+}
+
+.checkout-form select:focus-visible,
+.checkout-form input:focus-visible,
+.checkout-retry:focus-visible {
+  outline: 3px solid #6e5b36;
+  outline-offset: 2px;
+}
+
+.checkout-price-lines strong,
+.checkout-total strong {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .checkout-success {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .checkout-success__mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .checkout-success .button,
+  .checkout-retry {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .checkout-form,
+  .checkout-summary {
+    padding: 20px;
+  }
+}

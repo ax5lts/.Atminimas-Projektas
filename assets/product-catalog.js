@@ -1,6 +1,6 @@
 (function () {
   var DEFAULT_CATALOG = {
-    metal: { id: "metal", available: true, price_cents: null, currency: "EUR" },
+    metal: { id: "metal", available: false, price_cents: null, currency: "EUR" },
     asa: { id: "asa", available: false, price_cents: null, currency: "EUR" }
   };
 
@@ -17,11 +17,12 @@
     }).format(Number(priceCents) / 100);
   }
 
-  function fallbackCatalog() {
+  function fallbackCatalog(message) {
     return {
       metal: Object.assign({}, DEFAULT_CATALOG.metal),
       asa: Object.assign({}, DEFAULT_CATALOG.asa),
-      remote: false
+      remote: false,
+      error: message || "Nepavyko patikrinti produktų prieinamumo."
     };
   }
 
@@ -60,7 +61,7 @@
       });
       return catalog;
     } catch (_error) {
-      return fallbackCatalog();
+      return fallbackCatalog("Nepavyko susisiekti su parduotuve. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     } finally {
       if (timeoutId) window.clearTimeout(timeoutId);
     }

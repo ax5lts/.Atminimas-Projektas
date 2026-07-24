@@ -24,6 +24,13 @@
     return h;
   }
 
+  async function apiFetch(url, options) {
+    if (global.AtminimasAuth && global.AtminimasAuth.authorizedFetch && global.AtminimasAuth.accessToken()) {
+      return global.AtminimasAuth.authorizedFetch(url, options);
+    }
+    return fetch(url, options);
+  }
+
   function restUrl(table, query) {
     var cfg = getConfig();
     return cfg.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + encodeURIComponent(table) + "?" + query;
@@ -40,7 +47,7 @@
   }
 
   async function fetchJson(url) {
-    var res = await fetch(url, { headers: headers() });
+    var res = await apiFetch(url, { headers: headers() });
     if (!res.ok) {
       throw new Error("Duomenų išsaugoti nepavyko (" + res.status + ").");
     }
@@ -48,7 +55,7 @@
   }
 
   async function postJson(table, payload) {
-    var res = await fetch(restUrl(table, "select=*"), {
+    var res = await apiFetch(restUrl(table, "select=*"), {
       method: "POST",
       headers: Object.assign({}, headers(), {
         "Content-Type": "application/json",
@@ -94,7 +101,7 @@
   }
 
   async function uploadOneFile(bucket, path, file, upsert) {
-    var res = await fetch(storageObjectUrl(bucket, path), {
+    var res = await apiFetch(storageObjectUrl(bucket, path), {
       method: "POST",
       headers: Object.assign({}, headers(), {
         "Content-Type": file.type || "application/octet-stream",
@@ -241,7 +248,7 @@
   }
 
   async function manageProfile(payload) {
-    var res = await fetch(functionUrl("profile-manage"), {
+    var res = await apiFetch(functionUrl("profile-manage"), {
       method: "POST",
       headers: Object.assign({}, headers(), { "Content-Type": "application/json" }),
       body: JSON.stringify(payload)

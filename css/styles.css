@@ -681,7 +681,7 @@ video {
 
 .editor-workspace {
   display: grid;
-  grid-template-columns: 72px 320px minmax(420px, 1fr) 300px;
+  grid-template-columns: minmax(360px, 420px) minmax(420px, 1fr) 300px;
   min-height: calc(100vh - 64px);
 }
 
@@ -3325,11 +3325,11 @@ video {
 
 @media (min-width: 861px) and (max-width: 1280px) {
   .editor-workspace {
-    grid-template-columns: 72px minmax(290px, 340px) minmax(360px, 1fr);
+    grid-template-columns: minmax(340px, 400px) minmax(360px, 1fr);
   }
 
   .editor-db-panel {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     border-left: 0;
   }
@@ -5099,9 +5099,51 @@ body[data-loading]::after {
   background: #9ed4c3;
 }
 
+.editor-stepper button.is-complete {
+  color: #d9eee7;
+}
+
+.editor-stepper button.is-complete span {
+  border-color: rgba(158, 212, 195, 0.72);
+  color: #d9eee7;
+  background: rgba(158, 212, 195, 0.14);
+}
+
+.editor-stepper button:focus-visible {
+  outline: 3px solid #bce4b9;
+  outline-offset: 2px;
+}
+
+.editor-step-status {
+  margin: 12px 0 0;
+  color: #d9eee7;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.editor-product-unavailable {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 194, 94, 0.55);
+  border-radius: 12px;
+  color: #fff2c9;
+  background: rgba(122, 82, 13, 0.24);
+}
+
+.editor-product-unavailable[hidden] {
+  display: none;
+}
+
+.editor-product-unavailable a {
+  color: #fff;
+  font-weight: 800;
+}
+
 .editor-step-progress {
   height: 3px;
-  margin: 7px 0 18px;
+  margin: 6px 0 18px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
@@ -5121,7 +5163,16 @@ body[data-loading]::after {
   gap: 14px;
   min-width: 0;
   padding: 0 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 0;
+}
+
+.editor-step:not(.is-active) {
+  display: none;
+}
+
+.editor-step.is-active {
+  display: grid;
+  animation: editor-step-in 240ms ease both;
 }
 
 .editor-step:last-child {
@@ -5159,10 +5210,19 @@ body[data-loading]::after {
 
 .editor-step-actions,
 .editor-final-actions {
+  position: sticky;
+  z-index: 16;
+  bottom: 12px;
   display: flex;
   gap: 10px;
   align-items: stretch;
-  margin-top: 4px;
+  margin: 18px -2px 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 17px;
+  background: rgba(48, 52, 59, 0.94);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
 }
 
 .editor-step-actions .button,
@@ -5171,6 +5231,14 @@ body[data-loading]::after {
   min-width: 0;
   padding-right: 12px;
   padding-left: 12px;
+}
+
+.editor-final-actions {
+  flex-wrap: wrap;
+}
+
+.editor-final-actions .button {
+  flex-basis: 130px;
 }
 
 .editor-open-preview {
@@ -5297,13 +5365,6 @@ body[data-loading]::after {
   50% { opacity: 0.45; transform: scale(0.8); }
 }
 
-@media (min-width: 861px) {
-  .editor-step-actions,
-  .editor-final-back {
-    display: none;
-  }
-}
-
 @media (max-width: 860px) {
   .editor-shell {
     grid-template-rows: auto 1fr;
@@ -5352,29 +5413,16 @@ body[data-loading]::after {
     min-width: 66px;
   }
 
-  .editor-step:not(.is-active) {
-    display: none;
-  }
-
   .editor-step.is-active {
     display: grid;
     min-height: 48svh;
     border-bottom: 0;
-    animation: editor-mobile-step-in 240ms ease both;
+    animation: editor-step-in 240ms ease both;
   }
 
   .editor-step-actions,
   .editor-final-actions {
-    position: sticky;
-    z-index: 16;
     bottom: max(12px, env(safe-area-inset-bottom));
-    margin: 18px -2px 0;
-    padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 17px;
-    background: rgba(48, 52, 59, 0.94);
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(14px);
   }
 
   .editor-canvas {
@@ -5487,7 +5535,7 @@ body[data-loading]::after {
   }
 }
 
-@keyframes editor-mobile-step-in {
+@keyframes editor-step-in {
   from { opacity: 0; transform: translateX(10px); }
   to { opacity: 1; transform: none; }
 }

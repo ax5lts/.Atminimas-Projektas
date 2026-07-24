@@ -33,14 +33,23 @@
         <button class="button" type="submit">Sukurti paskyrą</button>
         <p class="form-status" id="register-status" role="status" aria-live="polite"></p>
       </form>
+      <section class="info-box" id="register-confirmation" aria-labelledby="register-confirmation-title" aria-live="polite" tabindex="-1" hidden>
+        <h2 id="register-confirmation-title">Patvirtinkite el. paštą</h2>
+        <p>Patvirtinimo nuorodą išsiuntėme adresu <strong id="register-confirmation-email"></strong>. Patikrinkite ir šlamšto aplanką.</p>
+        <div class="actions">
+          <button class="button button--ghost" id="register-resend" type="button">Siųsti laišką dar kartą</button>
+          <a class="button" id="register-login-link" href="prisijungti.html">Eiti į prisijungimą</a>
+        </div>
+        <p class="form-status" id="register-resend-status" role="status" aria-live="polite"></p>
+      </section>
       <p class="auth-switch">Jau turite paskyrą? <a href="prisijungti.html">Prisijunkite</a></p>
       <p class="auth-privacy">Kurdami paskyrą patvirtinate, kad susipažinote su <a href="privatumas.html">privatumo ir slapukų politika</a>.</p>
     </section>
   </main>
 </div>
 <script src="assets/supabase-config.js?v=20260618"></script>
-<script src="assets/auth.js?v=20260716-3"></script>
-<script src="assets/register.js?v=20260707-1"></script>
+<script src="assets/auth.js?v=20260724-2"></script>
+<script src="assets/register.js?v=20260724-2"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

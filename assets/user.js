@@ -32,7 +32,7 @@
   }
 
   var chosenProduct = selectedProduct();
-  if (createButton) createButton.href = "redaktorius.html?product=" + encodeURIComponent(chosenProduct);
+  if (createButton) createButton.href = "parduotuve.html";
   if (guestActions) {
     var next = requestedServiceId
       ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
@@ -59,8 +59,14 @@
     return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
   }
 
+  function apiFetch(url, options) {
+    return AtminimasAuth.authorizedFetch
+      ? AtminimasAuth.authorizedFetch(url, options)
+      : fetch(url, options);
+  }
+
   async function serviceFlow(action, payload) {
-    var response = await fetch(functionUrl("service-flow"), {
+    var response = await apiFetch(functionUrl("service-flow"), {
       method: "POST",
       headers: AtminimasAuth.headers(true),
       body: JSON.stringify(Object.assign({ action: action }, payload || {}))
@@ -159,7 +165,7 @@
   }
 
   async function serviceDecision(name, requestId, revision) {
-    var response = await fetch(rpcUrl(name), {
+    var response = await apiFetch(rpcUrl(name), {
       method: "POST",
       headers: AtminimasAuth.headers(true),
       body: JSON.stringify({ p_request_id: requestId, p_quote_revision: Number(revision) })
@@ -171,7 +177,7 @@
   }
 
   async function startServicePayment(requestId) {
-    var response = await fetch(functionUrl("service-flow"), {
+    var response = await apiFetch(functionUrl("service-flow"), {
       method: "POST",
       headers: AtminimasAuth.headers(true),
       body: JSON.stringify({ action: "start_payment", request_id: requestId })
@@ -238,7 +244,7 @@
 
   async function loadMyServiceRequests(ownerId) {
     try {
-      var response = await fetch(restUrl(
+      var response = await apiFetch(restUrl(
         "paslaugu_uzklausos",
         "owner_id=eq." + encodeURIComponent(ownerId) + "&select=id,paslaugos,mirusiojo_vardas,kapiniu_pavadinimas,savivaldybe,kapo_vieta,estimate_status,estimated_round_trip_min_km,estimated_round_trip_max_km,estimated_total_min_cents,estimated_total_max_cents,currency,quote_status,quote_amount_cents,quote_message,quote_revision,quote_sent_at,quote_expires_at,quote_accepted_at,quote_declined_at,payment_status,paid_at,statusas,scheduled_for,completed_at,created_at&order=created_at.desc"
       ), { headers: AtminimasAuth.headers(false) });
@@ -269,7 +275,7 @@
   }
 
   async function approveProduction(orderId) {
-    var res = await fetch(rpcUrl("approve_order_for_production"), {
+    var res = await apiFetch(rpcUrl("approve_order_for_production"), {
       method: "POST",
       headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
       body: JSON.stringify({ p_order_id: orderId })
@@ -282,7 +288,7 @@
 
   async function downloadDocument(orderId, type) {
     var url = cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/document-download?order=" + encodeURIComponent(orderId) + "&type=" + encodeURIComponent(type);
-    var response = await fetch(url, { headers: AtminimasAuth.headers(false) });
+    var response = await apiFetch(url, { headers: AtminimasAuth.headers(false) });
     if (!response.ok) throw new Error(await response.text());
     var blob = await response.blob();
     var objectUrl = URL.createObjectURL(blob);
@@ -296,7 +302,7 @@
   }
 
   async function setVisibility(profileId, active) {
-    var res = await fetch(rpcUrl("set_my_profile_visibility"), {
+    var res = await apiFetch(rpcUrl("set_my_profile_visibility"), {
       method: "POST",
       headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
       body: JSON.stringify({ profile_id: profileId, is_active: active })
@@ -306,7 +312,7 @@
 
   async function deleteProfile(profileId) {
     var url = cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/profile-manage";
-    var res = await fetch(url, {
+    var res = await apiFetch(url, {
       method: "POST",
       headers: Object.assign({}, AtminimasAuth.headers(true), { "Content-Type": "application/json" }),
       body: JSON.stringify({ action: "delete", profile_id: profileId })
@@ -352,7 +358,7 @@
       statusEl.textContent = "Mokėjimas atšauktas. Pasiūlymas išsaugotas, galėsite bandyti dar kartą.";
     }
 
-    var res = await fetch(restUrl(
+    var res = await apiFetch(restUrl(
       "profiliai",
       "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ), {
@@ -367,19 +373,19 @@
 
     var rows = await res.json();
     if (!rows.length) {
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo graviruotos QR atminimo lentelės užsakymo.</p><a class='button' href='redaktorius.html?product=metal'>Užsakyti</a></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo QR atminimo lentelės pasirinkimo.</p><a class='button' href='parduotuve.html'>Rinktis lentelę</a></div>";
       scrollToRequestedService();
       return;
     }
 
-    var orderResponse = await fetch(restUrl(
+    var orderResponse = await apiFetch(restUrl(
       "uzsakymai",
       "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,tracking_url,apmoketa,payment_status,fulfillment_status,customer_approved_at,total_cents,currency,created_at&order=created_at.desc"
     ), { headers: AtminimasAuth.headers(false) });
     var orders = orderResponse.ok ? await orderResponse.json() : [];
     var relatedResponses = await Promise.all([
-      fetch(restUrl("production_jobs", "select=order_id,status,qr_svg_path,qr_pdf_path&order=created_at.desc"), { headers: AtminimasAuth.headers(false) }),
-      fetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) })
+      apiFetch(restUrl("production_jobs", "select=order_id,status,qr_svg_path,qr_pdf_path&order=created_at.desc"), { headers: AtminimasAuth.headers(false) }),
+      apiFetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) })
     ]);
     var productionJobs = relatedResponses[0].ok ? await relatedResponses[0].json() : [];
     var invoices = relatedResponses[1].ok ? await relatedResponses[1].json() : [];

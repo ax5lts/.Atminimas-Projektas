@@ -3,6 +3,12 @@
   var status = document.getElementById("login-status");
   var requestedNext = (new URLSearchParams(window.location.search).get("next") || "").trim();
   var hasExplicitNext = /^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(requestedNext);
+  var confirmationNoticeKey = "atminimas.auth.confirmation-notice.v1";
+  var confirmationNotice = sessionStorage.getItem(confirmationNoticeKey);
+  if (confirmationNotice) {
+    sessionStorage.removeItem(confirmationNoticeKey);
+    status.textContent = confirmationNotice;
+  }
 
   function nextPage() {
     if (hasExplicitNext) return requestedNext;

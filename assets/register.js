@@ -1,6 +1,12 @@
 (function () {
   var form = document.getElementById("register-form");
   var status = document.getElementById("register-status");
+  var confirmation = document.getElementById("register-confirmation");
+  var confirmationEmail = document.getElementById("register-confirmation-email");
+  var resendButton = document.getElementById("register-resend");
+  var resendStatus = document.getElementById("register-resend-status");
+  var loginLink = document.getElementById("register-login-link");
+  var pendingEmail = "";
 
   function nextPage() {
     var value = (new URLSearchParams(window.location.search).get("next") || "").trim();
@@ -12,6 +18,9 @@
   document.querySelectorAll("a[href='prisijungti.html']").forEach(function (link) {
     if (next !== "vartotojas.html") link.href = "prisijungti.html?next=" + encodeURIComponent(next);
   });
+  if (loginLink && next !== "vartotojas.html") {
+    loginLink.href = "prisijungti.html?next=" + encodeURIComponent(next);
+  }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -25,12 +34,34 @@
         window.location.href = next;
         return;
       }
-      status.textContent = "Paskyra sukurta. Patvirtinkite el. paštą ir tada prisijunkite.";
+      pendingEmail = (data.user && data.user.email) || email;
+      confirmationEmail.textContent = pendingEmail;
+      confirmation.hidden = false;
+      form.hidden = true;
+      status.textContent = "";
       form.reset();
+      window.requestAnimationFrame(function () {
+        confirmation.focus({ preventScroll: true });
+        confirmation.scrollIntoView({ block: "center" });
+      });
     } catch (error) {
       status.textContent = error.message || "Nepavyko sukurti paskyros.";
     } finally {
       button.disabled = false;
+    }
+  });
+
+  resendButton.addEventListener("click", async function () {
+    if (!pendingEmail) return;
+    resendButton.disabled = true;
+    resendStatus.textContent = "Siunčiame naują patvirtinimo laišką…";
+    try {
+      await AtminimasAuth.resendSignupConfirmation(pendingEmail);
+      resendStatus.textContent = "Laiškas išsiųstas. Patikrinkite gautuosius ir šlamšto aplanką.";
+    } catch (error) {
+      resendStatus.textContent = error.message || "Laiško išsiųsti nepavyko. Palaukite ir bandykite dar kartą.";
+    } finally {
+      resendButton.disabled = false;
     }
   });
 })();

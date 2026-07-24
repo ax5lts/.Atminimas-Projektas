@@ -7,6 +7,7 @@
 <meta name="description" content="Pasirinkite graviruotą plieno QR atminimo lentelę ir peržiūrėkite ASA 3D varianto prieinamumą.">
 <title>QR atminimo lentelės - parduotuvė</title>
 <link rel="stylesheet" href="css/styles.css?v=20260724-1">
+<link rel="stylesheet" href="css/shop-ux.css?v=20260724-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -37,9 +38,16 @@
       <p id="shop-heading-copy">Graviruota plieno lentelė nukreipia į individualų atminimo puslapį. ASA 3D variantą taip pat rodome, tačiau kol kas jo neturime.</p>
     </header>
 
+    <ol class="shop-journey" aria-label="Užsakymo eiga">
+      <li class="is-current"><span>1</span><strong>Pasirinkite lentelę</strong><small>Esate čia</small></li>
+      <li><span>2</span><strong>Sukurkite puslapį</strong><small>Galima neprisijungus</small></li>
+      <li><span>3</span><strong>Pasirinkite pristatymą</strong><small>Matysite visą kainą</small></li>
+      <li><span>4</span><strong>Saugiai apmokėkite</strong><small>Tada patvirtinsite gamybą</small></li>
+    </ol>
+
     <fieldset class="product-selector" id="product-selector">
       <legend class="visually-hidden">Pasirinktas produktas</legend>
-      <label class="product-choice product-choice--recommended">
+      <label class="product-choice product-choice--recommended" data-product-choice="metal">
         <input type="radio" name="product_type" value="metal" checked>
         <span class="product-recommendation">Rekomenduojama</span>
         <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
@@ -58,6 +66,10 @@
         </span>
       </label>
     </fieldset>
+    <div class="shop-catalog-status" id="shop-catalog-status" role="status" aria-live="polite" hidden>
+      <p id="shop-catalog-message"></p>
+      <button class="button button--ghost" id="shop-catalog-retry" type="button">Bandyti dar kartą</button>
+    </div>
 
     <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
       <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
@@ -82,10 +94,17 @@
             <dt>Sauga</dt><dd id="product-safety">–</dd>
           </dl>
 
+          <div class="product-order-summary" aria-label="Kas bus toliau">
+            <div><span>Lentelė ir puslapio sukūrimas</span><strong id="product-summary-price">–</strong></div>
+            <div><span>Pristatymas</span><strong>Pasirinksite prieš apmokėjimą</strong></div>
+            <div><span>Prisijungimas</span><strong>Reikės tik tęsiant užsakymą</strong></div>
+            <div><span>Puslapio viešumas</span><strong>Iš pradžių privatus</strong></div>
+          </div>
           <div class="actions">
-            <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Rinktis ir kurti puslapį</a>
+            <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Kurti atminimo puslapį</a>
             <a class="button button--ghost" href="sablonas-viskas.html?slug=maironis-pavyzdys">Peržiūrėti Maironio puslapio pavyzdį</a>
           </div>
+          <p class="product-action-note">Pradėti galite nemokėdami. Juodraštis bus saugomas šiame įrenginyje.</p>
         </article>
       </div>
     </section>
@@ -180,8 +199,8 @@
 <script src="assets/business-config.js"></script>
 <script src="assets/business-details.js"></script>
 <script src="assets/supabase-config.js?v=20260618"></script>
-<script src="assets/product-catalog.js?v=20260724-1"></script>
-<script src="assets/shop.js?v=20260724-1"></script>
+<script src="assets/product-catalog.js?v=20260724-2"></script>
+<script src="assets/shop.js?v=20260724-2"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

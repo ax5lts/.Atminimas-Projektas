@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260724-1">
+<link rel="stylesheet" href="css/styles.css?v=20260724-2">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -29,14 +29,6 @@
   </header>
 
   <main class="editor-workspace">
-    <aside class="editor-rail" aria-label="Įrankiai">
-      <button type="button" class="editor-tool is-active" data-editor-section="text">Tekstas</button>
-      <button type="button" class="editor-tool" data-editor-section="colors">Spalvos</button>
-      <button type="button" class="editor-tool" data-editor-section="files">Failai</button>
-      <button type="button" class="editor-tool" data-editor-section="positions">Pozicijos</button>
-      <button type="button" class="editor-tool" data-editor-section="preview">Peržiūra</button>
-    </aside>
-
     <section class="editor-panel" aria-labelledby="editor-panel-title">
       <p class="eyebrow">Puslapio kūrimas</p>
       <h1 id="editor-panel-title">Sukurkite puslapį</h1>
@@ -51,23 +43,28 @@
         <img id="editor-product-image" src="assets/qr-atminimo-lentele-480.webp" width="480" height="640" alt="">
         <div>
           <p class="editor-note" id="editor-product-summary"></p>
+          <p class="editor-product-unavailable" id="editor-product-unavailable" role="alert" hidden>
+            <span id="editor-product-unavailable-message"></span>
+            <a href="parduotuve.html">Grįžti į parduotuvę</a>
+          </p>
           <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis bus saugomas šiame įrenginyje, o prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą.</p>
           <span class="editor-draft-state" id="editor-draft-state" role="status">Juodraštis saugomas automatiškai</span>
         </div>
       </div>
       <nav class="editor-stepper" aria-label="Puslapio kūrimo žingsniai">
-        <button class="is-active" type="button" data-editor-step-button="text"><span>1</span>Informacija</button>
-        <button type="button" data-editor-step-button="colors"><span>2</span>Dizainas</button>
-        <button type="button" data-editor-step-button="files"><span>3</span>Failai</button>
-        <button type="button" data-editor-step-button="positions"><span>4</span>Išdėstymas</button>
-        <button type="button" data-editor-step-button="preview"><span>5</span>Peržiūra</button>
+        <button class="is-active" type="button" data-editor-step-button="text" aria-controls="editor-section-text" aria-current="step"><span>1</span>Informacija</button>
+        <button type="button" data-editor-step-button="colors" aria-controls="editor-section-colors"><span>2</span>Dizainas</button>
+        <button type="button" data-editor-step-button="files" aria-controls="editor-section-files"><span>3</span>Failai</button>
+        <button type="button" data-editor-step-button="positions" aria-controls="editor-section-positions"><span>4</span>Išdėstymas</button>
+        <button type="button" data-editor-step-button="preview" aria-controls="editor-section-preview"><span>5</span>Peržiūra</button>
       </nav>
-      <div class="editor-step-progress" aria-hidden="true"><span id="editor-step-progress"></span></div>
-      <form id="editor-form" class="editor-form" novalidate>
-        <section class="editor-step is-active" id="editor-section-text" data-editor-step="text" aria-labelledby="editor-step-text-title">
+      <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 5: Informacija</p>
+      <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="1 žingsnis iš 5: Informacija"><span id="editor-step-progress"></span></div>
+      <form id="editor-form" class="editor-form" novalidate aria-describedby="editor-step-status">
+        <section class="editor-step is-active" id="editor-section-text" data-editor-step="text" aria-labelledby="editor-step-text-title" aria-hidden="false">
           <header class="editor-step__header">
             <span>1 žingsnis iš 5</span>
-            <h2 id="editor-step-text-title">Asmens informacija</h2>
+            <h2 id="editor-step-text-title" tabindex="-1">Asmens informacija</h2>
             <p>Įrašykite pagrindinius duomenis ir gyvenimo istoriją. Viską galėsite pakeisti vėliau.</p>
           </header>
           <label>
@@ -154,10 +151,10 @@
           <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių</p>
         </section>
 
-        <section class="editor-step" id="editor-section-colors" data-editor-step="colors" aria-labelledby="editor-step-colors-title">
+        <section class="editor-step" id="editor-section-colors" data-editor-step="colors" aria-labelledby="editor-step-colors-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>2 žingsnis iš 5</span>
-            <h2 id="editor-step-colors-title">Puslapio dizainas</h2>
+            <h2 id="editor-step-colors-title" tabindex="-1">Puslapio dizainas</h2>
             <p>Pasirinkite ramų foną. Teksto kontrastas peržiūroje prisitaikys automatiškai.</p>
           </header>
           <fieldset class="editor-color-picker">
@@ -190,10 +187,10 @@
           </fieldset>
         </section>
 
-        <section class="editor-step" id="editor-section-files" data-editor-step="files" aria-labelledby="editor-step-files-title">
+        <section class="editor-step" id="editor-section-files" data-editor-step="files" aria-labelledby="editor-step-files-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>3 žingsnis iš 5</span>
-            <h2 id="editor-step-files-title">Nuotraukos ir vaizdo įrašas</h2>
+            <h2 id="editor-step-files-title" tabindex="-1">Nuotraukos ir vaizdo įrašas</h2>
             <p>Nuotraukos prieš įkeliant sumažinamos ir optimizuojamos šiame įrenginyje.</p>
           </header>
           <label>
@@ -203,8 +200,9 @@
           </label>
           <div class="editor-photo-order" id="editor-photo-order" hidden aria-label="Nuotraukų eiliškumas"></div>
           <label>
-            Video (1 failas)
-            <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*">
+            Vaizdo įrašas (1 failas, iki 50 MB)
+            <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*" aria-describedby="editor-video-help">
+            <span class="editor-file-help" id="editor-video-help">Didžiausias failo dydis – 50 MB. Tinka MP4, MOV ir kiti įprasti vaizdo formatai.</span>
           </label>
           <label>
             Video subtitrai (WebVTT; privaloma, jei vaizdo įraše yra kalba ar svarbūs garsai)
@@ -226,10 +224,10 @@
           </fieldset>
         </section>
 
-        <section class="editor-step" id="editor-section-positions" data-editor-step="positions" aria-labelledby="editor-step-positions-title">
+        <section class="editor-step" id="editor-section-positions" data-editor-step="positions" aria-labelledby="editor-step-positions-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>4 žingsnis iš 5</span>
-            <h2 id="editor-step-positions-title">Nuotraukų išdėstymas</h2>
+            <h2 id="editor-step-positions-title" tabindex="-1">Nuotraukų išdėstymas</h2>
             <p>Nuotraukas jau išdėstėme automatiškai. Daugumai puslapių papildomai nieko keisti nereikia.</p>
           </header>
           <div class="editor-layout-summary">
@@ -253,10 +251,10 @@
           </div>
         </section>
 
-        <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title">
+        <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>5 žingsnis iš 5</span>
-            <h2 id="editor-step-preview-title">Peržiūra ir užsakymas</h2>
+            <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir užsakymas</h2>
             <p>Patikrinkite puslapį, patvirtinkite teises į turinį ir išsaugokite.</p>
           </header>
           <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Peržiūrėti kaip telefone</button>
@@ -393,11 +391,11 @@
 </div>
 
 <script src="assets/supabase-config.js?v=20260618"></script>
-<script src="assets/auth.js?v=20260716-3"></script>
-<script src="assets/product-catalog.js?v=20260724-1"></script>
+<script src="assets/auth.js?v=20260724-2"></script>
+<script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260724-1"></script>
-<script src="assets/redaktorius.js?v=20260724-1"></script>
+<script src="assets/atminimas-duomenys.js?v=20260724-2"></script>
+<script src="assets/redaktorius.js?v=20260724-2"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

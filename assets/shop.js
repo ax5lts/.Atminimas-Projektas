@@ -4,7 +4,7 @@
 
   var selectedKey = "atminimas.selected-product.v1";
   var business = window.ATMINIMAS_BUSINESS || {};
-  var availability = { metal: true, asa: false };
+  var availability = { metal: false, asa: false };
   var products = {
     metal: {
       kind: "Patvari plieno lentelė",
@@ -52,14 +52,21 @@
     safety: document.getElementById("product-safety")
   };
   var createLink = document.getElementById("product-create-link");
+  var summaryPrice = document.getElementById("product-summary-price");
   var metalPrice = document.querySelector("[data-metal-price]");
+  var metalChoice = document.querySelector("[data-product-choice='metal']");
+  var metalInput = selector.querySelector("input[value='metal']");
   var asaPrice = document.querySelector("[data-asa-price]");
   var asaChoice = document.querySelector("[data-product-choice='asa']");
   var asaInput = selector.querySelector("input[value='asa']");
   var asaAvailability = document.querySelector("[data-product-availability='asa']");
   var asaDescription = document.querySelector("[data-asa-description]");
   var headingCopy = document.getElementById("shop-heading-copy");
+  var catalogStatus = document.getElementById("shop-catalog-status");
+  var catalogMessage = document.getElementById("shop-catalog-message");
+  var catalogRetry = document.getElementById("shop-catalog-retry");
   if (metalPrice) metalPrice.textContent = products.metal.price;
+  if (summaryPrice) summaryPrice.textContent = products.metal.price;
 
   function normalizeType(type) {
     return window.AtminimasProductCatalog
@@ -70,7 +77,6 @@
   function selectProduct(type) {
     var safeType = normalizeType(type);
     if (!availability[safeType]) safeType = "metal";
-    if (!availability[safeType]) return;
 
     var product = products[safeType];
     fields.kind.textContent = product.kind;
@@ -86,8 +92,34 @@
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
     fields.safety.textContent = product.safety;
-    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType);
-    sessionStorage.setItem(selectedKey, safeType);
+    if (availability[safeType]) {
+      createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType);
+      createLink.removeAttribute("aria-disabled");
+      createLink.removeAttribute("tabindex");
+      sessionStorage.setItem(selectedKey, safeType);
+    } else {
+      createLink.removeAttribute("href");
+      createLink.setAttribute("aria-disabled", "true");
+      createLink.setAttribute("tabindex", "-1");
+    }
+    if (summaryPrice) summaryPrice.textContent = product.price;
+  }
+
+  function setMetalAvailability(catalogItem) {
+    var isAvailable = !!(catalogItem && catalogItem.available && catalogItem.price_cents != null);
+    availability.metal = isAvailable;
+    metalInput.disabled = !isAvailable;
+    metalChoice.classList.toggle("product-choice--unavailable", !isAvailable);
+    metalChoice.setAttribute("aria-disabled", isAvailable ? "false" : "true");
+    if (isAvailable) {
+      products.metal.price = AtminimasProductCatalog.formatPrice(catalogItem.price_cents, catalogItem.currency);
+      metalPrice.textContent = products.metal.price;
+      if (summaryPrice) summaryPrice.textContent = products.metal.price;
+    } else {
+      products.metal.price = "–";
+      metalPrice.textContent = products.metal.price;
+      if (summaryPrice) summaryPrice.textContent = products.metal.price;
+    }
   }
 
   function setAsaAvailability(catalogItem) {
@@ -127,22 +159,54 @@
     selectProduct(initial);
   }
 
+  function setCatalogStatus(message, canRetry) {
+    catalogMessage.textContent = message || "";
+    catalogStatus.hidden = !message;
+    catalogRetry.hidden = !message || !canRetry;
+  }
+
+  async function loadCatalog() {
+    catalogRetry.disabled = true;
+    selector.setAttribute("aria-busy", "true");
+    setCatalogStatus("Tikrinamas produkto prieinamumas…", false);
+    metalInput.disabled = true;
+    createLink.removeAttribute("href");
+    createLink.setAttribute("aria-disabled", "true");
+    createLink.setAttribute("tabindex", "-1");
+    try {
+      var catalog = await AtminimasProductCatalog.load();
+      setMetalAvailability(catalog.metal);
+      setAsaAvailability(catalog.asa);
+      if (!catalog.remote) {
+        setCatalogStatus(catalog.error || "Nepavyko patikrinti produktų prieinamumo. Bandykite dar kartą.", true);
+      } else if (!availability.metal && !availability.asa) {
+        setCatalogStatus("Šiuo metu užsakymų priimti negalime. Užsukite vėliau arba susisiekite su mumis.", true);
+      } else {
+        setCatalogStatus("", false);
+      }
+      applyInitialSelection();
+    } finally {
+      selector.removeAttribute("aria-busy");
+      catalogRetry.disabled = false;
+    }
+  }
+
   selector.addEventListener("change", function (event) {
     if (event.target.name === "product_type" && !event.target.disabled) selectProduct(event.target.value);
+  });
+  createLink.addEventListener("click", function (event) {
+    if (createLink.getAttribute("aria-disabled") === "true") event.preventDefault();
+  });
+  catalogRetry.addEventListener("click", function () {
+    if (window.AtminimasProductCatalog) loadCatalog();
+    else window.location.reload();
   });
 
   selectProduct("metal");
   if (!window.AtminimasProductCatalog) {
-    applyInitialSelection();
+    setCatalogStatus("Nepavyko paleisti produktų patikros. Atnaujinkite puslapį ir bandykite dar kartą.", true);
     return;
   }
 
-  AtminimasProductCatalog.load().then(function (catalog) {
-    if (catalog.metal && catalog.metal.available && catalog.metal.price_cents != null) {
-      products.metal.price = AtminimasProductCatalog.formatPrice(catalog.metal.price_cents, catalog.metal.currency);
-      if (metalPrice) metalPrice.textContent = products.metal.price;
-    }
-    setAsaAvailability(catalog.asa);
-    applyInitialSelection();
-  });
+  loadCatalog();
 })();

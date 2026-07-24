@@ -23,6 +23,8 @@
   var draftStateEl = document.getElementById("editor-draft-state");
   var accountNoteEl = document.getElementById("editor-account-note");
   var stepProgressEl = document.getElementById("editor-step-progress");
+  var stepProgressTrackEl = stepProgressEl ? stepProgressEl.parentElement : null;
+  var stepStatusEl = document.getElementById("editor-step-status");
   var saveProgressEl = document.getElementById("editor-save-progress");
   var photoOrderEl = document.getElementById("editor-photo-order");
   var photoDetailsEl = document.getElementById("editor-photo-details");
@@ -35,6 +37,7 @@
   var photoFileList = document.getElementById("editor-photo-file-list");
   var datePickers = Array.from(document.querySelectorAll("[data-date-picker]"));
   var MAX_PHOTOS = 8;
+  var MAX_VIDEO_BYTES = 50 * 1024 * 1024;
   var MAX_STORY_WORDS = 1000;
   var PREVIEW_STORY_WORDS = 80;
   var DATE_MIN_YEAR = 1800;
@@ -89,7 +92,16 @@
   var DRAFT_STORE = "files";
   var PRODUCT_KEY = "atminimas.selected-product.v1";
   var productSummary = document.getElementById("editor-product-summary");
+  var productUnavailable = document.getElementById("editor-product-unavailable");
+  var productUnavailableMessage = document.getElementById("editor-product-unavailable-message");
   var editorSteps = ["text", "colors", "files", "positions", "preview"];
+  var editorStepLabels = {
+    text: "Informacija",
+    colors: "Dizainas",
+    files: "Failai",
+    positions: "Išdėstymas",
+    preview: "Peržiūra"
+  };
   var currentEditorStep = "text";
   var photoOrderNames = [];
   var photoOrderMode = "files";
@@ -120,7 +132,7 @@
 
   var requestedProductType = requestedProduct();
   var productType = "metal";
-  var productAvailabilityReady = isDemoMode || !!editId || !window.AtminimasProductCatalog;
+  var productAvailabilityReady = isDemoMode || !!editId;
   if (!productAvailabilityReady) submitButton.disabled = true;
 
   function applySelectedProduct(type) {
@@ -139,21 +151,39 @@
   }
 
   applySelectedProduct("metal");
-  if (!isDemoMode && window.AtminimasProductCatalog) {
+  function setProductUnavailable(message) {
+    productAvailabilityReady = false;
+    submitButton.disabled = true;
+    if (productSummary) productSummary.textContent = "Šiuo metu naujo užsakymo pradėti negalima.";
+    if (productUnavailableMessage) productUnavailableMessage.textContent = message;
+    if (productUnavailable) productUnavailable.hidden = false;
+  }
+
+  if (!isDemoMode && !editId && window.AtminimasProductCatalog) {
+    if (productSummary) productSummary.textContent = "Tikrinamas pasirinkto produkto prieinamumas…";
     AtminimasProductCatalog.load().then(function (catalog) {
-      if (catalog.metal && catalog.metal.available && catalog.metal.price_cents != null) {
+      var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
+      var asaAvailable = !!(catalog.remote && catalog.asa && catalog.asa.available && catalog.asa.price_cents != null);
+      if (metalAvailable) {
         productOptions.metal.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.metal.price_cents, catalog.metal.currency) + ".";
       }
-      if (catalog.asa && catalog.asa.available) {
+      if (asaAvailable) {
         productOptions.asa.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.asa.price_cents, catalog.asa.currency) + ".";
       }
-      applySelectedProduct(requestedProductType === "asa" && catalog.asa && catalog.asa.available ? "asa" : "metal");
-    }).finally(function () {
-      if (!editId) {
-        productAvailabilityReady = true;
-        submitButton.disabled = false;
+      var selectedType = requestedProductType === "asa" && asaAvailable ? "asa" : "metal";
+      if ((selectedType === "metal" && !metalAvailable) || (selectedType === "asa" && !asaAvailable)) {
+        setProductUnavailable(catalog.error || "Nepavyko patvirtinti produkto kainos ir prieinamumo. Bandykite dar kartą parduotuvėje.");
+        return;
       }
+      applySelectedProduct(selectedType);
+      productAvailabilityReady = true;
+      submitButton.disabled = false;
+      if (productUnavailable) productUnavailable.hidden = true;
+    }).catch(function () {
+      setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     });
+  } else if (!isDemoMode && !editId) {
+    setProductUnavailable("Nepavyko paleisti produkto patikros. Atnaujinkite puslapį arba grįžkite į parduotuvę.");
   }
 
   function isSignedIn() {
@@ -570,6 +600,7 @@
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         form: draftFormData(),
         layout: collectLayout(),
+        step: currentEditorStep,
         savedAt: new Date().toISOString()
       }));
       setDraftState("Juodraštis išsaugotas " + new Intl.DateTimeFormat("lt-LT", {
@@ -696,6 +727,9 @@
     await Promise.all(cropPromises);
     var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
     var captions = (captionsInput.files && captionsInput.files[0]) ? captionsInput.files[0] : savedCaptionsFile;
+    if (video && video.size > MAX_VIDEO_BYTES) {
+      throw new Error("Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.");
+    }
     var hasMedia = processedPhotos.some(Boolean) || !!video || !!captions;
     if (hasMedia && !window.indexedDB) {
       throw new Error("Ši naršyklė negali saugiai išlaikyti pasirinktų failų. Prisijunkite prieš pasirinkdami failus.");
@@ -822,13 +856,16 @@
     }
 
     var video = await getDraftFile("video");
-    if (video) {
+    if (video && video.size <= MAX_VIDEO_BYTES) {
       savedVideoFile = video;
       var wrap = previewVideo.closest(".editor-video-slot");
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
       previewVideo.src = URL.createObjectURL(video);
       previewVideo.hidden = false;
       if (empty) empty.hidden = true;
+    } else if (video) {
+      await deleteDraftFile("video");
+      statusEl.textContent = "Anksčiau pasirinktas vaizdo įrašas viršijo 50 MB ribą, todėl pasirinkite mažesnį failą.";
     }
     var captions = await getDraftFile("captions");
     if (captions) savedCaptionsFile = captions;
@@ -841,6 +878,7 @@
     isRestoringDraft = true;
     try {
       var draft = JSON.parse(raw);
+      if (editorSteps.indexOf(draft.step) >= 0) currentEditorStep = draft.step;
       restoreDraftFields(draft.form);
       applyLayout(draft.layout);
       await restoreDraftMedia();
@@ -1277,32 +1315,54 @@
     currentEditorStep = name;
     var target = document.querySelector("[data-editor-step='" + name + "']");
     document.querySelectorAll("[data-editor-step]").forEach(function (step) {
-      step.classList.toggle("is-active", step === target);
+      var active = step === target;
+      step.classList.toggle("is-active", active);
+      step.hidden = !active;
+      step.setAttribute("aria-hidden", String(!active));
+      if ("inert" in step) step.inert = !active;
     });
     document.querySelectorAll("[data-editor-section]").forEach(function (button) {
       button.classList.toggle("is-active", button.dataset.editorSection === name);
     });
     document.querySelectorAll("[data-editor-step-button]").forEach(function (button) {
       var active = button.dataset.editorStepButton === name;
+      var buttonIndex = editorSteps.indexOf(button.dataset.editorStepButton);
       button.classList.toggle("is-active", active);
+      button.classList.toggle("is-complete", buttonIndex >= 0 && buttonIndex < index);
       if (active) button.setAttribute("aria-current", "step");
       else button.removeAttribute("aria-current");
     });
     if (stepProgressEl) stepProgressEl.style.width = ((index + 1) / editorSteps.length * 100) + "%";
+    var stepLabel = editorStepLabels[name] || name;
+    var stepStatus = (index + 1) + " žingsnis iš " + editorSteps.length + ": " + stepLabel;
+    if (stepStatusEl) stepStatusEl.textContent = stepStatus;
+    if (stepProgressTrackEl) {
+      stepProgressTrackEl.setAttribute("aria-valuenow", String(index + 1));
+      stepProgressTrackEl.setAttribute("aria-valuetext", stepStatus);
+    }
 
     if (scroll && target) {
+      var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var behavior = reducedMotion ? "auto" : "smooth";
       if (window.matchMedia("(max-width: 860px)").matches) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        target.scrollIntoView({ behavior: behavior, block: "start" });
       } else {
         var panel = document.querySelector(".editor-panel");
         if (panel) panel.scrollTo({
-          top: Math.max(0, target.offsetTop - panel.offsetTop - 18),
-          behavior: "smooth"
+          top: 0,
+          behavior: behavior
         });
       }
       target.classList.remove("editor-section-flash");
       void target.offsetWidth;
       target.classList.add("editor-section-flash");
+      var heading = target.querySelector("h2");
+      if (heading) {
+        window.requestAnimationFrame(function () {
+          heading.focus({ preventScroll: true });
+        });
+      }
+      saveDraftNow();
     }
   }
 
@@ -1318,6 +1378,7 @@
         previous.className = "button button--ghost";
         previous.type = "button";
         previous.textContent = "Atgal";
+        previous.setAttribute("aria-label", "Grįžti į žingsnį „" + editorStepLabels[editorSteps[index - 1]] + "“");
         previous.addEventListener("click", function () {
           activateEditorStep(editorSteps[index - 1], true);
         });
@@ -1333,10 +1394,9 @@
         var next = document.createElement("button");
         next.className = "button";
         next.type = "button";
-        next.textContent = "Išsaugoti ir tęsti";
+        next.textContent = "Toliau: " + editorStepLabels[editorSteps[index + 1]];
         next.addEventListener("click", function () {
           if (!validateEditorStep(step.dataset.editorStep)) return;
-          saveDraftNow();
           activateEditorStep(editorSteps[index + 1], true);
         });
         actions.appendChild(next);
@@ -1370,9 +1430,20 @@
         activateEditorStep(button.dataset.editorSection, true);
       });
     });
-    document.querySelectorAll("[data-editor-step-button]").forEach(function (button) {
+    var stepButtons = Array.from(document.querySelectorAll("[data-editor-step-button]"));
+    stepButtons.forEach(function (button, buttonIndex) {
       button.addEventListener("click", function () {
         activateEditorStep(button.dataset.editorStepButton, true);
+      });
+      button.addEventListener("keydown", function (event) {
+        var targetIndex = buttonIndex;
+        if (event.key === "ArrowRight") targetIndex = Math.min(stepButtons.length - 1, buttonIndex + 1);
+        else if (event.key === "ArrowLeft") targetIndex = Math.max(0, buttonIndex - 1);
+        else if (event.key === "Home") targetIndex = 0;
+        else if (event.key === "End") targetIndex = stepButtons.length - 1;
+        else return;
+        event.preventDefault();
+        stepButtons[targetIndex].focus();
       });
     });
     setupEditorStepActions();
@@ -1616,6 +1687,18 @@
       scheduleDraftSave();
       return;
     }
+    if (file.size > MAX_VIDEO_BYTES) {
+      videoInput.value = "";
+      savedVideoFile = null;
+      previewVideo.hidden = true;
+      previewVideo.removeAttribute("src");
+      if (empty) empty.hidden = false;
+      statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
+      deleteDraftFile("video").catch(function (err) { console.warn(err); });
+      scheduleStageFit(true);
+      scheduleDraftSave();
+      return;
+    }
     savedVideoFile = file;
     previewVideo.src = URL.createObjectURL(file);
     previewVideo.hidden = false;
@@ -1653,7 +1736,9 @@
       return;
     }
     if (!productAvailabilityReady) {
-      statusEl.textContent = "Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.";
+      statusEl.textContent = productUnavailable && !productUnavailable.hidden
+        ? "Produkto kainos ir prieinamumo patvirtinti nepavyko. Grįžkite į parduotuvę ir bandykite dar kartą."
+        : "Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.";
       return;
     }
     if (!validateDatePickers(false)) {
@@ -1691,6 +1776,26 @@
       }
       return;
     }
+    var videoForSubmission = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
+    if (videoForSubmission && videoForSubmission.size > MAX_VIDEO_BYTES) {
+      activateEditorStep("files", true);
+      statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
+      videoInput.focus();
+      return;
+    }
+    if (window.AtminimasAuth && AtminimasAuth.ensureFreshSession) {
+      submitButton.disabled = true;
+      statusEl.textContent = "Tikrinamas prisijungimas…";
+      try {
+        var freshSession = await AtminimasAuth.ensureFreshSession();
+        if (!freshSession) throw new Error("Prisijungimo sesija baigėsi.");
+      } catch (sessionError) {
+        statusEl.textContent = sessionError.message || "Prisijungimo sesijos patikrinti nepavyko. Bandykite dar kartą.";
+        submitButton.textContent = "Prisijungti ir tęsti užsakymą";
+        submitButton.disabled = false;
+        return;
+      }
+    }
     fitStageToContent(true);
     var submit = submitButton;
     var data = formData();
@@ -1699,7 +1804,7 @@
     resultBox.hidden = true;
     await Promise.all(cropPromises);
     var photos = processedPhotos.filter(Boolean).slice(0, MAX_PHOTOS);
-    var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
+    var video = videoForSubmission;
 
     data.tekstas_200 = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
     data.apmoketa = false;
