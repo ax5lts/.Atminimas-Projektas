@@ -161,7 +161,7 @@
     updatePayment(order);
     orderEl.textContent = order.product_type === "asa"
       ? "ASA QR atminimo lentelė"
-      : (order.product_type === "steel" ? "Graviruota plieno QR atminimo lentelė" : "Graviruota QR atminimo lentelė");
+      : "Graviruota plieno QR atminimo lentelė";
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
     });

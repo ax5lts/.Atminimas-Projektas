@@ -371,7 +371,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260719-4', user_page)
+        self.assertIn('assets/user.js?v=20260724-1', user_page)
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -433,17 +433,19 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("[functions.service-flow]", config)
         self.assertIn("verify_jwt = false", config.split("[functions.service-flow]", 1)[1].split("[", 1)[0])
 
-    def test_shop_offers_metal_steel_and_asa_3d_plaques(self):
+    def test_shop_has_one_orderable_steel_plaque_and_unavailable_asa(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
-        self.assertIn('value="steel"', html)
-        self.assertIn('value="asa"', html)
-        self.assertIn('src="assets/qr-atminimo-lentele-480.webp"', html)
+        self.assertNotIn('value="steel"', html)
+        self.assertIn('value="asa" disabled', html)
+        self.assertIn('aria-disabled="true"', html)
         self.assertIn('src="assets/qr-plienas-480.webp"', html)
         self.assertIn('src="assets/qr-asa-480.webp"', html)
-        self.assertIn("Graviruota QR atminimo lentelė", html)
         self.assertIn("Graviruota plieno QR atminimo lentelė", html)
         self.assertIn("ASA 3D spausdinta QR atminimo lentelė", html)
+        self.assertIn("Šiuo metu neturime", html)
+        self.assertIn("Kol kas neparduodama", html)
+        self.assertIn('src="assets/product-catalog.js?v=20260724-1"', html)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele.webp").stat().st_size, 100_000)
         self.assertLess((ROOT / "assets" / "qr-plienas-480.webp").stat().st_size, 30_000)
@@ -458,10 +460,12 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertNotRegex(path.read_text(encoding="utf-8"), forbidden)
 
-    def test_order_buttons_open_the_metal_plaque_form(self):
+    def test_home_order_buttons_open_product_selection(self):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
-        self.assertIn('<a class="button" href="redaktorius.html?product=metal">Užsakyti</a>', home)
+        site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
+        self.assertIn('<a class="button" href="parduotuve.html">Užsakyti</a>', home)
+        self.assertIn('{ href: "parduotuve.html", label: "Kurti"', site_ui)
         self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Rinktis ir kurti puslapį</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
@@ -475,23 +479,37 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_selected_product_reaches_order_and_admin(self):
         shop = (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
+        catalog = (ROOT / "assets" / "product-catalog.js").read_text(encoding="utf-8")
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         self.assertIn("atminimas.selected-product.v1", shop)
-        self.assertIn("steel: {", shop)
+        self.assertNotIn("steel: {", shop)
+        self.assertIn('value === "asa" ? "asa" : "metal"', catalog)
+        self.assertIn("catalog.asa.available", editor)
         self.assertIn("redaktorius.html?product=", user)
-        self.assertIn("steel: {", editor)
+        self.assertNotIn("steel: {", editor)
         self.assertIn("data.product_type = productType", editor)
-        self.assertIn('["asa", "steel"].indexOf(input.product_type)', api)
-        self.assertIn("steel_price", admin)
+        self.assertIn('input.product_type === "asa" ? "asa" : "metal"', api)
+        self.assertNotIn("steel_price", admin)
+        self.assertIn("asa_available", admin)
         self.assertIn("product_type", admin)
 
         sql = (ROOT / "supabase" / "migrations" / "20260719090808_add_steel_product.sql").read_text(encoding="utf-8")
         self.assertIn("check (id in ('metal', 'steel', 'asa'))", sql.lower())
         self.assertIn("check (product_type in ('metal', 'steel', 'asa'))", sql.lower())
         self.assertIn("graviruota plieno qr atminimo lentelė", sql.lower())
+
+        availability_sql = (ROOT / "supabase" / "migrations" / "20260724070516_unify_steel_product_and_asa_availability.sql").read_text(encoding="utf-8")
+        self.assertRegex(availability_sql, r"(?s)where id = 'steel'.*?where id = 'asa'")
+        self.assertIn("Product is not currently available", availability_sql)
+        self.assertIn("new.subtotal_cents := catalog.price_cents", availability_sql)
+        self.assertIn("disable trigger automation_refresh_product_orders", availability_sql)
+        self.assertIn("enable trigger automation_refresh_product_orders", availability_sql)
+        self.assertIn("productAvailabilityReady", editor)
+        self.assertIn("Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.", editor)
+        self.assertIn("headingCopy.textContent", shop)
 
     def test_admin_has_separate_all_orders_dashboard(self):
         html = (ROOT / "admin.html").read_text(encoding="utf-8")
@@ -514,7 +532,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260719-4', html)
+        self.assertIn('assets/admin.js?v=20260724-1', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)
@@ -795,18 +813,24 @@ class AtminimasSmokeTests(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 self.assertLess(path.stat().st_size, 400_000)
 
-    def test_editor_is_responsive_and_has_touch_color_wheel(self):
+    def test_editor_is_responsive_and_has_natural_color_palette(self):
         page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('id="editor-color-wheel"', page)
-        self.assertIn('id="editor-color-brightness"', page)
+        self.assertIn('id="editor-color-palette"', page)
+        self.assertNotIn('id="editor-color-wheel"', page)
+        self.assertNotIn('id="editor-color-brightness"', page)
+        self.assertEqual(page.count("data-background-color="), 14)
+        self.assertIn("Šiltas molis", page)
+        self.assertIn("Miško žalia", page)
         self.assertIn('type="hidden" name="fono_spalva"', page)
         self.assertNotIn('type="color" name="fono_spalva"', page)
         self.assertIn('data-editor-section="preview"', page)
-        self.assertIn("colorFromWheelPoint", editor)
-        self.assertIn('colorWheel.addEventListener("pointerdown"', editor)
-        self.assertIn('colorWheel.addEventListener("keydown"', editor)
+        self.assertIn("syncColorSelection", editor)
+        self.assertIn('button.setAttribute("aria-pressed"', editor)
+        self.assertNotIn("colorFromWheelPoint", editor)
+        self.assertIn(".editor-color-palette", styles)
+        self.assertNotIn(".editor-color-wheel", styles)
         self.assertIn('target.scrollIntoView({ behavior: "smooth"', editor)
         self.assertIn("@media (min-width: 861px) and (max-width: 1280px)", styles)
         self.assertIn("@media (pointer: coarse)", styles)
@@ -862,7 +886,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         server = (ROOT / "serve.py").read_text(encoding="utf-8")
         for page in ROOT.glob("*.html"):
             with self.subTest(page=page.name):
-                self.assertIn("assets/site-ui.js?v=20260716-1", page.read_text(encoding="utf-8"))
+                self.assertRegex(page.read_text(encoding="utf-8"), r"assets/site-ui\.js\?v=\d{8}-\d+")
         self.assertIn("mobile-dock", site_ui)
         self.assertIn("data-site-menu-toggle", site_ui)
         self.assertIn("Pereiti prie turinio", site_ui)
@@ -963,7 +987,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("hasExplicitNext", login)
         self.assertIn('!hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next', login)
         self.assertIn("Kurti galite ir neprisijungę", login_page)
-        self.assertIn("assets/checkout.js?v=20260719-2", checkout_page)
+        self.assertIn("assets/checkout.js?v=20260724-1", checkout_page)
 
         lower_migration = migration.lower()
         self.assertIn("revoke all privileges on table public.profiliai from anon", lower_migration)

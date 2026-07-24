@@ -13,7 +13,7 @@
   var claimAttempted = false;
   var productKey = "atminimas.selected-product.v1";
   var productNames = {
-    metal: "Graviruota QR atminimo lentelė",
+    metal: "Graviruota plieno QR atminimo lentelė",
     steel: "Graviruota plieno QR atminimo lentelė",
     asa: "ASA 3D spausdinta QR atminimo lentelė"
   };

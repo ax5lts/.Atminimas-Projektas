@@ -134,8 +134,7 @@
 
   function productName(value) {
     if (value === "asa") return "ASA 3D spausdinta QR atminimo lentelė";
-    if (value === "steel") return "Graviruota plieno QR atminimo lentelė";
-    return "Graviruota QR atminimo lentelė";
+    return "Graviruota plieno QR atminimo lentelė";
   }
 
   function orderCanBeDeleted(order) {
@@ -387,8 +386,8 @@
     var products = Object.fromEntries(results[1].map(function (row) { return [row.id, row]; }));
     var shipping = Object.fromEntries(results[2].map(function (row) { return [row.carrier, row]; }));
     businessSettingsForm.elements.metal_price.value = centsToInput(products.metal && products.metal.price_cents);
-    businessSettingsForm.elements.steel_price.value = centsToInput(products.steel && products.steel.price_cents);
     businessSettingsForm.elements.asa_price.value = centsToInput(products.asa && products.asa.price_cents);
+    businessSettingsForm.elements.asa_available.checked = !!(products.asa && products.asa.enabled);
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
     businessSettingsForm.elements.dpd_price.value = centsToInput(shipping.DPD && shipping.DPD.price_cents);
@@ -397,6 +396,15 @@
 
   async function saveBusinessSettings() {
     var values = Object.fromEntries(new FormData(businessSettingsForm).entries());
+    var metalPrice = inputToCents(values.metal_price);
+    var asaPrice = inputToCents(values.asa_price);
+    var asaAvailable = values.asa_available === "on";
+    if (metalPrice == null) {
+      throw new Error("Įrašykite graviruotos plieno lentelės kainą.");
+    }
+    if (asaAvailable && asaPrice == null) {
+      throw new Error("Norint įjungti ASA variantą, pirmiausia įrašykite jo kainą.");
+    }
     var businessPayload = {
       legal_name: values.legal_name || null,
       activity_form: values.activity_form || null,
@@ -412,22 +420,30 @@
     await supabaseJson(restUrl("business_profile", "singleton=eq.true"), {
       method: "PATCH", headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }), body: JSON.stringify(businessPayload)
     });
+    var productUpdates = [
+      ["metal", { name: "Graviruota plieno QR atminimo lentelė", price_cents: metalPrice, enabled: metalPrice != null, updated_at: new Date().toISOString() }],
+      ["steel", { enabled: false, updated_at: new Date().toISOString() }],
+      ["asa", { price_cents: asaPrice, enabled: asaAvailable && asaPrice != null, updated_at: new Date().toISOString() }]
+    ];
     var prices = [
-      ["product_catalog", "id", "metal", inputToCents(values.metal_price)],
-      ["product_catalog", "id", "steel", inputToCents(values.steel_price)],
-      ["product_catalog", "id", "asa", inputToCents(values.asa_price)],
       ["shipping_catalog", "carrier", "Omniva", inputToCents(values.omniva_price)],
       ["shipping_catalog", "carrier", "LP Express", inputToCents(values.lp_express_price)],
       ["shipping_catalog", "carrier", "DPD", inputToCents(values.dpd_price)]
     ];
-    await Promise.all(prices.map(function (item) {
+    await Promise.all(productUpdates.map(function (item) {
+      return supabaseJson(restUrl("product_catalog", "id=eq." + encodeURIComponent(item[0])), {
+        method: "PATCH",
+        headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+        body: JSON.stringify(item[1])
+      });
+    }).concat(prices.map(function (item) {
       return supabaseJson(restUrl(item[0], item[1] + "=eq." + encodeURIComponent(item[2])), {
         method: "PATCH",
         headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
         body: JSON.stringify({ price_cents: item[3], enabled: item[3] != null, updated_at: new Date().toISOString() })
       });
-    }));
-    businessSettingsStatus.textContent = "Rekvizitai ir kainos išsaugoti.";
+    })));
+    businessSettingsStatus.textContent = "Rekvizitai, kainos ir produktų prieinamumas išsaugoti.";
     await loadBusinessSettings();
   }
 

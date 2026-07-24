@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
-<meta name="description" content="Pasirinkite graviruotą metalo, plieno arba ASA 3D spausdintą QR atminimo lentelę.">
+<meta name="description" content="Pasirinkite graviruotą plieno QR atminimo lentelę ir peržiūrėkite ASA 3D varianto prieinamumą.">
 <title>QR atminimo lentelės - parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260719-1">
+<link rel="stylesheet" href="css/styles.css?v=20260724-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -32,9 +32,9 @@
     </nav>
 
     <header class="shop-heading">
-      <p class="eyebrow">Pasirinkite gamybos būdą</p>
+      <p class="eyebrow">Pasirinkite lentelę</p>
       <h1>QR atminimo lentelės</h1>
-      <p>Graviruotos metalo ir plieno lentelės bei ASA 3D spausdinta lentelė nukreipia į tą patį individualų atminimo puslapį.</p>
+      <p id="shop-heading-copy">Graviruota plieno lentelė nukreipia į individualų atminimo puslapį. ASA 3D variantą taip pat rodome, tačiau kol kas jo neturime.</p>
     </header>
 
     <fieldset class="product-selector" id="product-selector">
@@ -42,26 +42,19 @@
       <label class="product-choice product-choice--recommended">
         <input type="radio" name="product_type" value="metal" checked>
         <span class="product-recommendation">Rekomenduojama</span>
-        <span class="product-choice__image"><img src="assets/qr-atminimo-lentele-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota metalo QR atminimo lentelė"></span>
+        <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
         <span class="product-choice__content">
-          <span><strong>Graviruota QR atminimo lentelė</strong><small>Patvari metalo lentelė lauko sąlygoms</small></span>
+          <span><strong>Graviruota plieno QR atminimo lentelė</strong><small>Patvari plieno lentelė lauko sąlygoms</small></span>
           <span class="product-choice__price" data-metal-price>–</span>
         </span>
       </label>
-      <label class="product-choice">
-        <input type="radio" name="product_type" value="steel">
-        <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
-        <span class="product-choice__content">
-          <span><strong>Graviruota plieno QR atminimo lentelė</strong><small>Tvirtas plieno variantas lauko sąlygoms</small></span>
-          <span class="product-choice__price">–</span>
-        </span>
-      </label>
-      <label class="product-choice">
-        <input type="radio" name="product_type" value="asa">
+      <label class="product-choice product-choice--unavailable" data-product-choice="asa" aria-disabled="true">
+        <input type="radio" name="product_type" value="asa" disabled>
+        <span class="product-availability product-availability--unavailable" data-product-availability="asa">Šiuo metu neturime</span>
         <span class="product-choice__image"><img src="assets/qr-asa-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="ASA 3D spausdinta QR atminimo lentelė"></span>
         <span class="product-choice__content">
-          <span><strong>ASA 3D spausdinta QR atminimo lentelė</strong><small>Dvispalvis, lauko sąlygoms pritaikytas variantas</small></span>
-          <span class="product-choice__price">–</span>
+          <span><strong>ASA 3D spausdinta QR atminimo lentelė</strong><small data-asa-description>Dvispalvis, lauko sąlygoms pritaikytas variantas. Užsakyti bus galima, kai patvirtinsime, kad jį turime.</small></span>
+          <span class="product-choice__price product-choice__price--status" data-asa-price>Kol kas neparduodama</span>
         </span>
       </label>
     </fieldset>
@@ -69,21 +62,21 @@
     <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
       <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
         <div class="product-media">
-          <img id="product-image" src="assets/qr-atminimo-lentele-480.webp" srcset="assets/qr-atminimo-lentele-480.webp 480w, assets/qr-atminimo-lentele.webp 1086w" sizes="(max-width: 760px) 92vw, 540px" width="1086" height="1448" decoding="async" fetchpriority="high" alt="Graviruota metalo QR atminimo lentelė">
+          <img id="product-image" src="assets/qr-plienas-480.webp" srcset="assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w" sizes="(max-width: 760px) 92vw, 540px" width="1086" height="1448" decoding="async" fetchpriority="high" alt="Graviruota plieno QR atminimo lentelė">
         </div>
       </div>
 
       <div class="shop-side">
         <article class="product-panel">
-          <p class="eyebrow" id="product-kind">Patvari metalo lentelė</p>
-          <h2 id="product-title">Graviruota QR atminimo lentelė</h2>
+          <p class="eyebrow" id="product-kind">Patvari plieno lentelė</p>
+          <h2 id="product-title">Graviruota plieno QR atminimo lentelė</h2>
           <p class="product-price" id="product-price">–</p>
           <p>PVM: <strong id="product-vat">–</strong></p>
           <p class="product-copy" id="product-copy">Graviruota lentelė su QR kodu nukreipia į asmeninį atminimo puslapį su nuotraukomis, vaizdo įrašu, gyvenimo datomis ir epitafija.</p>
           <div class="product-divider"></div>
           <dl class="product-facts">
-            <dt>Produkto tipas</dt><dd id="product-type-detail">Graviruota metalo QR atminimo lentelė</dd>
-            <dt>Medžiaga</dt><dd id="product-material">–</dd>
+            <dt>Produkto tipas</dt><dd id="product-type-detail">Graviruota plieno QR atminimo lentelė</dd>
+            <dt>Medžiaga</dt><dd id="product-material">Plienas</dd>
             <dt>Matmenys</dt><dd id="product-dimensions">–</dd>
             <dt>Tvirtinimas</dt><dd id="product-mounting">–</dd>
             <dt>Sauga</dt><dd id="product-safety">–</dd>
@@ -186,7 +179,9 @@
 
 <script src="assets/business-config.js"></script>
 <script src="assets/business-details.js"></script>
-<script src="assets/shop.js?v=20260719-1"></script>
+<script src="assets/supabase-config.js?v=20260618"></script>
+<script src="assets/product-catalog.js?v=20260724-1"></script>
+<script src="assets/shop.js?v=20260724-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

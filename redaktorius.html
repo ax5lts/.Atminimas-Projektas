@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260719-4">
+<link rel="stylesheet" href="css/styles.css?v=20260724-1">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -162,44 +162,31 @@
           </header>
           <fieldset class="editor-color-picker">
             <legend>Puslapio fonas</legend>
-            <div class="editor-color-picker__layout">
-              <button
-                class="editor-color-wheel"
-                id="editor-color-wheel"
-                type="button"
-                role="slider"
-                aria-label="Fono atspalvis ir sodrumas"
-                aria-valuemin="0"
-                aria-valuemax="360"
-                aria-valuenow="0"
-                aria-valuetext="Balta"
-              >
-                <span class="editor-color-wheel__thumb" id="editor-color-wheel-thumb" aria-hidden="true"></span>
-              </button>
-              <div class="editor-color-picker__controls">
-                <label class="editor-color-brightness">
-                  Šviesumas
-                  <input type="range" id="editor-color-brightness" min="20" max="100" value="100">
-                </label>
-                <div class="editor-color-exact">
-                  <span>Pasirinkta spalva</span>
-                  <span class="editor-color-row">
-                    <span class="editor-color-current" id="editor-color-current" aria-hidden="true"></span>
-                    <input type="hidden" name="fono_spalva" id="editor-background" value="#ffffff">
-                    <output id="editor-background-value" for="editor-background">#ffffff</output>
-                  </span>
-                </div>
-              </div>
+            <div class="editor-color-palette" id="editor-color-palette" role="group" aria-label="Natūralios fono spalvos">
+              <button type="button" data-background-color="#ffffff" aria-pressed="false">Balta drobė</button>
+              <button type="button" data-background-color="#f7f2e8" aria-pressed="false">Porceliano</button>
+              <button type="button" data-background-color="#eee4d4" aria-pressed="false">Lino</button>
+              <button type="button" data-background-color="#e2d2bd" aria-pressed="false">Smėlio</button>
+              <button type="button" data-background-color="#d3bba7" aria-pressed="false">Šiltas molis</button>
+              <button type="button" data-background-color="#d4b7b2" aria-pressed="false">Dulkėta rožė</button>
+              <button type="button" data-background-color="#c8bccb" aria-pressed="false">Viržių</button>
+              <button type="button" data-background-color="#b9c8d1" aria-pressed="false">Rūko mėlyna</button>
+              <button type="button" data-background-color="#aebdbc" aria-pressed="false">Ežero pilka</button>
+              <button type="button" data-background-color="#c2cab4" aria-pressed="false">Šalavijo</button>
+              <button type="button" data-background-color="#aeb99c" aria-pressed="false">Alyvuogių</button>
+              <button type="button" data-background-color="#82917c" aria-pressed="false">Samanų</button>
+              <button type="button" data-background-color="#516357" aria-pressed="false">Miško žalia</button>
+              <button type="button" data-background-color="#45585a" aria-pressed="false">Gili jūra</button>
             </div>
-            <div class="editor-color-swatches" aria-label="Greitos fono spalvos">
-              <button type="button" data-background-color="#ffffff" aria-label="Balta" title="Balta"></button>
-              <button type="button" data-background-color="#f5f0e8" aria-label="Šilta balta" title="Šilta balta"></button>
-              <button type="button" data-background-color="#e8efe9" aria-label="Švelni žalia" title="Švelni žalia"></button>
-              <button type="button" data-background-color="#e8eef5" aria-label="Švelni mėlyna" title="Švelni mėlyna"></button>
-              <button type="button" data-background-color="#efe8f5" aria-label="Švelni violetinė" title="Švelni violetinė"></button>
-              <button type="button" data-background-color="#2d3436" aria-label="Tamsiai pilka" title="Tamsiai pilka"></button>
+            <div class="editor-color-exact">
+              <span>Pasirinkta spalva</span>
+              <span class="editor-color-row">
+                <span class="editor-color-current" id="editor-color-current" aria-hidden="true"></span>
+                <input type="hidden" name="fono_spalva" id="editor-background" value="#ffffff">
+                <output id="editor-background-value" for="editor-background" aria-live="polite">#ffffff</output>
+              </span>
             </div>
-            <p class="editor-field-help">Braukite pirštu per ratą. Rodyklių klavišais taip pat galima keisti atspalvį ir sodrumą.</p>
+            <p class="editor-field-help">Pasirinkite vieną iš ramių, gamtos įkvėptų spalvų. Peržiūra pasikeis iš karto.</p>
           </fieldset>
         </section>
 
@@ -407,9 +394,10 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260716-3"></script>
+<script src="assets/product-catalog.js?v=20260724-1"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260719-1"></script>
-<script src="assets/redaktorius.js?v=20260719-3"></script>
+<script src="assets/atminimas-duomenys.js?v=20260724-1"></script>
+<script src="assets/redaktorius.js?v=20260724-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>
