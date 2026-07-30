@@ -69,6 +69,13 @@
         ? Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) / 1000
         : 0;
     }
+    function photoWidth(raw, align) {
+      var number = Number(raw);
+      var fallback = align === "full" ? 100 : 42;
+      return Number.isFinite(number)
+        ? Math.round(Math.max(35, Math.min(100, number)))
+        : fallback;
+    }
     return saved.slice(0, 40).reduce(function (result, item) {
       if (!item || typeof item !== "object") return result;
       if (item.type === "text") {
@@ -82,10 +89,13 @@
       } else if (item.type === "photo") {
         var photoOrder = Number(item.photoOrder);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
+          var align = item.align === "left" || item.align === "right" ? item.align : "full";
           result.push({
             type: "photo",
             photoOrder: photoOrder,
-            align: item.align === "left" || item.align === "right" ? item.align : "full",
+            align: align,
+            widthPct: photoWidth(item.widthPct, align),
+            fit: item.fit === "cover" ? "cover" : "contain",
             offsetX: offset(item.offsetX, -70, 70),
             offsetY: offset(item.offsetY, -320, 320)
           });
@@ -254,7 +264,8 @@
       var imageIndex = allImages.indexOf(item);
       var figure = document.createElement("figure");
       figure.className = "memorial-story-block memorial-story-block--photo memorial-story-block--photo-" +
-        block.align;
+        block.align + " memorial-story-block--photo-fit-" + block.fit;
+      figure.style.setProperty("--story-photo-width", Number(block.widthPct) + "%");
       applyStoryBlockPosition(figure, block);
       var button = document.createElement("button");
       button.type = "button";

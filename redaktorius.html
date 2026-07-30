@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260730-4">
+<link rel="stylesheet" href="css/styles.css?v=20260730-7">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -254,7 +254,7 @@
                 <button type="button" data-transform-mode="crop">Apkirpti</button>
               </div>
             </div>
-            <p class="editor-note">Peržiūroje kiekvienas teksto ir nuotraukos blokas turi atskirą perkėlimo rankenėlę. Pajudinus vieną bloką, kiti lieka savo vietoje. Blokų eiliškumas keičiamas 1 žingsnyje.</p>
+            <p class="editor-note">Peržiūroje paspauskite nuotrauką, kad galėtumėte ją didinti, mažinti ar pakeisti jos užpildymą. Kiekvienas teksto ir nuotraukos blokas taip pat turi atskirą perkėlimo rankenėlę. Pajudinus vieną bloką, kiti lieka savo vietoje.</p>
             <p class="editor-note">Puslapio apačia prisitaiko automatiškai: nuleidus elementą puslapis pailgės, o likusi tuščia vieta bus sutrumpinta.</p>
             <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Atidaryti koregavimo peržiūrą</button>
           </div>
@@ -290,6 +290,27 @@
         <span id="editor-preview-code">puslapio adresas bus sugeneruotas automatiškai</span>
         <button class="editor-preview-close" type="button" data-editor-preview-close aria-label="Uždaryti peržiūrą">×</button>
       </div>
+      <aside class="editor-story-photo-tools" id="editor-story-photo-tools" aria-labelledby="editor-story-photo-tools-title" hidden>
+        <div class="editor-story-photo-tools__header">
+          <strong id="editor-story-photo-tools-title">Pasirinkta nuotrauka</strong>
+          <div>
+            <button type="button" data-story-photo-reset>Atstatyti</button>
+            <button type="button" data-story-photo-close aria-label="Baigti nuotraukos koregavimą">×</button>
+          </div>
+        </div>
+        <div class="editor-story-photo-tools__size">
+          <button type="button" data-story-photo-size="-5" aria-label="Mažinti nuotrauką">−</button>
+          <label for="editor-story-photo-size">
+            <span>Dydis <output id="editor-story-photo-size-value" for="editor-story-photo-size">100 %</output></span>
+            <input id="editor-story-photo-size" type="range" min="35" max="100" step="1" value="100">
+          </label>
+          <button type="button" data-story-photo-size="5" aria-label="Didinti nuotrauką">+</button>
+        </div>
+        <div class="editor-story-photo-tools__fit" role="group" aria-label="Nuotraukos rodymas">
+          <button type="button" data-story-photo-fit="contain" aria-pressed="true">Visa nuotrauka</button>
+          <button type="button" data-story-photo-fit="cover" aria-pressed="false">Užpildyti plotą</button>
+        </div>
+      </aside>
       <article class="editor-phone-preview" id="editor-preview-stage">
         <header class="editor-piece editor-header-card" data-piece="header" style="left: 8%; top: 3%; width: 84%;">
           <h3 id="editor-preview-name">Vardas Pavardė</h3>
@@ -403,8 +424,8 @@
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260730-3"></script>
-<script src="assets/redaktorius.js?v=20260730-4"></script>
+<script src="assets/atminimas-duomenys.js?v=20260730-4"></script>
+<script src="assets/redaktorius.js?v=20260730-8"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

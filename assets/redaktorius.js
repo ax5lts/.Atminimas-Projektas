@@ -33,6 +33,10 @@
   var addStoryPhotoButton = document.querySelector("[data-story-add='photo']");
   var advancedLayoutToggle = document.querySelector("[data-advanced-layout-toggle]");
   var advancedLayoutEl = document.getElementById("editor-advanced-layout");
+  var storyPhotoTools = document.getElementById("editor-story-photo-tools");
+  var storyPhotoToolsTitle = document.getElementById("editor-story-photo-tools-title");
+  var storyPhotoSizeInput = document.getElementById("editor-story-photo-size");
+  var storyPhotoSizeValue = document.getElementById("editor-story-photo-size-value");
   var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
@@ -44,6 +48,8 @@
   var MAX_VIDEO_BYTES = 50 * 1024 * 1024;
   var MAX_STORY_WORDS = 1000;
   var MAX_STORY_CHARS = 10000;
+  var MIN_STORY_PHOTO_WIDTH = 35;
+  var MAX_STORY_PHOTO_WIDTH = 100;
   var DATE_MIN_YEAR = 1800;
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
@@ -124,6 +130,7 @@
   var storyBlocks = [];
   var storyBlocksLoaded = false;
   var storyEmptyMode = false;
+  var selectedStoryPhotoIndex = -1;
   var productOptions = {
     metal: {
       image: "assets/qr-plienas-480.webp",
@@ -284,6 +291,28 @@
     return value === "left" || value === "right" ? value : "full";
   }
 
+  function defaultStoryPhotoWidth(align) {
+    return normalizeStoryPhotoAlign(align) === "full" ? 100 : 42;
+  }
+
+  function normalizeStoryPhotoWidth(value, align) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return defaultStoryPhotoWidth(align);
+    return Math.round(Math.max(MIN_STORY_PHOTO_WIDTH, Math.min(MAX_STORY_PHOTO_WIDTH, number)));
+  }
+
+  function normalizeStoryPhotoFit(value) {
+    return value === "cover" ? "cover" : "contain";
+  }
+
+  function storyPhotoAppearance(block) {
+    var align = normalizeStoryPhotoAlign(block && block.align);
+    return {
+      widthPct: normalizeStoryPhotoWidth(block && block.widthPct, align),
+      fit: normalizeStoryPhotoFit(block && block.fit)
+    };
+  }
+
   function normalizeStoryOffset(value, minimum, maximum) {
     var number = Number(value);
     if (!Number.isFinite(number)) return 0;
@@ -314,12 +343,15 @@
       if (item.type === "photo") {
         var photoOrder = Number(item.photoOrder);
         var photoPosition = storyBlockPosition(item);
+        var photoAppearance = storyPhotoAppearance(item);
         result.push({
           type: "photo",
           photoOrder: Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS
             ? photoOrder
             : null,
           align: normalizeStoryPhotoAlign(item.align),
+          widthPct: photoAppearance.widthPct,
+          fit: photoAppearance.fit,
           offsetX: photoPosition.offsetX,
           offsetY: photoPosition.offsetY
         });
@@ -345,11 +377,14 @@
         var photoOrder = Number(block.photoOrder);
         var align = normalizeStoryPhotoAlign(block.align);
         var photoPosition = storyBlockPosition(block);
+        var photoAppearance = storyPhotoAppearance(block);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS) {
           result.push({
             type: "photo",
             photoOrder: photoOrder,
             align: align,
+            widthPct: photoAppearance.widthPct,
+            fit: photoAppearance.fit,
             offsetX: photoPosition.offsetX,
             offsetY: photoPosition.offsetY
           });
@@ -358,6 +393,8 @@
             type: "photo",
             photoOrder: null,
             align: align,
+            widthPct: photoAppearance.widthPct,
+            fit: photoAppearance.fit,
             offsetX: photoPosition.offsetX,
             offsetY: photoPosition.offsetY
           });
@@ -491,6 +528,8 @@
           type: "photo",
           photoOrder: photoOrder,
           align: "full",
+          widthPct: 100,
+          fit: "contain",
           offsetX: 0,
           offsetY: 0
         });
@@ -549,6 +588,148 @@
     });
   }
 
+  function storyPhotoPreviewElement(index) {
+    if (!previewLongText || !Number.isInteger(index)) return null;
+    return previewLongText.querySelector(
+      "[data-story-photo-container='" + index + "']"
+    );
+  }
+
+  function applyStoryPhotoAppearance(element, block) {
+    if (!element || !block) return;
+    var appearance = storyPhotoAppearance(block);
+    block.widthPct = appearance.widthPct;
+    block.fit = appearance.fit;
+    element.style.setProperty("--story-photo-width", appearance.widthPct + "%");
+    element.classList.toggle(
+      "editor-preview-story__photo--fit-cover",
+      appearance.fit === "cover"
+    );
+    element.classList.toggle(
+      "editor-preview-story__photo--fit-contain",
+      appearance.fit === "contain"
+    );
+  }
+
+  function syncStoryPhotoInteractivity() {
+    if (!previewLongText) return;
+    var enabled = !stage.classList.contains("is-simple-layout");
+    previewLongText.querySelectorAll("[data-story-photo-select]").forEach(function (button) {
+      button.disabled = !enabled;
+    });
+  }
+
+  function selectedStoryPhotoBlock() {
+    var block = storyBlocks[selectedStoryPhotoIndex];
+    return block && block.type === "photo" && block.photoOrder ? block : null;
+  }
+
+  function syncStoryPhotoTools() {
+    if (!storyPhotoTools) return;
+    var block = selectedStoryPhotoBlock();
+    var element = storyPhotoPreviewElement(selectedStoryPhotoIndex);
+    previewLongText.querySelectorAll("[data-story-photo-container]").forEach(function (figure) {
+      var selected = figure === element && !!block;
+      figure.classList.toggle("is-selected", selected);
+      var button = figure.querySelector("[data-story-photo-select]");
+      if (button) button.setAttribute("aria-pressed", String(selected));
+    });
+    if (!block || !element || stage.classList.contains("is-simple-layout")) {
+      storyPhotoTools.hidden = true;
+      return;
+    }
+    var appearance = storyPhotoAppearance(block);
+    storyPhotoTools.hidden = false;
+    if (storyPhotoToolsTitle) {
+      storyPhotoToolsTitle.textContent = Number(block.photoOrder) + " nuotraukos koregavimas";
+    }
+    if (storyPhotoSizeInput) storyPhotoSizeInput.value = String(appearance.widthPct);
+    if (storyPhotoSizeValue) {
+      storyPhotoSizeValue.value = appearance.widthPct + " %";
+      storyPhotoSizeValue.textContent = appearance.widthPct + " %";
+    }
+    storyPhotoTools.querySelectorAll("[data-story-photo-fit]").forEach(function (button) {
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.storyPhotoFit === appearance.fit)
+      );
+    });
+  }
+
+  function clearStoryPhotoSelection() {
+    selectedStoryPhotoIndex = -1;
+    if (previewLongText) {
+      previewLongText.querySelectorAll("[data-story-photo-container]").forEach(function (figure) {
+        figure.classList.remove("is-selected");
+        var button = figure.querySelector("[data-story-photo-select]");
+        if (button) button.setAttribute("aria-pressed", "false");
+      });
+    }
+    if (storyPhotoTools) storyPhotoTools.hidden = true;
+  }
+
+  function selectStoryPhoto(index, focusControl) {
+    var block = storyBlocks[index];
+    if (
+      stage.classList.contains("is-simple-layout") ||
+      !block ||
+      block.type !== "photo" ||
+      !block.photoOrder
+    ) return;
+    selectedStoryPhotoIndex = index;
+    syncStoryPhotoTools();
+    if (focusControl && storyPhotoSizeInput) storyPhotoSizeInput.focus();
+  }
+
+  function updateSelectedStoryPhoto(width, fit) {
+    var block = selectedStoryPhotoBlock();
+    if (!block) return;
+    if (width !== undefined) {
+      block.widthPct = normalizeStoryPhotoWidth(width, block.align);
+    }
+    if (fit !== undefined) block.fit = normalizeStoryPhotoFit(fit);
+    applyStoryPhotoAppearance(storyPhotoPreviewElement(selectedStoryPhotoIndex), block);
+    syncStoryPhotoTools();
+    scheduleStageFit(true);
+    scheduleDraftSave();
+  }
+
+  function setupStoryPhotoTools() {
+    if (!previewLongText || !storyPhotoTools) return;
+    if (storyPhotoSizeInput) {
+      storyPhotoSizeInput.addEventListener("input", function () {
+        updateSelectedStoryPhoto(storyPhotoSizeInput.value);
+      });
+    }
+    storyPhotoTools.addEventListener("click", function (event) {
+      var sizeButton = event.target.closest("[data-story-photo-size]");
+      if (sizeButton) {
+        var block = selectedStoryPhotoBlock();
+        if (!block) return;
+        updateSelectedStoryPhoto(
+          storyPhotoAppearance(block).widthPct + Number(sizeButton.dataset.storyPhotoSize || 0)
+        );
+        return;
+      }
+      var fitButton = event.target.closest("[data-story-photo-fit]");
+      if (fitButton) {
+        updateSelectedStoryPhoto(undefined, fitButton.dataset.storyPhotoFit);
+        return;
+      }
+      if (event.target.closest("[data-story-photo-reset]")) {
+        var selectedBlock = selectedStoryPhotoBlock();
+        if (!selectedBlock) return;
+        selectedBlock.widthPct = defaultStoryPhotoWidth(selectedBlock.align);
+        selectedBlock.fit = "contain";
+        updateSelectedStoryPhoto(selectedBlock.widthPct, selectedBlock.fit);
+        return;
+      }
+      if (event.target.closest("[data-story-photo-close]")) {
+        clearStoryPhotoSelection();
+      }
+    });
+  }
+
   function renderStoryPreview() {
     if (!previewLongText) return;
     previewLongText.innerHTML = "";
@@ -581,8 +762,22 @@
       figure.className = "editor-preview-story__photo editor-preview-story__photo--" + align +
         " editor-story-layout-piece";
       figure.dataset.storyPreviewIndex = String(index);
+      figure.dataset.storyPhotoContainer = String(index);
       figure.style.setProperty("--story-offset-x", position.offsetX + "%");
       figure.style.setProperty("--story-offset-y", position.offsetY + "px");
+      applyStoryPhotoAppearance(figure, block);
+      var selectButton = document.createElement("button");
+      selectButton.type = "button";
+      selectButton.className = "editor-story-photo-select";
+      selectButton.dataset.storyPhotoSelect = String(index);
+      selectButton.setAttribute(
+        "aria-label",
+        "Koreguoti " + Number(block.photoOrder) + " nuotraukos dydį ir rodymą"
+      );
+      selectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
+      selectButton.addEventListener("click", function (event) {
+        selectStoryPhoto(index, event.detail === 0);
+      });
       var image = document.createElement("img");
       image.alt = storyPhotoAlt(block.photoOrder);
       image.decoding = "async";
@@ -590,7 +785,8 @@
         scheduleStageFit(true);
       }, { once: true });
       image.src = url;
-      figure.appendChild(image);
+      selectButton.appendChild(image);
+      figure.appendChild(selectButton);
       var captionValue = storyPhotoCaption(block.photoOrder);
       if (captionValue) {
         var caption = document.createElement("figcaption");
@@ -608,6 +804,8 @@
       previewLongText.appendChild(placeholder);
     }
     previewLongText.style.setProperty("--story-offset-padding", maximumPositiveOffsetY + "px");
+    syncStoryPhotoInteractivity();
+    syncStoryPhotoTools();
     setupStoryPreviewDragging();
     scheduleStageFit(true);
   }
@@ -916,7 +1114,14 @@
       var index = card ? Number(card.dataset.storyBlockIndex) : -1;
       if (!storyBlocks[index] || storyBlocks[index].type !== "photo") return;
       if (event.target.matches("[data-story-photo-align]")) {
-        storyBlocks[index].align = normalizeStoryPhotoAlign(event.target.value);
+        var previousAlign = normalizeStoryPhotoAlign(storyBlocks[index].align);
+        var nextAlign = normalizeStoryPhotoAlign(event.target.value);
+        if (
+          storyPhotoAppearance(storyBlocks[index]).widthPct === defaultStoryPhotoWidth(previousAlign)
+        ) {
+          storyBlocks[index].widthPct = defaultStoryPhotoWidth(nextAlign);
+        }
+        storyBlocks[index].align = nextAlign;
         renderStoryPreview();
         scheduleDraftSave();
         return;
@@ -943,6 +1148,7 @@
       if (move) {
         var targetIndex = index + Number(move.dataset.storyMove);
         if (targetIndex < 0 || targetIndex >= storyBlocks.length) return;
+        clearStoryPhotoSelection();
         var moved = storyBlocks.splice(index, 1)[0];
         storyBlocks.splice(targetIndex, 0, moved);
         renderStoryBlockEditor(targetIndex, moved.type);
@@ -950,6 +1156,7 @@
         return;
       }
       if (event.target.closest("[data-story-delete]")) {
+        clearStoryPhotoSelection();
         storyBlocks.splice(index, 1);
         ensurePersistableStoryMode();
         renderStoryBlockEditor(Math.min(index, storyBlocks.length - 1));
@@ -982,6 +1189,8 @@
           type: "photo",
           photoOrder: firstUnusedStoryPhotoOrder(),
           align: "full",
+          widthPct: 100,
+          fit: "contain",
           offsetX: 0,
           offsetY: 0
         });
@@ -2276,12 +2485,15 @@
   function setupAdvancedLayout() {
     if (!advancedLayoutToggle || !advancedLayoutEl) return;
     stage.classList.add("is-simple-layout");
+    syncStoryPhotoInteractivity();
     advancedLayoutToggle.addEventListener("click", function () {
       var open = advancedLayoutEl.hidden;
       advancedLayoutEl.hidden = !open;
       advancedLayoutToggle.setAttribute("aria-expanded", String(open));
       advancedLayoutToggle.textContent = open ? "Slėpti papildomus nustatymus" : "Noriu koreguoti pats";
       stage.classList.toggle("is-simple-layout", !open);
+      syncStoryPhotoInteractivity();
+      if (!open) clearStoryPhotoSelection();
       if (open) {
         advancedLayoutEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
@@ -2415,6 +2627,7 @@
     }
     function closePreview() {
       document.body.classList.remove("editor-preview-open");
+      clearStoryPhotoSelection();
       if (canvas) {
         canvas.removeAttribute("role");
         canvas.removeAttribute("aria-modal");
@@ -2947,6 +3160,7 @@
     }
     ensureStoryBlocks(true);
     setupStoryBuilder();
+    setupStoryPhotoTools();
     renderStoryBlockEditor();
     setupColorPicker();
     syncPreview();

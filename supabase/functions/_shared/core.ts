@@ -170,6 +170,8 @@ export type StoryBlock =
     type: "photo";
     photoOrder: number;
     align: "full" | "left" | "right";
+    widthPct: number;
+    fit: "contain" | "cover";
     offsetX: number;
     offsetY: number;
   };
@@ -188,6 +190,18 @@ function safeStoryOffset(
   if (!Number.isFinite(number)) return 0;
   return Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) /
     1000;
+}
+
+function safeStoryPhotoWidth(
+  value: unknown,
+  align: "full" | "left" | "right",
+) {
+  if (typeof value !== "number" && typeof value !== "string") {
+    return align === "full" ? 100 : 42;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) return align === "full" ? 100 : 42;
+  return Math.round(Math.max(35, Math.min(100, number)));
 }
 
 export function safeStoryBlocks(value: unknown): StoryBlock[] {
@@ -236,6 +250,8 @@ export function safeStoryBlocks(value: unknown): StoryBlock[] {
           type: "photo",
           photoOrder,
           align,
+          widthPct: safeStoryPhotoWidth(block.widthPct, align),
+          fit: block.fit === "cover" ? "cover" : "contain",
           offsetX: safeStoryOffset(block.offsetX, -70, 70),
           offsetY: safeStoryOffset(block.offsetY, -320, 320),
         });

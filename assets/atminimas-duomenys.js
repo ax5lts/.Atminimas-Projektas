@@ -108,6 +108,13 @@
         ? Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) / 1000
         : 0;
     }
+    function photoWidth(raw, align) {
+      var number = Number(raw);
+      var fallback = align === "full" ? 100 : 42;
+      return Number.isFinite(number)
+        ? Math.round(Math.max(35, Math.min(100, number)))
+        : fallback;
+    }
 
     value.slice(0, 40).forEach(function (raw) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
@@ -131,10 +138,13 @@
       if (raw.type === "photo") {
         var photoOrder = Number(raw.photoOrder);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
+          var align = raw.align === "left" || raw.align === "right" ? raw.align : "full";
           blocks.push({
             type: "photo",
             photoOrder: photoOrder,
-            align: raw.align === "left" || raw.align === "right" ? raw.align : "full",
+            align: align,
+            widthPct: photoWidth(raw.widthPct, align),
+            fit: raw.fit === "cover" ? "cover" : "contain",
             offsetX: offset(raw.offsetX, -70, 70),
             offsetY: offset(raw.offsetY, -320, 320)
           });

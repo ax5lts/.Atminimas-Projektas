@@ -481,6 +481,74 @@ class StoryBlocksContractTests(unittest.TestCase):
             self.editor_html,
         )
 
+    def test_story_photos_are_selectable_resizable_and_keep_display_settings(self):
+        for source in (
+            self.editor_js,
+            self.api_js,
+            self.memorial_js,
+            self.core,
+        ):
+            with self.subTest(source=source[:40]):
+                self.assertIn("widthPct", source)
+                self.assertIn('"cover"', source)
+                self.assertIn('"contain"', source)
+
+        self.assertIn('id="editor-story-photo-tools"', self.editor_html)
+        self.assertIn('id="editor-story-photo-size"', self.editor_html)
+        self.assertIn('data-story-photo-fit="contain"', self.editor_html)
+        self.assertIn('data-story-photo-fit="cover"', self.editor_html)
+        self.assertIn("setupStoryPhotoTools()", self.editor_js)
+        self.assertIn("selectStoryPhoto(", self.editor_js)
+        self.assertIn("updateSelectedStoryPhoto(", self.editor_js)
+        self.assertIn("MIN_STORY_PHOTO_WIDTH = 35", self.editor_js)
+        self.assertIn("MAX_STORY_PHOTO_WIDTH = 100", self.editor_js)
+
+        preview = balanced_block(
+            self.editor_js, r"function\s+renderStoryPreview\s*\(",
+        )
+        self.assertIn("dataset.storyPhotoSelect", preview)
+        self.assertIn("applyStoryPhotoAppearance(figure, block)", preview)
+        self.assertIn("syncStoryPhotoTools()", preview)
+
+        controls = balanced_block(
+            self.editor_js, r"function\s+setupStoryPhotoTools\s*\(",
+        )
+        self.assertIn("[data-story-photo-size]", controls)
+        self.assertIn("[data-story-photo-fit]", controls)
+        self.assertIn("[data-story-photo-reset]", controls)
+        self.assertIn("event.detail === 0", self.editor_js)
+
+        renderer = balanced_block(
+            self.memorial_js, r"function\s+buildStoryBlocks\s*\(",
+        )
+        self.assertIn("--story-photo-width", renderer)
+        self.assertIn("memorial-story-block--photo-fit-", renderer)
+
+        display_migration = "\n".join(
+            source
+            for name, source in self.migrations.items()
+            if "story_photo_display_controls" in name
+        )
+        self.assertTrue(display_migration)
+        self.assertIn("'widthPct', photo_width", display_migration)
+        self.assertIn("'fit', photo_fit", display_migration)
+        self.assertIn("least(100, greatest(35", display_migration)
+        self.assertIn("'widthPct', 100", display_migration)
+        self.assertIn("'fit', 'contain'", display_migration)
+
+        self.assertRegex(
+            self.styles,
+            r"\.editor-preview-story__photo,[\s\S]{0,420}"
+            r"background:\s*transparent",
+        )
+        self.assertRegex(
+            self.styles,
+            r"\.memorial-story-block--photo img\s*\{[\s\S]{0,220}"
+            r"background:\s*transparent",
+        )
+        self.assertIn(".editor-preview-story__photo.is-selected", self.styles)
+        self.assertIn(".editor-story-photo-tools", self.styles)
+
     def test_photo_draft_errors_cannot_be_reported_as_saved(self):
         save_draft = balanced_block(
             self.editor_js, r"function\s+saveDraftNow\s*\(",
