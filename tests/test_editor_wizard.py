@@ -111,6 +111,19 @@ class EditorWizardTests(unittest.TestCase):
         self.assertIn("catalog.remote && catalog.metal", self.script)
         self.assertNotIn("}).finally(function ()", self.script)
 
+    def test_manual_preview_opens_on_desktop_and_restores_focus(self):
+        editor_mobile_media = self.styles.rfind("@media (max-width: 860px)")
+        canvas_rule = self.styles.index(".editor-preview-open .editor-canvas {")
+        close_rule = self.styles.index(".editor-preview-open .editor-preview-close {")
+        self.assertEqual(self.styles.count(".editor-preview-open .editor-canvas {"), 1)
+        self.assertLess(canvas_rule, editor_mobile_media)
+        self.assertLess(close_rule, editor_mobile_media)
+        self.assertIn('var canvas = document.querySelector(".editor-canvas");', self.script)
+        self.assertIn("canvas.scrollTop = 0;", self.script)
+        self.assertIn('canvas.setAttribute("role", "dialog");', self.script)
+        self.assertIn('canvas.setAttribute("aria-modal", "true");', self.script)
+        self.assertIn("previewOpener.focus();", self.script)
+
 
 if __name__ == "__main__":
     unittest.main()

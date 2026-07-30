@@ -2400,13 +2400,26 @@
 
   function setupPreviewDialog() {
     var close = document.querySelector("[data-editor-preview-close]");
-    function openPreview() {
+    var canvas = document.querySelector(".editor-canvas");
+    var previewOpener = null;
+    function openPreview(event) {
+      previewOpener = event && event.currentTarget ? event.currentTarget : null;
       document.body.classList.add("editor-preview-open");
+      if (canvas) {
+        canvas.scrollTop = 0;
+        canvas.setAttribute("role", "dialog");
+        canvas.setAttribute("aria-modal", "true");
+      }
       if (close) close.focus();
       window.requestAnimationFrame(function () { refreshResponsiveStage(true); });
     }
     function closePreview() {
       document.body.classList.remove("editor-preview-open");
+      if (canvas) {
+        canvas.removeAttribute("role");
+        canvas.removeAttribute("aria-modal");
+      }
+      if (previewOpener && document.contains(previewOpener)) previewOpener.focus();
     }
     document.querySelectorAll("[data-editor-preview-open]").forEach(function (button) {
       button.addEventListener("click", openPreview);
