@@ -6,7 +6,7 @@
   var previewName = document.getElementById("editor-preview-name");
   var previewDates = document.getElementById("editor-preview-dates");
   var previewText = document.getElementById("editor-preview-epitaph");
-  var previewLongText = document.getElementById("editor-preview-text");
+  var previewLongText = document.getElementById("editor-preview-story") || document.getElementById("editor-preview-text");
   var photosInput = document.getElementById("editor-photos");
   var videoInput = document.getElementById("editor-video");
   var captionsInput = document.getElementById("editor-captions");
@@ -28,6 +28,9 @@
   var saveProgressEl = document.getElementById("editor-save-progress");
   var photoOrderEl = document.getElementById("editor-photo-order");
   var photoDetailsEl = document.getElementById("editor-photo-details");
+  var storyBlocksEl = document.getElementById("editor-story-blocks");
+  var addStoryTextButton = document.querySelector("[data-story-add='text']");
+  var addStoryPhotoButton = document.querySelector("[data-story-add='photo']");
   var advancedLayoutToggle = document.querySelector("[data-advanced-layout-toggle]");
   var advancedLayoutEl = document.getElementById("editor-advanced-layout");
   var productImage = document.getElementById("editor-product-image");
@@ -37,14 +40,17 @@
   var photoFileList = document.getElementById("editor-photo-file-list");
   var datePickers = Array.from(document.querySelectorAll("[data-date-picker]"));
   var MAX_PHOTOS = 8;
+  var MAX_STORY_BLOCKS = 40;
   var MAX_VIDEO_BYTES = 50 * 1024 * 1024;
   var MAX_STORY_WORDS = 1000;
+  var MAX_STORY_CHARS = 10000;
   var PREVIEW_STORY_WORDS = 80;
   var DATE_MIN_YEAR = 1800;
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
   var STAGE_BOTTOM_GAP_PCT = 12;
   var MAX_STAGE_HEIGHT_PCT = 1200;
+  var MAX_STORY_STAGE_HEIGHT_PCT = 8000;
   var MAX_PIECE_HEIGHT_PCT = 180;
   var DATE_MONTHS = [
     "Sausis", "Vasaris", "Kovas", "Balandis", "Gegužė", "Birželis",
@@ -69,7 +75,15 @@
   var transformMode = "resize";
   var selectedPiece = null;
   var processedPhotos = [];
-  var cropPromises = [];
+  var photoSyncPromise = Promise.resolve();
+  var photoProcessingGeneration = 0;
+  var photosProcessing = false;
+  var photoPreparationFailed = false;
+  var photoDraftPersistenceFailed = false;
+  var auxiliaryMediaPersistencePromise = Promise.resolve();
+  var auxiliaryMediaPersistencePending = 0;
+  var auxiliaryMediaPersistenceVersion = { video: 0, captions: 0 };
+  var auxiliaryMediaPersistenceFailed = { video: false, captions: false };
   var savedVideoFile = null;
   var savedCaptionsFile = null;
   var editingMedia = [];
@@ -108,6 +122,9 @@
   var photoOrderNames = [];
   var photoOrderMode = "files";
   var photoPreviewUrls = new WeakMap();
+  var storyBlocks = [];
+  var storyBlocksLoaded = false;
+  var storyEmptyMode = false;
   var productOptions = {
     metal: {
       image: "assets/qr-plienas-480.webp",
@@ -268,6 +285,515 @@
     var list = words(value);
     if (list.length <= PREVIEW_STORY_WORDS) return value;
     return list.slice(0, PREVIEW_STORY_WORDS).join(" ") + "…";
+  }
+
+  function normalizeStoryBlocks(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0, MAX_STORY_BLOCKS).reduce(function (result, item) {
+      if (!item || typeof item !== "object") return result;
+      if (item.type === "text") {
+        result.push({ type: "text", text: String(item.text || "").slice(0, 10000) });
+        return result;
+      }
+      if (item.type === "photo") {
+        var photoOrder = Number(item.photoOrder);
+        result.push({
+          type: "photo",
+          photoOrder: Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS
+            ? photoOrder
+            : null
+        });
+      }
+      return result;
+    }, []);
+  }
+
+  function collectStoryBlocks(includeEmpty) {
+    return storyBlocks.slice(0, MAX_STORY_BLOCKS).reduce(function (result, block) {
+      if (block.type === "text") {
+        var text = String(block.text || "").slice(0, 10000);
+        if (includeEmpty || text.trim()) result.push({ type: "text", text: text });
+      } else if (block.type === "photo") {
+        var photoOrder = Number(block.photoOrder);
+        if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS) {
+          result.push({ type: "photo", photoOrder: photoOrder });
+        } else if (includeEmpty) {
+          result.push({ type: "photo", photoOrder: null });
+        }
+      }
+      return result;
+    }, []);
+  }
+
+  function ensurePersistableStoryMode() {
+    var hasPersistableBlock = storyBlocks.some(function (block) {
+      if (block.type === "text") return true;
+      var photoOrder = Number(block.photoOrder);
+      return block.type === "photo" && Number.isInteger(photoOrder) &&
+        photoOrder >= 1 && photoOrder <= MAX_PHOTOS;
+    });
+    if (!hasPersistableBlock) {
+      storyBlocks = [{ type: "text", text: "" }];
+      storyEmptyMode = true;
+    }
+  }
+
+  function storyTextValue() {
+    return storyBlocks
+      .filter(function (block) { return block.type === "text"; })
+      .map(function (block) { return String(block.text || "").trim(); })
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  function syncLegacyStoryText() {
+    var field = form.elements.tekstas_200;
+    var value = storyTextValue();
+    if (field) field.value = value;
+    return value;
+  }
+
+  function limitStoryBlocksToWords() {
+    var remainingWords = MAX_STORY_WORDS;
+    var remainingChars = MAX_STORY_CHARS;
+    var hasNonEmptyText = false;
+    storyBlocks.forEach(function (block) {
+      if (block.type !== "text") return;
+      var value = String(block.text || "");
+      var blockWords = words(value);
+      if (blockWords.length > remainingWords) {
+        value = remainingWords > 0 ? blockWords.slice(0, remainingWords).join(" ") : "";
+        block.text = value;
+      }
+      remainingWords = Math.max(0, remainingWords - Math.min(blockWords.length, remainingWords));
+
+      var trimmed = value.trim();
+      var separatorLength = trimmed && hasNonEmptyText ? 2 : 0;
+      var available = Math.max(0, remainingChars - separatorLength);
+      if (trimmed.length > available) {
+        block.text = trimmed.slice(0, available).replace(/\s+$/, "");
+        trimmed = block.text;
+      }
+      if (trimmed) {
+        remainingChars = Math.max(0, remainingChars - separatorLength - trimmed.length);
+        hasNonEmptyText = true;
+      }
+    });
+  }
+
+  function setStoryBlocks(value, acceptEmpty, explicitEmptyMode) {
+    var normalized = normalizeStoryBlocks(value);
+    if (!normalized.length && !acceptEmpty) return false;
+    if (!normalized.length) normalized = [{ type: "text", text: "" }];
+    storyBlocks = normalized;
+    storyBlocksLoaded = true;
+    storyEmptyMode = typeof explicitEmptyMode === "boolean"
+      ? explicitEmptyMode
+      : normalized.length === 1 &&
+        normalized[0].type === "text" &&
+        !String(normalized[0].text || "").trim();
+    limitStoryBlocksToWords();
+    return true;
+  }
+
+  function storyPhotoCount() {
+    return Math.min(MAX_PHOTOS, photoOrderNames.filter(Boolean).length);
+  }
+
+  function storyPhotoName(photoOrder) {
+    var index = Number(photoOrder) - 1;
+    return index >= 0 && photoOrderNames[index]
+      ? photoOrderNames[index]
+      : ("Nuotrauka " + photoOrder);
+  }
+
+  function storyPhotoCaption(photoOrder) {
+    var field = form.elements["photo_caption_" + photoOrder];
+    return field ? String(field.value || "").trim() : "";
+  }
+
+  function storyPhotoAlt(photoOrder) {
+    var field = form.elements["photo_alt_" + photoOrder];
+    return field ? String(field.value || "").trim() : "";
+  }
+
+  function reconcileStoryPhotoBlocks(count, appendMissing, appendFromOrder) {
+    if (!storyBlocksLoaded) return;
+    var safeCount = Math.max(0, Math.min(MAX_PHOTOS, Number(count) || 0));
+    var used = new Set();
+    storyBlocks.forEach(function (block) {
+      if (block.type !== "photo") return;
+      var photoOrder = Number(block.photoOrder);
+      if (!Number.isInteger(photoOrder) || photoOrder < 1 || photoOrder > safeCount || used.has(photoOrder)) {
+        block.photoOrder = null;
+        return;
+      }
+      used.add(photoOrder);
+    });
+    ensurePersistableStoryMode();
+    if (!appendMissing) return;
+    var firstAppendOrder = Math.max(1, Number(appendFromOrder) || 1);
+    if (storyEmptyMode && firstAppendOrder <= safeCount) {
+      storyBlocks = [];
+      storyEmptyMode = false;
+    }
+    for (var photoOrder = firstAppendOrder; photoOrder <= safeCount; photoOrder++) {
+      if (used.has(photoOrder)) continue;
+      var emptyBlock = storyBlocks.find(function (block) {
+        return block.type === "photo" && !block.photoOrder;
+      });
+      if (emptyBlock) {
+        emptyBlock.photoOrder = photoOrder;
+      } else if (storyBlocks.length < MAX_STORY_BLOCKS) {
+        storyBlocks.push({ type: "photo", photoOrder: photoOrder });
+      }
+      used.add(photoOrder);
+    }
+  }
+
+  function ensureStoryBlocks(includePhotos) {
+    if (!storyBlocksLoaded) {
+      storyBlocks = [{
+        type: "text",
+        text: form.elements.tekstas_200 ? String(form.elements.tekstas_200.value || "") : ""
+      }];
+      storyBlocksLoaded = true;
+      storyEmptyMode = false;
+      limitStoryBlocksToWords();
+      if (includePhotos) reconcileStoryPhotoBlocks(storyPhotoCount(), true);
+    }
+    syncLegacyStoryText();
+  }
+
+  function firstUnusedStoryPhotoOrder() {
+    var used = new Set(storyBlocks.filter(function (block) {
+      return block.type === "photo" && block.photoOrder;
+    }).map(function (block) {
+      return Number(block.photoOrder);
+    }));
+    for (var photoOrder = 1; photoOrder <= storyPhotoCount(); photoOrder++) {
+      if (!used.has(photoOrder)) return photoOrder;
+    }
+    return null;
+  }
+
+  function updateStoryWordCount() {
+    var value = storyTextValue();
+    var count = words(value).length;
+    wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių · " +
+      value.length + " / " + MAX_STORY_CHARS + " ženklų";
+    wordCountEl.classList.toggle(
+      "is-limit",
+      count >= MAX_STORY_WORDS || value.length >= MAX_STORY_CHARS
+    );
+  }
+
+  function syncStoryTextEditors() {
+    if (!storyBlocksEl) return;
+    storyBlocksEl.querySelectorAll("[data-story-block-index]").forEach(function (card) {
+      var field = card.querySelector("[data-story-text]");
+      var block = storyBlocks[Number(card.dataset.storyBlockIndex)];
+      if (field && block && block.type === "text" && field.value !== block.text) {
+        field.value = block.text;
+      }
+    });
+  }
+
+  function renderStoryPreview() {
+    if (!previewLongText) return;
+    previewLongText.innerHTML = "";
+    stage.classList.add("has-story-blocks");
+    var visibleBlocks = 0;
+    storyBlocks.forEach(function (block) {
+      if (block.type === "text") {
+        var value = String(block.text || "").trim();
+        if (!value) return;
+        var text = document.createElement("div");
+        text.className = "editor-preview-story__text";
+        text.textContent = value;
+        previewLongText.appendChild(text);
+        visibleBlocks += 1;
+        return;
+      }
+      if (block.type !== "photo" || !block.photoOrder) return;
+      var url = photoUrlAt(Number(block.photoOrder) - 1);
+      if (!url) return;
+      var figure = document.createElement("figure");
+      figure.className = "editor-preview-story__photo";
+      var image = document.createElement("img");
+      image.alt = storyPhotoAlt(block.photoOrder);
+      image.decoding = "async";
+      image.addEventListener("load", function () {
+        scheduleStageFit(true);
+      }, { once: true });
+      image.src = url;
+      figure.appendChild(image);
+      var captionValue = storyPhotoCaption(block.photoOrder);
+      if (captionValue) {
+        var caption = document.createElement("figcaption");
+        caption.textContent = captionValue;
+        figure.appendChild(caption);
+      }
+      previewLongText.appendChild(figure);
+      visibleBlocks += 1;
+    });
+    if (!visibleBlocks) {
+      var placeholder = document.createElement("p");
+      placeholder.className = "editor-preview-story__placeholder";
+      placeholder.textContent = "Gyvenimo istorijos blokai atsiras čia.";
+      previewLongText.appendChild(placeholder);
+    }
+    scheduleStageFit(true);
+  }
+
+  function storyBlockControls(index) {
+    var controls = document.createElement("span");
+    controls.className = "editor-story-block__controls";
+    var up = document.createElement("button");
+    up.type = "button";
+    up.dataset.storyMove = "-1";
+    up.textContent = "↑ Aukštyn";
+    up.disabled = index === 0;
+    var down = document.createElement("button");
+    down.type = "button";
+    down.dataset.storyMove = "1";
+    down.textContent = "↓ Žemyn";
+    down.disabled = index === storyBlocks.length - 1;
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.dataset.storyDelete = "";
+    remove.textContent = "Ištrinti";
+    controls.appendChild(up);
+    controls.appendChild(down);
+    controls.appendChild(remove);
+    return controls;
+  }
+
+  function renderStoryBlockEditor(focusIndex, focusKind) {
+    if (!storyBlocksEl) return;
+    storyBlocksEl.innerHTML = "";
+    var selectedOrders = new Set(storyBlocks.filter(function (block) {
+      return block.type === "photo" && block.photoOrder;
+    }).map(function (block) {
+      return Number(block.photoOrder);
+    }));
+
+    storyBlocks.forEach(function (block, index) {
+      if (storyEmptyMode) return;
+      var card = document.createElement("article");
+      card.className = "editor-story-block editor-story-block--" + block.type;
+      card.dataset.storyBlockIndex = String(index);
+      card.setAttribute("role", "listitem");
+
+      var header = document.createElement("header");
+      header.className = "editor-story-block__header";
+      var title = document.createElement("strong");
+      title.textContent = block.type === "text"
+        ? ("Teksto blokas " + (index + 1))
+        : ("Nuotraukos blokas " + (index + 1));
+      header.appendChild(title);
+      header.appendChild(storyBlockControls(index));
+      card.appendChild(header);
+
+      if (block.type === "text") {
+        var textLabel = document.createElement("label");
+        textLabel.className = "editor-story-block__field";
+        var textLabelCopy = document.createElement("span");
+        textLabelCopy.textContent = "Istorijos dalis";
+        var textarea = document.createElement("textarea");
+        textarea.className = "editor-story-block__text";
+        textarea.dataset.storyText = "";
+        textarea.rows = 5;
+        textarea.maxLength = 10000;
+        textarea.placeholder = "Įrašykite šią gyvenimo istorijos dalį…";
+        textarea.value = String(block.text || "");
+        textLabel.appendChild(textLabelCopy);
+        textLabel.appendChild(textarea);
+        card.appendChild(textLabel);
+      } else {
+        var photoLayout = document.createElement("div");
+        photoLayout.className = "editor-story-block__photo";
+        var thumbnail = document.createElement("img");
+        thumbnail.className = "editor-story-block__thumbnail";
+        thumbnail.alt = "";
+        var previewUrl = block.photoOrder ? photoUrlAt(Number(block.photoOrder) - 1) : "";
+        if (previewUrl) thumbnail.src = previewUrl;
+        else thumbnail.hidden = true;
+        photoLayout.appendChild(thumbnail);
+
+        var photoFields = document.createElement("div");
+        photoFields.className = "editor-story-block__photo-fields";
+        var selectLabel = document.createElement("label");
+        selectLabel.className = "editor-story-block__field";
+        var selectCopy = document.createElement("span");
+        selectCopy.textContent = "Nuotrauka";
+        var select = document.createElement("select");
+        select.dataset.storyPhotoSelect = "";
+        var emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = storyPhotoCount()
+          ? "Pasirinkite nuotrauką"
+          : "Nuotraukų dar nėra";
+        select.appendChild(emptyOption);
+        for (var photoOrder = 1; photoOrder <= storyPhotoCount(); photoOrder++) {
+          var option = document.createElement("option");
+          option.value = String(photoOrder);
+          option.textContent = photoOrder + ". " + storyPhotoName(photoOrder);
+          option.disabled = selectedOrders.has(photoOrder) && Number(block.photoOrder) !== photoOrder;
+          select.appendChild(option);
+        }
+        select.value = block.photoOrder ? String(block.photoOrder) : "";
+        selectLabel.appendChild(selectCopy);
+        selectLabel.appendChild(select);
+        photoFields.appendChild(selectLabel);
+
+        if (block.photoOrder) {
+          var captionLabel = document.createElement("label");
+          captionLabel.className = "editor-story-block__field";
+          var captionCopy = document.createElement("span");
+          captionCopy.textContent = "Trumpas aprašymas";
+          var captionInput = document.createElement("textarea");
+          captionInput.dataset.storyPhotoCaption = "";
+          captionInput.rows = 2;
+          captionInput.maxLength = 240;
+          captionInput.placeholder = "Pvz., Su šeima prie Baltijos jūros, 1985 m.";
+          captionInput.value = storyPhotoCaption(block.photoOrder);
+          captionLabel.appendChild(captionCopy);
+          captionLabel.appendChild(captionInput);
+          photoFields.appendChild(captionLabel);
+        } else {
+          var emptyHelp = document.createElement("p");
+          emptyHelp.className = "editor-story-block__empty";
+          emptyHelp.textContent = "Pasirinkite jau pridėtą nuotrauką arba įkelkite ją 3 žingsnyje.";
+          var openFiles = document.createElement("button");
+          openFiles.type = "button";
+          openFiles.className = "button button--ghost editor-story-block__open-files";
+          openFiles.dataset.storyOpenFiles = "";
+          openFiles.textContent = "Pridėti nuotraukas";
+          emptyHelp.appendChild(openFiles);
+          photoFields.appendChild(emptyHelp);
+        }
+        photoLayout.appendChild(photoFields);
+        card.appendChild(photoLayout);
+      }
+      storyBlocksEl.appendChild(card);
+    });
+
+    syncLegacyStoryText();
+    updateStoryWordCount();
+    renderStoryPreview();
+    if (Number.isInteger(focusIndex)) {
+      window.requestAnimationFrame(function () {
+        var targetCard = storyBlocksEl.querySelector("[data-story-block-index='" + focusIndex + "']");
+        var target = targetCard && targetCard.querySelector(
+          focusKind === "photo" ? "[data-story-photo-select]" : "[data-story-text]"
+        );
+        if (target) target.focus();
+      });
+    }
+  }
+
+  function remapStoryPhotoOrder(from, to) {
+    if (from === to) return;
+    storyBlocks.forEach(function (block) {
+      if (block.type !== "photo" || !block.photoOrder) return;
+      var current = Number(block.photoOrder) - 1;
+      if (current === from) current = to;
+      else if (from < to && current > from && current <= to) current -= 1;
+      else if (from > to && current >= to && current < from) current += 1;
+      block.photoOrder = current + 1;
+    });
+  }
+
+  function setupStoryBuilder() {
+    if (!storyBlocksEl) return;
+    storyBlocksEl.addEventListener("input", function (event) {
+      var card = event.target.closest("[data-story-block-index]");
+      if (!card) return;
+      var index = Number(card.dataset.storyBlockIndex);
+      var block = storyBlocks[index];
+      if (!block) return;
+      if (event.target.matches("[data-story-text]")) {
+        block.text = event.target.value;
+        limitStoryBlocksToWords();
+        syncStoryTextEditors();
+      } else if (event.target.matches("[data-story-photo-caption]") && block.photoOrder) {
+        var captionField = form.elements["photo_caption_" + block.photoOrder];
+        if (captionField) captionField.value = event.target.value;
+      }
+      syncLegacyStoryText();
+      updateStoryWordCount();
+      renderStoryPreview();
+      scheduleDraftSave();
+    });
+
+    storyBlocksEl.addEventListener("change", function (event) {
+      if (!event.target.matches("[data-story-photo-select]")) return;
+      var card = event.target.closest("[data-story-block-index]");
+      var index = card ? Number(card.dataset.storyBlockIndex) : -1;
+      if (!storyBlocks[index] || storyBlocks[index].type !== "photo") return;
+      var nextOrder = Number(event.target.value);
+      storyBlocks[index].photoOrder = Number.isInteger(nextOrder) && nextOrder >= 1 && nextOrder <= storyPhotoCount()
+        ? nextOrder
+        : null;
+      ensurePersistableStoryMode();
+      renderStoryBlockEditor(index, "photo");
+      scheduleDraftSave();
+    });
+
+    storyBlocksEl.addEventListener("click", function (event) {
+      var openFiles = event.target.closest("[data-story-open-files]");
+      if (openFiles) {
+        activateEditorStep("files", true);
+        return;
+      }
+      var card = event.target.closest("[data-story-block-index]");
+      if (!card) return;
+      var index = Number(card.dataset.storyBlockIndex);
+      var move = event.target.closest("[data-story-move]");
+      if (move) {
+        var targetIndex = index + Number(move.dataset.storyMove);
+        if (targetIndex < 0 || targetIndex >= storyBlocks.length) return;
+        var moved = storyBlocks.splice(index, 1)[0];
+        storyBlocks.splice(targetIndex, 0, moved);
+        renderStoryBlockEditor(targetIndex, moved.type);
+        scheduleDraftSave();
+        return;
+      }
+      if (event.target.closest("[data-story-delete]")) {
+        storyBlocks.splice(index, 1);
+        ensurePersistableStoryMode();
+        renderStoryBlockEditor(Math.min(index, storyBlocks.length - 1));
+        scheduleDraftSave();
+      }
+    });
+
+    if (addStoryTextButton) {
+      addStoryTextButton.addEventListener("click", function () {
+        if (storyBlocks.length >= MAX_STORY_BLOCKS) {
+          statusEl.textContent = "Galima pridėti iki " + MAX_STORY_BLOCKS + " turinio blokų.";
+          return;
+        }
+        if (storyEmptyMode) storyBlocks = [];
+        storyEmptyMode = false;
+        storyBlocks.push({ type: "text", text: "" });
+        renderStoryBlockEditor(storyBlocks.length - 1, "text");
+        scheduleDraftSave();
+      });
+    }
+    if (addStoryPhotoButton) {
+      addStoryPhotoButton.addEventListener("click", function () {
+        if (storyBlocks.length >= MAX_STORY_BLOCKS) {
+          statusEl.textContent = "Galima pridėti iki " + MAX_STORY_BLOCKS + " turinio blokų.";
+          return;
+        }
+        if (storyEmptyMode) storyBlocks = [];
+        storyEmptyMode = false;
+        storyBlocks.push({ type: "photo", photoOrder: firstUnusedStoryPhotoOrder() });
+        renderStoryBlockEditor(storyBlocks.length - 1, "photo");
+        scheduleDraftSave();
+      });
+    }
   }
 
   function padDatePart(value) {
@@ -478,34 +1004,105 @@
     return DRAFT_FILE_PREFIX + key;
   }
 
-  async function putDraftFile(key, file) {
-    if (!file) return;
+  async function persistDraftFileChanges(changes) {
+    var updates = Array.isArray(changes) ? changes : [];
+    if (!updates.length) return;
     var db = await openDraftDb();
-    if (!db) return;
+    if (!db) {
+      if (updates.some(function (change) { return !!change.file; })) {
+        throw new Error("Naršyklė negali išsaugoti pasirinktų failų.");
+      }
+      return;
+    }
     return new Promise(function (resolve, reject) {
+      var settled = false;
       var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).put({
-        key: draftFileKey(key),
-        file: file,
-        name: file.name,
-        type: file.type,
-        lastModified: file.lastModified || Date.now(),
-        savedAt: Date.now()
+      var store = tx.objectStore(DRAFT_STORE);
+      updates.forEach(function (change) {
+        if (change.file) {
+          store.put({
+            key: draftFileKey(change.key),
+            file: change.file,
+            name: change.file.name,
+            type: change.file.type,
+            lastModified: change.file.lastModified || Date.now(),
+            savedAt: Date.now()
+          });
+        } else {
+          store.delete(draftFileKey(change.key));
+        }
       });
-      tx.oncomplete = function () { resolve(); };
-      tx.onerror = function () { reject(tx.error); };
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        db.close();
+        if (error) reject(error);
+        else resolve();
+      }
+      tx.oncomplete = function () { finish(); };
+      tx.onerror = function () { finish(tx.error || new Error("Failų juodraščio įrašyti nepavyko.")); };
+      tx.onabort = function () { finish(tx.error || new Error("Failų juodraščio įrašymas nutrauktas.")); };
     });
   }
 
+  async function putDraftFile(key, file) {
+    if (!file) return;
+    return persistDraftFileChanges([{ key: key, file: file }]);
+  }
+
   async function deleteDraftFile(key) {
-    var db = await openDraftDb();
-    if (!db) return;
-    return new Promise(function (resolve, reject) {
-      var tx = db.transaction(DRAFT_STORE, "readwrite");
-      tx.objectStore(DRAFT_STORE).delete(draftFileKey(key));
-      tx.oncomplete = function () { resolve(); };
-      tx.onerror = function () { reject(tx.error); };
-    });
+    return persistDraftFileChanges([{ key: key, file: null }]);
+  }
+
+  function hasDraftMediaPersistenceFailure() {
+    return photoDraftPersistenceFailed ||
+      auxiliaryMediaPersistenceFailed.video ||
+      auxiliaryMediaPersistenceFailed.captions;
+  }
+
+  function queueAuxiliaryMediaPersistence(key, file) {
+    var version = ++auxiliaryMediaPersistenceVersion[key];
+    auxiliaryMediaPersistenceFailed[key] = false;
+    auxiliaryMediaPersistencePending += 1;
+    clearTimeout(draftSaveTimer);
+    setDraftState("Saugomi pasirinkti failai…", "saving");
+    auxiliaryMediaPersistencePromise = auxiliaryMediaPersistencePromise
+      .then(function () {
+        return file ? putDraftFile(key, file) : deleteDraftFile(key);
+      })
+      .then(function () {
+        if (version === auxiliaryMediaPersistenceVersion[key]) {
+          auxiliaryMediaPersistenceFailed[key] = false;
+        }
+      }, function (err) {
+        console.warn("Auxiliary media draft persistence failed", err);
+        if (version === auxiliaryMediaPersistenceVersion[key]) {
+          auxiliaryMediaPersistenceFailed[key] = true;
+        }
+      })
+      .then(function () {
+        auxiliaryMediaPersistencePending = Math.max(0, auxiliaryMediaPersistencePending - 1);
+        if (version !== auxiliaryMediaPersistenceVersion[key] || auxiliaryMediaPersistencePending) return;
+        if (hasDraftMediaPersistenceFailure()) {
+          clearTimeout(draftSaveTimer);
+          setDraftState("Pasirinktų failų juodraščio nepavyko išsaugoti", "error");
+          return;
+        }
+        scheduleDraftSave();
+      });
+    return auxiliaryMediaPersistencePromise;
+  }
+
+  async function waitForAuxiliaryMediaPersistence(throwOnFailure) {
+    var observed;
+    do {
+      observed = auxiliaryMediaPersistencePromise;
+      await observed;
+    } while (observed !== auxiliaryMediaPersistencePromise);
+    if (throwOnFailure !== false &&
+      (auxiliaryMediaPersistenceFailed.video || auxiliaryMediaPersistenceFailed.captions)) {
+      throw new Error("Pasirinktų failų juodraščio nepavyko išsaugoti.");
+    }
   }
 
   async function getDraftFile(key) {
@@ -548,6 +1145,8 @@
   }
 
   async function clearDraft() {
+    await photoSyncPromise;
+    await waitForAuxiliaryMediaPersistence(false);
     localStorage.removeItem(DRAFT_KEY);
     draftSavedAtMs = 0;
     await clearDraftFiles();
@@ -589,6 +1188,7 @@
   }
 
   function draftFormData() {
+    syncLegacyStoryText();
     var state = {
       vardas: form.elements.vardas.value || "",
       pavarde: form.elements.pavarde.value || "",
@@ -607,11 +1207,25 @@
 
   function saveDraftNow() {
     if (isRestoringDraft) return false;
+    if (photosProcessing) {
+      setDraftState("Nuotraukos ruošiamos…", "saving");
+      return false;
+    }
+    if (auxiliaryMediaPersistencePending) {
+      setDraftState("Failai ruošiami…", "saving");
+      return false;
+    }
+    if (hasDraftMediaPersistenceFailure()) {
+      setDraftState("Pasirinktų failų juodraščio nepavyko išsaugoti", "error");
+      return false;
+    }
     try {
       var savedAt = new Date();
       draftSavedAtMs = savedAt.getTime();
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         form: draftFormData(),
+        storyBlocks: collectStoryBlocks(true),
+        storyEmpty: storyEmptyMode,
         layout: collectLayout(),
         step: currentEditorStep,
         savedAt: savedAt.toISOString()
@@ -728,16 +1342,33 @@
   }
 
   async function persistProcessedPhotoOrder() {
-    if (photoOrderMode !== "files") return;
-    for (var i = 0; i < MAX_PHOTOS; i++) {
-      if (processedPhotos[i]) await putDraftFile("photo-" + i, processedPhotos[i]);
-      else await deleteDraftFile("photo-" + i);
+    if (photoOrderMode !== "files") {
+      photoDraftPersistenceFailed = false;
+      return;
+    }
+    try {
+      var changes = [];
+      for (var i = 0; i < MAX_PHOTOS; i++) {
+        changes.push({
+          key: "photo-" + i,
+          file: processedPhotos[i] || null
+        });
+      }
+      await persistDraftFileChanges(changes);
+      photoDraftPersistenceFailed = false;
+    } catch (err) {
+      photoDraftPersistenceFailed = true;
+      throw err;
     }
   }
 
   async function persistDraftBeforeLogin() {
     clearTimeout(draftSaveTimer);
-    await Promise.all(cropPromises);
+    await photoSyncPromise;
+    if (photoPreparationFailed) {
+      throw new Error("Nuotraukų paruošti nepavyko. Pasirinkite jas dar kartą.");
+    }
+    await waitForAuxiliaryMediaPersistence(false);
     var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
     var captions = (captionsInput.files && captionsInput.files[0]) ? captionsInput.files[0] : savedCaptionsFile;
     if (video && video.size > MAX_VIDEO_BYTES) {
@@ -747,18 +1378,38 @@
     if (hasMedia && !window.indexedDB) {
       throw new Error("Ši naršyklė negali saugiai išlaikyti pasirinktų failų. Prisijunkite prieš pasirinkdami failus.");
     }
-    await persistProcessedPhotoOrder();
-    if (video) await putDraftFile("video", video);
-    else await deleteDraftFile("video");
-    if (captions) await putDraftFile("captions", captions);
-    else await deleteDraftFile("captions");
+    var changes = [];
+    if (photoOrderMode === "files") {
+      for (var i = 0; i < MAX_PHOTOS; i++) {
+        changes.push({ key: "photo-" + i, file: processedPhotos[i] || null });
+      }
+    }
+    changes.push({ key: "video", file: video || null });
+    changes.push({ key: "captions", file: captions || null });
+    try {
+      await persistDraftFileChanges(changes);
+      photoDraftPersistenceFailed = false;
+      auxiliaryMediaPersistenceFailed.video = false;
+      auxiliaryMediaPersistenceFailed.captions = false;
+    } catch (err) {
+      if (photoOrderMode === "files") photoDraftPersistenceFailed = true;
+      auxiliaryMediaPersistenceFailed.video = true;
+      auxiliaryMediaPersistenceFailed.captions = true;
+      throw err;
+    }
     if (!saveDraftNow()) throw new Error("Juodraščio nepavyko išsaugoti šiame įrenginyje.");
   }
 
   function swapPhotoOrder(from, to) {
+    if (photosProcessing) {
+      statusEl.textContent = "Palaukite, kol nuotraukos bus paruoštos.";
+      return;
+    }
     if (from === to || from < 0 || to < 0 || from >= photoOrderNames.length || to >= photoOrderNames.length) return;
+    remapStoryPhotoOrder(from, to);
     var name = photoOrderNames.splice(from, 1)[0];
     photoOrderNames.splice(to, 0, name);
+    var photoPersistence = null;
     if (photoOrderMode === "existing") {
       var images = orderedExistingImages();
       var image = images.splice(from, 1)[0];
@@ -768,14 +1419,36 @@
     } else {
       var file = processedPhotos.splice(from, 1)[0];
       processedPhotos.splice(to, 0, file);
-      persistProcessedPhotoOrder().catch(function (err) { console.warn(err); });
+      photosProcessing = true;
+      photosInput.disabled = true;
+      photoPersistence = persistProcessedPhotoOrder();
+      photoSyncPromise = photoPersistence.catch(function () {});
     }
     movePhotoFields(from, to);
     updatePhotoDescriptionVisibility(photoOrderNames);
     renderPhotoOrder();
     refreshOrderedPhotoPreviews();
+    renderStoryBlockEditor();
     syncPreview();
-    scheduleDraftSave();
+    if (photoPersistence) {
+      clearTimeout(draftSaveTimer);
+      setDraftState("Saugomi pakeitimai…", "saving");
+      photoPersistence.then(function () {
+        photosProcessing = false;
+        photosInput.disabled = false;
+        renderPhotoOrder();
+        scheduleDraftSave();
+      }).catch(function (err) {
+        photosProcessing = false;
+        photosInput.disabled = false;
+        renderPhotoOrder();
+        console.warn("Photo order draft persistence failed", err);
+        clearTimeout(draftSaveTimer);
+        setDraftState("Nuotraukų juodraščio nepavyko išsaugoti", "error");
+      });
+    } else {
+      scheduleDraftSave();
+    }
   }
 
   function renderPhotoOrder() {
@@ -792,6 +1465,7 @@
       handle.type = "button";
       handle.setAttribute("aria-label", "Tempti " + (index + 1) + " nuotrauką");
       handle.textContent = "⋮⋮";
+      handle.disabled = photosProcessing;
 
       var preview = document.createElement("img");
       var previewUrl = photoUrlAt(index);
@@ -808,8 +1482,9 @@
       controls.innerHTML =
         '<button type="button" data-photo-move="-1" aria-label="Perkelti aukštyn">↑</button>' +
         '<button type="button" data-photo-move="1" aria-label="Perkelti žemyn">↓</button>';
-      controls.querySelector("[data-photo-move='-1']").disabled = index === 0;
-      controls.querySelector("[data-photo-move='1']").disabled = index === photoOrderNames.length - 1;
+      controls.querySelector("[data-photo-move='-1']").disabled = photosProcessing || index === 0;
+      controls.querySelector("[data-photo-move='1']").disabled =
+        photosProcessing || index === photoOrderNames.length - 1;
 
       item.appendChild(handle);
       item.appendChild(preview);
@@ -818,6 +1493,7 @@
       photoOrderEl.appendChild(item);
 
       handle.addEventListener("pointerdown", function (event) {
+        if (photosProcessing) return;
         event.preventDefault();
         handle.setPointerCapture(event.pointerId);
         item.classList.add("is-dragging");
@@ -863,6 +1539,7 @@
     if (restoredNames.some(Boolean) || (!editId && !isDemoMode)) {
       photoOrderMode = "files";
       photoOrderNames = restoredNames.filter(Boolean);
+      reconcileStoryPhotoBlocks(photoOrderNames.length, false);
       renderPhotoFileList(restoredNames);
       updatePhotoDescriptionVisibility(photoOrderNames);
       renderPhotoOrder();
@@ -908,7 +1585,12 @@
       }
       draftSavedAtMs = savedAt;
       if (editorSteps.indexOf(draft.step) >= 0) currentEditorStep = draft.step;
+      storyBlocks = [];
+      storyBlocksLoaded = false;
       restoreDraftFields(draft.form);
+      if (Object.prototype.hasOwnProperty.call(draft, "storyBlocks")) {
+        setStoryBlocks(draft.storyBlocks, true, draft.storyEmpty === true);
+      }
       applyLayout(draft.layout);
       await restoreDraftMedia();
       statusEl.textContent = "Atkurta paskutinė neišsaugota versija.";
@@ -933,6 +1615,7 @@
     editingMedia = Array.isArray(media) ? media.slice() : [];
     var images = editingMedia.filter(function (item) { return item.type === "image"; })
       .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); });
+    var unavailableImageCount = 0;
     images.forEach(function (item, index) {
       var captionField = form.elements["photo_caption_" + (index + 1)];
       var altField = form.elements["photo_alt_" + (index + 1)];
@@ -942,16 +1625,26 @@
       if (!slot) return;
       var wrap = slot.closest(".editor-photo-slot");
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
-      slot.src = item.url;
-      slot.hidden = false;
-      if (empty) empty.hidden = true;
+      if (item.url) {
+        slot.src = item.url;
+        slot.hidden = false;
+        if (empty) empty.hidden = true;
+      } else {
+        unavailableImageCount += 1;
+        slot.hidden = true;
+        slot.removeAttribute("src");
+        if (empty) empty.hidden = false;
+      }
     });
     if (images.length) {
       photoOrderMode = "existing";
       photoOrderNames = images.map(function (item, index) {
         return item.caption || ("Esama nuotrauka " + (index + 1));
       });
-      photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos.";
+      photoFileList.textContent = "Paliekamos " + images.length + " esamos nuotraukos. Pasirinkus naujas, jos bus pakeistos." +
+        (unavailableImageCount
+          ? " Kai kurių nuotraukų peržiūra laikinai nepasiekiama, tačiau failai bus išsaugoti."
+          : "");
       updatePhotoDescriptionVisibility(photoOrderNames);
       renderPhotoOrder();
     }
@@ -960,9 +1653,16 @@
     if (video) {
       var videoWrap = previewVideo.closest(".editor-video-slot");
       var videoEmpty = videoWrap ? videoWrap.querySelector(".editor-empty-photo") : null;
-      previewVideo.src = video.url;
-      previewVideo.hidden = false;
-      if (videoEmpty) videoEmpty.hidden = true;
+      if (video.url) {
+        previewVideo.src = video.url;
+        previewVideo.hidden = false;
+        if (videoEmpty) videoEmpty.hidden = true;
+      } else {
+        previewVideo.hidden = true;
+        previewVideo.removeAttribute("src");
+        if (videoEmpty) videoEmpty.hidden = false;
+        statusEl.textContent = "Vaizdo įrašo peržiūra laikinai nepasiekiama, tačiau failas bus išsaugotas.";
+      }
     }
     scheduleStageFit(true);
   }
@@ -975,6 +1675,7 @@
       if (form.elements[name]) form.elements[name].value = profile[name] || "";
     });
     showExistingMedia(profile.media_json);
+    setStoryBlocks(profile.story_blocks_json);
     applyLayout(profile.layout_json || {});
     var heading = document.getElementById("editor-panel-title");
     if (heading) heading.textContent = "Redaguokite puslapį";
@@ -993,6 +1694,7 @@
       if (form.elements[name]) form.elements[name].value = profile[name] || "";
     });
     showExistingMedia(demo.media);
+    setStoryBlocks(demo.story_blocks_json || (demo.profile && demo.profile.story_blocks_json));
     applyLayout(demo.layout);
     var heading = document.getElementById("editor-panel-title");
     var notice = document.getElementById("editor-demo-notice");
@@ -1007,17 +1709,16 @@
   }
 
   function syncPreview() {
+    ensureStoryBlocks(false);
+    syncLegacyStoryText();
     var data = formData();
-    var text = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
-    if (text !== data.tekstas_200) form.elements.tekstas_200.value = text;
-    var count = words(text).length;
     var fullName = [data.vardas, data.pavarde].filter(Boolean).join(" ").trim();
     var dates = [data.gimimo_data, data.mirties_data].filter(Boolean).join(" - ");
 
     previewName.textContent = fullName || "Vardas Pavardė";
     previewDates.textContent = dates || "Gimimo data - Mirties data";
     previewText.textContent = data.epitafija || "Trumpa epitafija atsiras čia.";
-    previewLongText.textContent = storyPreview(text) || "Gyvenimo istorijos pradžia atsiras čia. Visas tekstas bus rodomas žemiau pagrindinio vaizdo.";
+    renderStoryPreview();
     captionSlots.forEach(function (caption, index) {
       var value = (data["photo_caption_" + (index + 1)] || "").trim();
       caption.textContent = value;
@@ -1026,8 +1727,7 @@
     var background = data.fono_spalva || "#ffffff";
     setBackgroundColor(background, false);
     fitName();
-    wordCountEl.textContent = count + " / " + MAX_STORY_WORDS + " žodžių";
-    wordCountEl.classList.toggle("is-limit", count >= MAX_STORY_WORDS);
+    updateStoryWordCount();
   }
 
   function fitName() {
@@ -1134,12 +1834,24 @@
   }
 
   async function syncPhotos() {
+    clearTimeout(draftSaveTimer);
+    setDraftState("Nuotraukos ruošiamos…", "saving");
+    photoPreparationFailed = false;
+    photoDraftPersistenceFailed = false;
+    var generation = ++photoProcessingGeneration;
     var allFiles = Array.prototype.slice.call(photosInput.files || []);
     var files = allFiles.slice(0, MAX_PHOTOS);
+    var previousPhotoCount = storyPhotoCount();
     photoOrderMode = "files";
     photoOrderNames = files.map(function (file) { return file.name; });
+    reconcileStoryPhotoBlocks(
+      photoOrderNames.length,
+      true,
+      previousPhotoCount + 1
+    );
+    photosProcessing = true;
     processedPhotos = [];
-    cropPromises = [];
+    var localProcessedPhotos = new Array(files.length);
     photoSlots.forEach(function (slot) {
       var wrap = slot.closest(".editor-photo-slot");
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
@@ -1147,25 +1859,35 @@
       slot.removeAttribute("src");
       if (empty) empty.hidden = false;
     });
-    files.forEach(function (file, index) {
-      var promise = autoCropBlackBorders(file).then(function (cropped) {
-        processedPhotos[index] = cropped;
-        putDraftFile("photo-" + index, cropped).catch(function (err) { console.warn(err); });
-        scheduleDraftSave();
+    var localCropPromises = files.map(function (file, index) {
+      return autoCropBlackBorders(file).catch(function (err) {
+        console.warn("Photo optimization failed", err);
+        return file;
+      }).then(function (cropped) {
+        localProcessedPhotos[index] = cropped;
+        return cropped;
       });
-      cropPromises.push(promise);
     });
-    for (var i = files.length; i < MAX_PHOTOS; i++) {
-      deleteDraftFile("photo-" + i).catch(function (err) { console.warn(err); });
-    }
     renderPhotoFileList(files.map(function (file) { return file.name; }));
     updatePhotoDescriptionVisibility(photoOrderNames);
     renderPhotoOrder();
     statusEl.textContent = files.length ? "Nuotraukos optimizuojamos…" : "";
-    await Promise.all(cropPromises);
+    await Promise.all(localCropPromises);
+    if (generation !== photoProcessingGeneration) return;
+    processedPhotos = localProcessedPhotos;
+    try {
+      await persistProcessedPhotoOrder();
+    } catch (err) {
+      console.warn("Processed photo draft persistence failed", err);
+      setDraftState("Nuotraukų juodraščio nepavyko išsaugoti", "error");
+    }
+    if (generation !== photoProcessingGeneration) return;
+    photosProcessing = false;
     renderPhotoOrder();
     refreshOrderedPhotoPreviews();
+    renderStoryBlockEditor();
     scheduleStageFit(true);
+    if (!photoDraftPersistenceFailed) scheduleDraftSave();
     statusEl.textContent = allFiles.length > MAX_PHOTOS
       ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
       : (files.length ? "Paruošta nuotraukų: " + files.length + ". Eiliškumą galite keisti tempdami." : "");
@@ -1228,7 +1950,10 @@
   }
 
   function setStageHeightPct(heightPct, width) {
-    var next = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, Number(heightPct) || MIN_STAGE_HEIGHT_PCT));
+    var maximumHeightPct = stage.classList.contains("has-story-blocks")
+      ? MAX_STORY_STAGE_HEIGHT_PCT
+      : MAX_STAGE_HEIGHT_PCT;
+    var next = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(maximumHeightPct, Number(heightPct) || MIN_STAGE_HEIGHT_PCT));
     var basis = width || stageWidth();
     stage.dataset.heightPct = String(layoutNumber(next));
     stage.style.height = Math.round(basis * next / 100) + "px";
@@ -1249,19 +1974,34 @@
 
   function desiredStageHeightPct(forcedPiece) {
     var width = stageWidth();
+    var maximumHeightPct = stage.classList.contains("has-story-blocks")
+      ? MAX_STORY_STAGE_HEIGHT_PCT
+      : MAX_STAGE_HEIGHT_PCT;
     var bottom = 0;
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       if (piece !== forcedPiece && !pieceAffectsStageHeight(piece)) return;
       bottom = Math.max(bottom, piece.offsetTop + piece.offsetHeight);
     });
     var desired = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
-    return Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, desired));
+    return Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(maximumHeightPct, desired));
+  }
+
+  function keepVideoBelowStory() {
+    if (!stage.classList.contains("has-story-blocks") || !previewLongText) return;
+    var videoPiece = stage.querySelector(".editor-video-slot");
+    if (!videoPiece || !pieceAffectsStageHeight(videoPiece)) return;
+    var width = stageWidth();
+    var gapPx = width * 6 / 100;
+    var savedTopPx = width * pieceTopPct(videoPiece) / 100;
+    var minimumTopPx = previewLongText.offsetTop + previewLongText.offsetHeight + gapPx;
+    videoPiece.style.top = Math.round(Math.max(savedTopPx, minimumTopPx)) + "px";
   }
 
   function fitStageToContent(allowShrink, forcedPiece) {
     if (stage.getBoundingClientRect().width < 1) {
       return parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
     }
+    keepVideoBelowStory();
     var desired = desiredStageHeightPct(forcedPiece);
     var current = parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
     if (!allowShrink) desired = Math.max(current, desired);
@@ -1350,6 +2090,7 @@
     if (index < 0) return;
     currentEditorStep = name;
     var target = document.querySelector("[data-editor-step='" + name + "']");
+    if (name === "text" && storyBlocksLoaded) renderStoryBlockEditor();
     document.querySelectorAll("[data-editor-step]").forEach(function (step) {
       var active = step === target;
       step.classList.toggle("is-active", active);
@@ -1492,6 +2233,11 @@
       piece.addEventListener("pointerdown", function (event) {
         if (event.target.closest("input, textarea, button, a")) return;
         if (event.target.closest(".editor-resize-handle, .editor-stretch-handle, .editor-crop-handle")) return;
+        if (
+          piece === previewLongText &&
+          event.pointerType === "touch" &&
+          window.matchMedia("(max-width: 860px)").matches
+        ) return;
         if (piece.classList.contains("editor-photo-slot")) selectPiece(piece);
         event.preventDefault();
         piece.setPointerCapture(event.pointerId);
@@ -1707,7 +2453,18 @@
   });
   form.addEventListener("focusout", function () { scheduleStageFit(true); });
   window.addEventListener("resize", function () { refreshResponsiveStage(true); });
-  photosInput.addEventListener("change", syncPhotos);
+  photosInput.addEventListener("change", function () {
+    photoSyncPromise = syncPhotos().catch(function (err) {
+      photosProcessing = false;
+      photoPreparationFailed = true;
+      photoDraftPersistenceFailed = true;
+      clearTimeout(draftSaveTimer);
+      renderPhotoOrder();
+      statusEl.textContent = "Nuotraukų paruošti nepavyko. Bandykite pasirinkti failus dar kartą.";
+      setDraftState("Nuotraukų juodraščio nepavyko išsaugoti", "error");
+      console.warn("Photo preparation failed", err);
+    });
+  });
   videoInput.addEventListener("change", function () {
     var file = videoInput.files && videoInput.files[0];
     var wrap = previewVideo.closest(".editor-video-slot");
@@ -1718,9 +2475,8 @@
       previewVideo.removeAttribute("src");
       if (empty) empty.hidden = false;
       statusEl.textContent = "";
-      deleteDraftFile("video").catch(function (err) { console.warn(err); });
+      queueAuxiliaryMediaPersistence("video", null);
       scheduleStageFit(true);
-      scheduleDraftSave();
       return;
     }
     if (file.size > MAX_VIDEO_BYTES) {
@@ -1730,9 +2486,8 @@
       previewVideo.removeAttribute("src");
       if (empty) empty.hidden = false;
       statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
-      deleteDraftFile("video").catch(function (err) { console.warn(err); });
+      queueAuxiliaryMediaPersistence("video", null);
       scheduleStageFit(true);
-      scheduleDraftSave();
       return;
     }
     savedVideoFile = file;
@@ -1740,20 +2495,18 @@
     previewVideo.hidden = false;
     if (empty) empty.hidden = true;
     statusEl.textContent = "Video pasirinktas: " + file.name;
-    putDraftFile("video", file).catch(function (err) { console.warn(err); });
+    queueAuxiliaryMediaPersistence("video", file);
     scheduleStageFit(true);
-    scheduleDraftSave();
   });
   captionsInput.addEventListener("change", function () {
     var file = captionsInput.files && captionsInput.files[0];
     savedCaptionsFile = file || null;
     if (file) {
       statusEl.textContent = "Subtitrai pasirinkti: " + file.name;
-      putDraftFile("captions", file).catch(function (err) { console.warn(err); });
+      queueAuxiliaryMediaPersistence("captions", file);
     } else {
-      deleteDraftFile("captions").catch(function (err) { console.warn(err); });
+      queueAuxiliaryMediaPersistence("captions", null);
     }
-    scheduleDraftSave();
   });
 
   if (clearDraftButton) {
@@ -1838,11 +2591,18 @@
     showSaveProgress(10, "Ruošiamos nuotraukos…");
     submit.disabled = true;
     resultBox.hidden = true;
-    await Promise.all(cropPromises);
+    await photoSyncPromise;
+    if (photoPreparationFailed) {
+      submit.disabled = false;
+      statusEl.textContent = "Nuotraukų paruošti nepavyko. Pasirinkite jas dar kartą.";
+      return;
+    }
+    await waitForAuxiliaryMediaPersistence(false);
     var photos = processedPhotos.filter(Boolean).slice(0, MAX_PHOTOS);
-    var video = videoForSubmission;
+    var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
 
-    data.tekstas_200 = limitWords(data.tekstas_200 || "", MAX_STORY_WORDS);
+    limitStoryBlocksToWords();
+    data.tekstas_200 = syncLegacyStoryText();
     data.apmoketa = false;
     data.product_type = productType;
 
@@ -1859,14 +2619,16 @@
       var result = editId
         ? await AtminimasApi.updateAtminimas(editId, data, {
             existingMedia: editingMedia,
-            files: { photos: photos, video: video, captions: captions },
-            layout: collectLayout(),
-            onProgress: onUploadProgress
+             files: { photos: photos, video: video, captions: captions },
+             layout: collectLayout(),
+             storyBlocks: collectStoryBlocks(true),
+             onProgress: onUploadProgress
           })
         : await AtminimasApi.createAtminimas(data, {
-            files: { photos: photos, video: video, captions: captions },
-            layout: collectLayout(),
-            onProgress: onUploadProgress
+             files: { photos: photos, video: video, captions: captions },
+             layout: collectLayout(),
+             storyBlocks: collectStoryBlocks(true),
+             onProgress: onUploadProgress
           });
       showSaveProgress(94, "Baigiamas išsaugojimas…");
       if (editId) {
@@ -1953,6 +2715,9 @@
         accountNoteEl.textContent = "Prisijungimas patvirtintas. Prieš išsaugodami dar kartą patikrinkite puslapį ir pažymėkite privalomus patvirtinimus.";
       }
     }
+    ensureStoryBlocks(true);
+    setupStoryBuilder();
+    renderStoryBlockEditor();
     setupColorPicker();
     syncPreview();
     refreshResponsiveStage(true);

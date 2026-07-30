@@ -7,6 +7,8 @@ import {
   RequestError,
   requireUser,
   safeProfileLayout,
+  safeStoryBlocks,
+  storyBlocksText,
   userClient,
 } from "../_shared/core.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.110.1";
@@ -166,7 +168,7 @@ Deno.serve(async (request: Request) => {
 
     const { data: profile, error: profileError } = await client
       .from("profiliai")
-      .select("id,owner_id,media_json,deleted_at")
+      .select("id,owner_id,story_blocks_json,media_json,deleted_at")
       .eq("id", profileId)
       .maybeSingle();
     if (profileError) throw profileError;
@@ -236,11 +238,43 @@ Deno.serve(async (request: Request) => {
           !Array.isArray(body.profile)
         ? body.profile as Record<string, unknown>
         : {};
+      const existingStoryBlocks = safeStoryBlocks(
+        profile.story_blocks_json,
+      );
+      const hasStoryBlocks = Object.prototype.hasOwnProperty.call(
+        body,
+        "story_blocks",
+      );
+      const hasLegacyText = Object.prototype.hasOwnProperty.call(
+        input,
+        "tekstas_200",
+      );
+      const legacyText = text(input.tekstas_200, 10000) || "";
       const media = safeMedia(
         body.media,
         String(profile.owner_id || ""),
         profileId,
       );
+      let storyBlocks = existingStoryBlocks;
+      if (hasStoryBlocks) {
+        storyBlocks = safeStoryBlocks(body.story_blocks);
+      } else if (hasLegacyText && legacyText !== storyBlocksText(storyBlocks)) {
+        storyBlocks = safeStoryBlocks(
+          [
+            ...(legacyText ? [{ type: "text", text: legacyText }] : []),
+            ...media
+              .filter((item) => item.type === "image")
+              .sort((left, right) =>
+                Number(left.order || 0) - Number(right.order || 0)
+              )
+              .slice(0, 8)
+              .map((item, index) => ({
+                type: "photo",
+                photoOrder: Number(item.order || index + 1),
+              })),
+          ],
+        );
+      }
       const layout = safeProfileLayout(body.layout);
       const payload = {
         vardas: text(input.vardas, 120),
@@ -248,7 +282,8 @@ Deno.serve(async (request: Request) => {
         gimimo_data: text(input.gimimo_data, 40),
         mirties_data: text(input.mirties_data, 40),
         epitafija: text(input.epitafija, 180),
-        tekstas_200: text(input.tekstas_200, 10000),
+        tekstas_200: storyBlocksText(storyBlocks) || null,
+        story_blocks_json: storyBlocks,
         layout_json: layout,
         media_json: media,
       };
@@ -303,6 +338,7 @@ Deno.serve(async (request: Request) => {
           mirties_data: null,
           epitafija: null,
           tekstas_200: null,
+          story_blocks_json: [],
           layout_json: {},
           media_json: [],
           aktyvus: false,

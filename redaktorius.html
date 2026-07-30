@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260724-5">
+<link rel="stylesheet" href="css/styles.css?v=20260730-1">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -146,11 +146,17 @@
             Epitafija
             <input type="text" name="epitafija" maxlength="180" placeholder="Trumpa frazė po datomis">
           </label>
-          <label>
-            Gyvenimo istorija
-            <textarea name="tekstas_200" rows="12" maxlength="10000" placeholder="Iki 1000 žodžių. Galite aprašyti gyvenimo kelią, šeimą, darbus, pomėgius ir svarbiausius prisiminimus."></textarea>
-          </label>
-          <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių</p>
+          <fieldset class="editor-story-builder" aria-describedby="editor-story-help">
+            <legend id="editor-story-builder-title">Gyvenimo istorija</legend>
+            <p class="editor-field-help" id="editor-story-help">Kurkite istoriją dalimis. Teksto ir nuotraukų blokai galutiniame puslapyje bus rodomi tokia pačia eilės tvarka.</p>
+            <textarea name="tekstas_200" id="editor-story-legacy" maxlength="10000" hidden aria-hidden="true" tabindex="-1"></textarea>
+            <div class="editor-story-blocks" id="editor-story-blocks" data-story-blocks role="list" aria-label="Gyvenimo istorijos turinio blokai"></div>
+            <div class="editor-story-add-actions" role="group" aria-label="Pridėti gyvenimo istorijos turinį">
+              <button class="button button--ghost" type="button" data-story-add="text" aria-controls="editor-story-blocks">+ Pridėti tekstą</button>
+              <button class="button button--ghost" type="button" data-story-add="photo" aria-controls="editor-story-blocks">+ Pridėti nuotrauką</button>
+            </div>
+            <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių · 0 / 10000 ženklų</p>
+          </fieldset>
         </section>
 
         <section class="editor-step" id="editor-section-colors" data-editor-step="colors" aria-labelledby="editor-step-colors-title" aria-hidden="true" hidden>
@@ -229,16 +235,16 @@
         <section class="editor-step" id="editor-section-positions" data-editor-step="positions" aria-labelledby="editor-step-positions-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>4 žingsnis iš 5</span>
-            <h2 id="editor-step-positions-title" tabindex="-1">Nuotraukų išdėstymas</h2>
-            <p>Nuotraukas jau išdėstėme automatiškai. Daugumai puslapių papildomai nieko keisti nereikia.</p>
+            <h2 id="editor-step-positions-title" tabindex="-1">Turinio išdėstymas</h2>
+            <p>Tekstas ir nuotraukos bus rodomi 1 žingsnyje pasirinkta blokų tvarka. Antraštę ir vaizdo įrašą išdėstėme automatiškai.</p>
           </header>
           <div class="editor-layout-summary">
             <span aria-hidden="true">✓</span>
-            <div><strong>Automatinis išdėstymas paruoštas</strong><small>Galite iškart tęsti į peržiūrą arba, jei norite, koreguoti nuotraukas patys.</small></div>
+            <div><strong>Automatinis išdėstymas paruoštas</strong><small>Galite iškart tęsti į peržiūrą. Blokų eiliškumą bet kada pakeisite 1 žingsnyje.</small></div>
           </div>
           <button class="button button--ghost" type="button" data-advanced-layout-toggle aria-expanded="false" aria-controls="editor-advanced-layout">Noriu koreguoti pats</button>
           <div class="editor-advanced-layout" id="editor-advanced-layout" hidden>
-            <div class="editor-transform-tools" aria-label="Nuotraukos keitimo režimas">
+            <div class="editor-transform-tools" aria-label="Senesnio nuotraukų išdėstymo keitimo režimas" hidden>
               <span>Kaip keisti pasirinktą nuotrauką?</span>
               <div>
                 <button type="button" class="is-active" data-transform-mode="resize">Keisti dydį</button>
@@ -247,7 +253,7 @@
                 <button type="button" data-transform-mode="crop">Apkirpti</button>
               </div>
             </div>
-            <p class="editor-note">Peržiūroje pasirinkite nuotrauką ir tempkite jos kraštus arba pačią nuotrauką.</p>
+            <p class="editor-note">Peržiūroje galite perkelti antraštę, visą istorijos blokų sritį arba vaizdo įrašą. Atskirų blokų tvarka keičiama 1 žingsnyje.</p>
             <p class="editor-note">Puslapio apačia prisitaiko automatiškai: nuleidus elementą puslapis pailgės, o likusi tuščia vieta bus sutrumpinta.</p>
             <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Atidaryti koregavimo peržiūrą</button>
           </div>
@@ -268,7 +274,7 @@
             <label><input type="checkbox" name="custom_product_confirm" value="yes" required> Suprantu, kad pagal mano nurodymus individualiai pagamintai QR atminimo lentelei gali būti netaikoma 14 dienų sutarties atsisakymo teisė; tai neriboja teisių dėl nekokybiškos prekės.</label>
           </fieldset>
           <progress class="editor-save-progress" id="editor-save-progress" max="100" value="0" hidden>0%</progress>
-          <div class="editor-final-actions">
+          <div class="editor-final-actions preview-actions" data-preview-actions>
             <button class="button" type="submit">Tęsti užsakymą</button>
             <button class="button button--ghost" type="button" id="editor-clear-draft">Išvalyti juodraštį</button>
           </div>
@@ -289,9 +295,9 @@
           <p id="editor-preview-dates">Gimimo data - Mirties data</p>
           <blockquote id="editor-preview-epitaph">Trumpa epitafija atsiras čia.</blockquote>
         </header>
-        <blockquote class="editor-piece editor-preview-text" data-piece="text" id="editor-preview-text" style="left: 8%; top: 16%; width: 84%;">
-          Gyvenimo istorijos pradžia atsiras čia. Visas tekstas bus rodomas žemiau pagrindinio vaizdo.
-        </blockquote>
+        <div class="editor-piece editor-preview-story" data-piece="text" data-story-preview id="editor-preview-story" style="left: 8%; top: 16%; width: 84%;">
+          <p class="editor-preview-story__placeholder" data-story-preview-placeholder>Gyvenimo istorijos pradžia atsiras čia. Tekstas ir nuotraukos bus rodomi jūsų pasirinkta eilės tvarka.</p>
+        </div>
         <div class="editor-piece editor-photo-slot" data-piece="photo-1" data-height-pct="44" style="left: 10%; top: 44%; width: 80%;">
           <img id="editor-preview-photo-1" alt="" hidden>
           <span class="editor-empty-photo">Nuotrauka 1</span>
@@ -396,8 +402,8 @@
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260724-4"></script>
-<script src="assets/redaktorius.js?v=20260724-3"></script>
+<script src="assets/atminimas-duomenys.js?v=20260730-1"></script>
+<script src="assets/redaktorius.js?v=20260730-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

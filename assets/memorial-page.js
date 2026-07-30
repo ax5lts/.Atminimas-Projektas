@@ -10,6 +10,7 @@
   };
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
+  var MIN_STORY_HEADER_HEIGHT_PCT = 42;
   var STAGE_BOTTOM_GAP_PCT = 12;
   var MAX_STAGE_HEIGHT_PCT = 1200;
   var MAX_PIECE_HEIGHT_PCT = 180;
@@ -57,6 +58,31 @@
   function normalizeMedia(atminimas) {
     var saved = parseJson(atminimas.media_json, []);
     return Array.isArray(saved) ? saved : [];
+  }
+
+  function normalizeStoryBlocks(atminimas) {
+    var saved = parseJson(atminimas.story_blocks_json, []);
+    if (!Array.isArray(saved)) return [];
+    return saved.slice(0, 40).reduce(function (result, item) {
+      if (!item || typeof item !== "object") return result;
+      if (item.type === "text") {
+        var text = String(item.text || "").slice(0, 10000);
+        result.push({ type: "text", text: text });
+      } else if (item.type === "photo") {
+        var photoOrder = Number(item.photoOrder);
+        if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
+          result.push({ type: "photo", photoOrder: photoOrder });
+        }
+      }
+      return result;
+    }, []);
+  }
+
+  function orderedImages(media) {
+    return media
+      .filter(function (item) { return item.type === "image" && item.url; })
+      .sort(function (left, right) { return Number(left.order || 0) - Number(right.order || 0); })
+      .slice(0, 8);
   }
 
   function mergedPiece(layout, name) {
@@ -111,7 +137,10 @@
       bottom = Math.max(bottom, element.offsetTop + element.offsetHeight);
     });
     var heightPct = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
-    heightPct = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, heightPct));
+    var minimumHeightPct = view.classList.contains("builder-view--story-blocks")
+      ? MIN_STORY_HEADER_HEIGHT_PCT
+      : MIN_STAGE_HEIGHT_PCT;
+    heightPct = Math.max(minimumHeightPct, Math.min(MAX_STAGE_HEIGHT_PCT, heightPct));
     var savedHeightPct = parseFloat(view.dataset.savedHeightPct || "");
     if (Number.isFinite(savedHeightPct)) {
       heightPct = Math.max(heightPct, Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(MAX_STAGE_HEIGHT_PCT, savedHeightPct)));
@@ -166,6 +195,58 @@
     content.textContent = text;
     section.appendChild(heading);
     section.appendChild(content);
+    return section;
+  }
+
+  function buildStoryBlocks(blocks, allImages) {
+    var section = document.createElement("section");
+    section.className = "memorial-story memorial-story-blocks";
+    section.setAttribute("aria-labelledby", "memorial-story-blocks-title");
+    var heading = document.createElement("h2");
+    heading.id = "memorial-story-blocks-title";
+    heading.textContent = "Gyvenimo istorija";
+    section.appendChild(heading);
+    var visibleBlocks = 0;
+
+    blocks.forEach(function (block) {
+      if (block.type === "text") {
+        if (!String(block.text || "").trim()) return;
+        var text = document.createElement("div");
+        text.className = "memorial-story-block memorial-story-block--text";
+        text.textContent = block.text;
+        section.appendChild(text);
+        visibleBlocks += 1;
+        return;
+      }
+      if (block.type !== "photo") return;
+      var item = allImages.find(function (image) {
+        return Number(image.order) === Number(block.photoOrder);
+      });
+      if (!item) return;
+      var imageIndex = allImages.indexOf(item);
+      var figure = document.createElement("figure");
+      figure.className = "memorial-story-block memorial-story-block--photo";
+      var button = document.createElement("button");
+      button.type = "button";
+      button.setAttribute("aria-label", "Atidaryti: " + (item.alt || "atminimo nuotrauka"));
+      button.addEventListener("click", function () { openGallery(imageIndex, allImages); });
+      var image = document.createElement("img");
+      image.src = item.url;
+      image.alt = item.alt || "Atminimo nuotrauka";
+      image.loading = imageIndex === 0 ? "eager" : "lazy";
+      image.decoding = "async";
+      if (imageIndex === 0) image.fetchPriority = "high";
+      button.appendChild(image);
+      figure.appendChild(button);
+      if (item.caption) {
+        var caption = document.createElement("figcaption");
+        caption.textContent = item.caption;
+        figure.appendChild(caption);
+      }
+      section.appendChild(figure);
+      visibleBlocks += 1;
+    });
+    section.hidden = visibleBlocks === 0;
     return section;
   }
 
@@ -252,9 +333,14 @@
     var view = document.createElement("section");
     view.id = "builder-view";
     view.className = "builder-view";
+    var storyBlocks = normalizeStoryBlocks(atminimas);
+    var hasStoryBlocks = storyBlocks.length > 0;
+    view.classList.toggle("builder-view--story-blocks", hasStoryBlocks);
     var stageBackground = applyMemorialBackground(layout.__stage && layout.__stage.background);
     view.style.backgroundColor = stageBackground;
-    if (layout.__stage && layout.__stage.heightPct) view.dataset.savedHeightPct = layout.__stage.heightPct;
+    if (!hasStoryBlocks && layout.__stage && layout.__stage.heightPct) {
+      view.dataset.savedHeightPct = layout.__stage.heightPct;
+    }
 
     var headerSaved = mergedPiece(layout, "header");
     var header = document.createElement("header");
@@ -276,27 +362,35 @@
 
     var fullStory = atminimas.tekstas_200 || "";
     var storyWordCount = String(fullStory).trim().split(/\s+/).filter(Boolean).length;
-    var text = document.createElement("blockquote");
-    text.className = "builder-piece builder-text";
-    text.dataset.piece = "text";
-    text.textContent = excerptWords(fullStory, 80);
-    applyPieceStyle(text, mergedPiece(layout, "text"));
-    view.appendChild(text);
+    var allImages = orderedImages(media);
+    if (!hasStoryBlocks) {
+      var text = document.createElement("blockquote");
+      text.className = "builder-piece builder-text";
+      text.dataset.piece = "text";
+      text.textContent = excerptWords(fullStory, 80);
+      applyPieceStyle(text, mergedPiece(layout, "text"));
+      view.appendChild(text);
 
-    var allImages = media.filter(function (item) { return item.type === "image" && item.url; }).slice(0, 8);
-    var primaryImages = allImages.slice(0, 4);
-    primaryImages.forEach(function (item, index) {
-      var name = "photo-" + (index + 1);
-      view.appendChild(buildImagePiece(item, name, layout, index ? "builder-photo-small" : ""));
-    });
+      var primaryImages = allImages.slice(0, 4);
+      primaryImages.forEach(function (item, index) {
+        var name = "photo-" + (index + 1);
+        view.appendChild(buildImagePiece(item, name, layout, index ? "builder-photo-small" : ""));
+      });
+    }
 
     var video = media.find(function (item) { return item.type === "video" && item.url; });
     var captions = media.find(function (item) { return item.type === "captions" && item.url; });
+    var storyVideoWrap = null;
     if (video) {
       var videoWrap = document.createElement("div");
-      videoWrap.className = "builder-piece builder-video";
-      videoWrap.dataset.piece = "video";
-      applyPieceStyle(videoWrap, mergedPiece(layout, "video"));
+      if (hasStoryBlocks) {
+        videoWrap.className = "memorial-story-video";
+        storyVideoWrap = videoWrap;
+      } else {
+        videoWrap.className = "builder-piece builder-video";
+        videoWrap.dataset.piece = "video";
+        applyPieceStyle(videoWrap, mergedPiece(layout, "video"));
+      }
       var player = document.createElement("video");
       player.controls = true;
       player.playsInline = true;
@@ -312,13 +406,18 @@
         player.appendChild(track);
       }
       videoWrap.appendChild(player);
-      view.appendChild(videoWrap);
+      if (!hasStoryBlocks) view.appendChild(videoWrap);
     }
 
     var contentRoot = document.getElementById("turinys");
     contentRoot.appendChild(view);
-    if (storyWordCount > 80) contentRoot.appendChild(buildStorySection(fullStory));
-    if (allImages.length > 4) contentRoot.appendChild(buildStoryGallery(allImages.slice(4), 4, allImages));
+    if (hasStoryBlocks) {
+      contentRoot.appendChild(buildStoryBlocks(storyBlocks, allImages));
+      if (storyVideoWrap) contentRoot.appendChild(storyVideoWrap);
+    } else {
+      if (storyWordCount > 80) contentRoot.appendChild(buildStorySection(fullStory));
+      if (allImages.length > 4) contentRoot.appendChild(buildStoryGallery(allImages.slice(4), 4, allImages));
+    }
     var mediaSources = buildMediaSources(allImages);
     if (mediaSources) contentRoot.appendChild(mediaSources);
     window.addEventListener("resize", function () {
@@ -339,7 +438,7 @@
     longText.textContent = atminimas.tekstas_200 || "";
     longText.hidden = !longText.textContent;
 
-    var images = media.filter(function (item) { return item.type === "image" && item.url; });
+    var images = orderedImages(media);
     var photos = document.getElementById("nuotraukos");
     photos.innerHTML = "";
     images.forEach(function (item, index) {
@@ -394,7 +493,9 @@
     var atminimas = payload.atminimas || payload;
     var media = normalizeMedia(atminimas);
     var layout = parseJson(atminimas.layout_json, {});
-    var hasBuilderData = Object.keys(layout).length > 0 || parseJson(atminimas.media_json, []).length > 0;
+    var hasBuilderData = Object.keys(layout).length > 0 ||
+      parseJson(atminimas.media_json, []).length > 0 ||
+      normalizeStoryBlocks(atminimas).length > 0;
 
     if (hasBuilderData) renderBuilderLayout(atminimas, media, layout);
     else {

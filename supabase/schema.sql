@@ -12,6 +12,7 @@ create table if not exists public.profiliai (
   mirties_data text,
   epitafija text,
   tekstas_200 text,
+  story_blocks_json jsonb not null default '[]'::jsonb,
   layout_json jsonb not null default '{}'::jsonb,
   media_json jsonb not null default '[]'::jsonb,
   apmoketa boolean not null default false,

@@ -1017,7 +1017,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("async function persistDraftBeforeLogin()", editor)
         self.assertIn("redirectToLoginForOrder", editor)
         self.assertIn('editorParams.get("resume") === "order"', editor)
-        self.assertIn('await putDraftFile("captions", captions)', editor)
+        self.assertIn('changes.push({ key: "captions", file: captions || null })', editor)
         self.assertIn('await getDraftFile("captions")', editor)
         self.assertIn('store.delete(draftFileKey("captions"))', editor)
         self.assertGreaterEqual(editor.count("await discardCurrentDraft();"), 2)

@@ -159,6 +159,66 @@ export function safeProfileLayout(value: unknown) {
   return result;
 }
 
+export type StoryBlock =
+  | { type: "text"; text: string }
+  | { type: "photo"; photoOrder: number };
+
+const MAX_STORY_BLOCKS = 40;
+// Matches the existing 10000-character `tekstas_200` persistence boundary.
+const MAX_STORY_TEXT_LENGTH = 10_000;
+
+export function safeStoryBlocks(value: unknown): StoryBlock[] {
+  if (!Array.isArray(value)) return [];
+
+  const blocks: StoryBlock[] = [];
+  let flattenedTextLength = 0;
+  let hasNonEmptyText = false;
+
+  for (const raw of value.slice(0, MAX_STORY_BLOCKS)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const block = raw as Record<string, unknown>;
+
+    if (block.type === "text" && typeof block.text === "string") {
+      const trimmed = block.text.trim();
+      const separatorLength = trimmed && hasNonEmptyText ? 2 : 0;
+      const available = Math.max(
+        0,
+        MAX_STORY_TEXT_LENGTH - flattenedTextLength - separatorLength,
+      );
+      const text = trimmed.slice(0, available).trimEnd();
+      blocks.push({ type: "text", text });
+      if (text) {
+        flattenedTextLength += separatorLength + text.length;
+        hasNonEmptyText = true;
+      }
+      continue;
+    }
+
+    if (block.type === "photo") {
+      const photoOrder = Number(block.photoOrder);
+      if (
+        Number.isInteger(photoOrder) &&
+        photoOrder >= 1 &&
+        photoOrder <= 8
+      ) {
+        blocks.push({ type: "photo", photoOrder });
+      }
+    }
+  }
+
+  return blocks;
+}
+
+export function storyBlocksText(value: unknown) {
+  return safeStoryBlocks(value)
+    .filter((block): block is Extract<StoryBlock, { type: "text" }> =>
+      block.type === "text" && Boolean(block.text)
+    )
+    .map((block) => block.text)
+    .join("\n\n")
+    .slice(0, MAX_STORY_TEXT_LENGTH);
+}
+
 export async function requireUser(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "");

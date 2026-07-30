@@ -97,6 +97,57 @@
     return base + "-" + suffix;
   }
 
+  function safeStoryBlocks(value) {
+    if (!Array.isArray(value)) return [];
+    var blocks = [];
+    var flattenedTextLength = 0;
+    var hasNonEmptyText = false;
+
+    value.slice(0, 40).forEach(function (raw) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+      if (raw.type === "text" && typeof raw.text === "string") {
+        var trimmed = raw.text.trim();
+        var separatorLength = trimmed && hasNonEmptyText ? 2 : 0;
+        var available = Math.max(0, 10000 - flattenedTextLength - separatorLength);
+        var text = trimmed.slice(0, available).replace(/\s+$/, "");
+        blocks.push({ type: "text", text: text });
+        if (text) {
+          flattenedTextLength += separatorLength + text.length;
+          hasNonEmptyText = true;
+        }
+        return;
+      }
+      if (raw.type === "photo") {
+        var photoOrder = Number(raw.photoOrder);
+        if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
+          blocks.push({ type: "photo", photoOrder: photoOrder });
+        }
+      }
+    });
+    return blocks;
+  }
+
+  function storyBlocksForInput(input, options) {
+    if (options && Object.prototype.hasOwnProperty.call(options, "storyBlocks")) {
+      return safeStoryBlocks(options.storyBlocks);
+    }
+    if (Array.isArray(input && input.story_blocks_json)) {
+      return safeStoryBlocks(input.story_blocks_json);
+    }
+    var legacyText = String(input && input.tekstas_200 || "").trim();
+    return legacyText
+      ? safeStoryBlocks([{ type: "text", text: legacyText }])
+      : [];
+  }
+
+  function storyBlocksText(value) {
+    return safeStoryBlocks(value).filter(function (block) {
+      return block.type === "text" && block.text;
+    }).map(function (block) {
+      return block.text;
+    }).join("\n\n").slice(0, 10000);
+  }
+
   function fileExt(file) {
     var name = file && file.name ? file.name : "";
     var ext = name.split(".").pop().toLowerCase();
@@ -206,6 +257,7 @@
     var fullName = [vardas, pavarde].filter(Boolean).join(" ");
     var media = options && options.media ? options.media : [];
     var layout = options && options.layout ? options.layout : {};
+    var storyBlocks = storyBlocksForInput(input, options);
 
     if (options && options.files) {
       media = await uploadBuilderMedia(identifier, options.files, false, options.onProgress);
@@ -227,7 +279,8 @@
       gimimo_data: input.gimimo_data || null,
       mirties_data: input.mirties_data || null,
       epitafija: input.epitafija || null,
-      tekstas_200: input.tekstas_200 || null,
+      tekstas_200: storyBlocksText(storyBlocks) || null,
+      story_blocks_json: storyBlocks,
       layout_json: layout,
       media_json: media,
       apmoketa: !!input.apmoketa,
@@ -267,6 +320,7 @@
   }
 
   async function updateAtminimas(identifier, input, options) {
+    var storyBlocks = storyBlocksForInput(input, options);
     var existing = Array.isArray(options && options.existingMedia) ? options.existingMedia.slice() : [];
     var files = options && options.files ? options.files : {};
     var hasPhotos = !!(files.photos && files.photos.length);
@@ -300,8 +354,9 @@
         gimimo_data: input.gimimo_data,
         mirties_data: input.mirties_data,
         epitafija: input.epitafija,
-        tekstas_200: input.tekstas_200
+        tekstas_200: storyBlocksText(storyBlocks)
       },
+      story_blocks: storyBlocks,
       layout: options && options.layout ? options.layout : {},
       media: media
     });

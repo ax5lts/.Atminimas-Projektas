@@ -65,19 +65,26 @@ class EditorWizardTests(unittest.TestCase):
 
     def test_mobile_final_actions_do_not_cover_the_scrollable_content(self):
         self.assertRegex(
-            self.styles,
-            r"\.editor-final-actions \{\s*"
-            r"position: static;\s*"
-            r"bottom: auto;\s*"
-            r"flex-direction: column;\s*"
-            r"\}",
+            self.page,
+            r'class="[^"]*\beditor-final-actions\b[^"]*\bpreview-actions\b[^"]*"'
+            r"\s+data-preview-actions",
         )
         self.assertRegex(
             self.styles,
-            r"\.editor-final-actions \.button \{\s*"
-            r"flex: 0 0 auto;\s*"
-            r"width: 100%;\s*"
-            r"\}",
+            r"(?s)\.preview-actions\s*\{"
+            r"[^}]*position:\s*static;"
+            r"[^}]*flex-direction:\s*column;"
+            r"[^}]*gap:\s*10px;"
+            r"[^}]*\}",
+        )
+        self.assertRegex(
+            self.styles,
+            r"(?s)\.preview-actions\s+\.button\s*\{"
+            r"[^}]*flex:\s*0 0 auto;"
+            r"[^}]*width:\s*100%;"
+            r"[^}]*min-height:\s*52px;"
+            r"[^}]*padding:\s*12px 16px;"
+            r"[^}]*\}",
         )
 
     def test_narrow_mobile_navigation_stays_on_one_scrollable_row(self):

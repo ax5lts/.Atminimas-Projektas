@@ -3,6 +3,7 @@ import {
   handleOptions,
   json,
   safeProfileLayout,
+  safeStoryBlocks,
 } from "../_shared/core.ts";
 
 const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
@@ -117,7 +118,16 @@ async function signedMedia(
         path: item.path,
         error,
       });
-      return null;
+      if (!includePath) return null;
+      return {
+        type: item.type,
+        path: item.path,
+        ...(item.alt ? { alt: item.alt } : {}),
+        ...(item.caption ? { caption: item.caption } : {}),
+        ...(item.language ? { language: item.language } : {}),
+        order: item.order,
+        unavailable: true,
+      };
     }
     return {
       type: item.type,
@@ -152,7 +162,7 @@ Deno.serve(async (request: Request) => {
     const { data: profile, error } = await client
       .from("profiliai")
       .select(
-        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,layout_json,media_json,aktyvus,deleted_at",
+        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at",
       )
       .eq("id", profileId)
       .maybeSingle();
@@ -186,6 +196,7 @@ Deno.serve(async (request: Request) => {
         mirties_data: profile.mirties_data,
         epitafija: profile.epitafija,
         tekstas_200: profile.tekstas_200,
+        story_blocks_json: safeStoryBlocks(profile.story_blocks_json),
         layout_json: safeProfileLayout(profile.layout_json),
         media_json: media,
       },
