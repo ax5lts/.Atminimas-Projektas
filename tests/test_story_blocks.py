@@ -352,6 +352,73 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertLess(story_append, video_append)
         self.assertIn(".memorial-story-video", self.styles)
 
+    def test_photo_alignment_wraps_full_story_text_and_round_trips(self):
+        self.assertNotIn("PREVIEW_STORY_WORDS", self.editor_js)
+        self.assertNotIn("function storyPreview(", self.editor_js)
+        preview = balanced_block(
+            self.editor_js, r"function\s+renderStoryPreview\s*\(",
+        )
+        self.assertIn("text.textContent = value", preview)
+        self.assertNotRegex(preview, r"slice\(|excerpt|PREVIEW")
+
+        self.assertIn("dataset.storyPhotoAlign", self.editor_js)
+        self.assertIn("data-story-photo-align", self.editor_js)
+        self.assertIn("Vieta prie teksto", self.editor_js)
+        for label in (
+            "Per visą plotį (atskira eilutė)",
+            "Kairėje – tekstas apteka dešinėje",
+            "Dešinėje – tekstas apteka kairėje",
+        ):
+            self.assertIn(label, self.editor_js)
+
+        for source in (
+            self.editor_js,
+            self.api_js,
+            self.memorial_js,
+            self.core,
+        ):
+            with self.subTest(source=source[:40]):
+                self.assertIn("align", source.lower())
+                self.assertIn('"left"', source)
+                self.assertIn('"right"', source)
+                self.assertIn('"full"', source)
+
+        wrapping_migrations = "\n".join(
+            source
+            for name, source in self.migrations.items()
+            if "story_photo_wrapping" in name
+        )
+        self.assertTrue(wrapping_migrations)
+        self.assertIn("'align', photo_align", wrapping_migrations)
+        self.assertRegex(
+            wrapping_migrations,
+            r"in\s*\(\s*'left'\s*,\s*'right'\s*\)",
+        )
+        self.assertIn("'align', 'full'", wrapping_migrations)
+
+        renderer = balanced_block(
+            self.memorial_js, r"function\s+buildStoryBlocks\s*\(",
+        )
+        self.assertIn("block.align", renderer)
+        self.assertIn("memorial-story-block--photo-", renderer)
+        self.assertRegex(
+            self.styles,
+            r"\.memorial-story-block--photo-left[\s\S]{0,320}"
+            r"float\s*:\s*left",
+        )
+        self.assertRegex(
+            self.styles,
+            r"\.memorial-story-block--photo-right[\s\S]{0,320}"
+            r"float\s*:\s*right",
+        )
+        self.assertRegex(
+            self.styles,
+            r"\.memorial-story-block--photo-full\s*\{[\s\S]{0,100}"
+            r"clear\s*:\s*both",
+        )
+        self.assertIn("display: flow-root", self.styles)
+        self.assertIn("Kad tekstas aptekėtų nuotrauką", self.editor_html)
+
     def test_photo_draft_errors_cannot_be_reported_as_saved(self):
         save_draft = balanced_block(
             self.editor_js, r"function\s+saveDraftNow\s*\(",
@@ -453,7 +520,10 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn("block.photoOrder", renderer)
         self.assertIn("textContent", renderer)
         self.assertIn('className = "memorial-story-block memorial-story-block--text"', renderer)
-        self.assertIn('className = "memorial-story-block memorial-story-block--photo"', renderer)
+        self.assertIn(
+            'className = "memorial-story-block memorial-story-block--photo ',
+            renderer,
+        )
         self.assertIn("section.appendChild(text)", renderer)
         self.assertIn("section.appendChild(figure)", renderer)
         self.assertNotRegex(renderer, r"blocks\.(?:filter|sort)\s*\(")

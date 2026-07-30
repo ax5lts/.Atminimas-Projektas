@@ -120,7 +120,11 @@
       if (raw.type === "photo") {
         var photoOrder = Number(raw.photoOrder);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
-          blocks.push({ type: "photo", photoOrder: photoOrder });
+          blocks.push({
+            type: "photo",
+            photoOrder: photoOrder,
+            align: raw.align === "left" || raw.align === "right" ? raw.align : "full"
+          });
         }
       }
     });

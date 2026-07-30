@@ -44,7 +44,6 @@
   var MAX_VIDEO_BYTES = 50 * 1024 * 1024;
   var MAX_STORY_WORDS = 1000;
   var MAX_STORY_CHARS = 10000;
-  var PREVIEW_STORY_WORDS = 80;
   var DATE_MIN_YEAR = 1800;
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
@@ -281,10 +280,8 @@
     return list.length > max ? list.slice(0, max).join(" ") : value;
   }
 
-  function storyPreview(value) {
-    var list = words(value);
-    if (list.length <= PREVIEW_STORY_WORDS) return value;
-    return list.slice(0, PREVIEW_STORY_WORDS).join(" ") + "…";
+  function normalizeStoryPhotoAlign(value) {
+    return value === "left" || value === "right" ? value : "full";
   }
 
   function normalizeStoryBlocks(value) {
@@ -301,7 +298,8 @@
           type: "photo",
           photoOrder: Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS
             ? photoOrder
-            : null
+            : null,
+          align: normalizeStoryPhotoAlign(item.align)
         });
       }
       return result;
@@ -315,10 +313,11 @@
         if (includeEmpty || text.trim()) result.push({ type: "text", text: text });
       } else if (block.type === "photo") {
         var photoOrder = Number(block.photoOrder);
+        var align = normalizeStoryPhotoAlign(block.align);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS) {
-          result.push({ type: "photo", photoOrder: photoOrder });
+          result.push({ type: "photo", photoOrder: photoOrder, align: align });
         } else if (includeEmpty) {
-          result.push({ type: "photo", photoOrder: null });
+          result.push({ type: "photo", photoOrder: null, align: align });
         }
       }
       return result;
@@ -445,7 +444,7 @@
       if (emptyBlock) {
         emptyBlock.photoOrder = photoOrder;
       } else if (storyBlocks.length < MAX_STORY_BLOCKS) {
-        storyBlocks.push({ type: "photo", photoOrder: photoOrder });
+        storyBlocks.push({ type: "photo", photoOrder: photoOrder, align: "full" });
       }
       used.add(photoOrder);
     }
@@ -519,7 +518,8 @@
       var url = photoUrlAt(Number(block.photoOrder) - 1);
       if (!url) return;
       var figure = document.createElement("figure");
-      figure.className = "editor-preview-story__photo";
+      var align = normalizeStoryPhotoAlign(block.align);
+      figure.className = "editor-preview-story__photo editor-preview-story__photo--" + align;
       var image = document.createElement("img");
       image.alt = storyPhotoAlt(block.photoOrder);
       image.decoding = "async";
@@ -647,6 +647,27 @@
         selectLabel.appendChild(select);
         photoFields.appendChild(selectLabel);
 
+        var alignLabel = document.createElement("label");
+        alignLabel.className = "editor-story-block__field";
+        var alignCopy = document.createElement("span");
+        alignCopy.textContent = "Vieta prie teksto";
+        var alignSelect = document.createElement("select");
+        alignSelect.dataset.storyPhotoAlign = "";
+        [
+          { value: "full", label: "Per visą plotį (atskira eilutė)" },
+          { value: "left", label: "Kairėje – tekstas apteka dešinėje" },
+          { value: "right", label: "Dešinėje – tekstas apteka kairėje" }
+        ].forEach(function (choice) {
+          var alignOption = document.createElement("option");
+          alignOption.value = choice.value;
+          alignOption.textContent = choice.label;
+          alignSelect.appendChild(alignOption);
+        });
+        alignSelect.value = normalizeStoryPhotoAlign(block.align);
+        alignLabel.appendChild(alignCopy);
+        alignLabel.appendChild(alignSelect);
+        photoFields.appendChild(alignLabel);
+
         if (block.photoOrder) {
           var captionLabel = document.createElement("label");
           captionLabel.className = "editor-story-block__field";
@@ -728,10 +749,16 @@
     });
 
     storyBlocksEl.addEventListener("change", function (event) {
-      if (!event.target.matches("[data-story-photo-select]")) return;
+      if (!event.target.matches("[data-story-photo-select], [data-story-photo-align]")) return;
       var card = event.target.closest("[data-story-block-index]");
       var index = card ? Number(card.dataset.storyBlockIndex) : -1;
       if (!storyBlocks[index] || storyBlocks[index].type !== "photo") return;
+      if (event.target.matches("[data-story-photo-align]")) {
+        storyBlocks[index].align = normalizeStoryPhotoAlign(event.target.value);
+        renderStoryPreview();
+        scheduleDraftSave();
+        return;
+      }
       var nextOrder = Number(event.target.value);
       storyBlocks[index].photoOrder = Number.isInteger(nextOrder) && nextOrder >= 1 && nextOrder <= storyPhotoCount()
         ? nextOrder
@@ -789,7 +816,11 @@
         }
         if (storyEmptyMode) storyBlocks = [];
         storyEmptyMode = false;
-        storyBlocks.push({ type: "photo", photoOrder: firstUnusedStoryPhotoOrder() });
+        storyBlocks.push({
+          type: "photo",
+          photoOrder: firstUnusedStoryPhotoOrder(),
+          align: "full"
+        });
         renderStoryBlockEditor(storyBlocks.length - 1, "photo");
         scheduleDraftSave();
       });

@@ -161,7 +161,11 @@ export function safeProfileLayout(value: unknown) {
 
 export type StoryBlock =
   | { type: "text"; text: string }
-  | { type: "photo"; photoOrder: number };
+  | {
+    type: "photo";
+    photoOrder: number;
+    align: "full" | "left" | "right";
+  };
 
 const MAX_STORY_BLOCKS = 40;
 // Matches the existing 10000-character `tekstas_200` persistence boundary.
@@ -201,7 +205,10 @@ export function safeStoryBlocks(value: unknown): StoryBlock[] {
         photoOrder >= 1 &&
         photoOrder <= 8
       ) {
-        blocks.push({ type: "photo", photoOrder });
+        const align = block.align === "left" || block.align === "right"
+          ? block.align
+          : "full";
+        blocks.push({ type: "photo", photoOrder, align });
       }
     }
   }

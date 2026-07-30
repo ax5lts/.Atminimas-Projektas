@@ -71,7 +71,11 @@
       } else if (item.type === "photo") {
         var photoOrder = Number(item.photoOrder);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
-          result.push({ type: "photo", photoOrder: photoOrder });
+          result.push({
+            type: "photo",
+            photoOrder: photoOrder,
+            align: item.align === "left" || item.align === "right" ? item.align : "full"
+          });
         }
       }
       return result;
@@ -225,7 +229,8 @@
       if (!item) return;
       var imageIndex = allImages.indexOf(item);
       var figure = document.createElement("figure");
-      figure.className = "memorial-story-block memorial-story-block--photo";
+      figure.className = "memorial-story-block memorial-story-block--photo memorial-story-block--photo-" +
+        block.align;
       var button = document.createElement("button");
       button.type = "button";
       button.setAttribute("aria-label", "Atidaryti: " + (item.alt || "atminimo nuotrauka"));
