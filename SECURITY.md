@@ -49,7 +49,7 @@ pasirašytas nuorodas. Diekite tokia tvarka:
    ```
 
    Svarbi migracija:
-   `20260724160452_harden_private_profile_media.sql`.
+   `20260730121821_harden_private_profile_media.sql`.
 
    Jei diegimo žurnale matote `SECURITY FOLLOW-UP REQUIRED` apie
    `supabase_admin` numatytąsias teises, dabartinių objektų apsaugos vis tiek

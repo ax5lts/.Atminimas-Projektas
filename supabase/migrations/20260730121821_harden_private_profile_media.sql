@@ -1,4 +1,4 @@
--- Private memorial media and least-privilege API access.
+-- Private memorial media with least-privilege API access.
 --
 -- Public memorial pages are served through the `profile-content` Edge Function.
 -- The browser must not read `profiliai`, legacy `medijos`, or the `atminimas`

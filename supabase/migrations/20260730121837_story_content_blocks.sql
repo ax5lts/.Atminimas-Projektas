@@ -1,4 +1,4 @@
--- Ordered story content blocks, with a flattened legacy text representation.
+-- Ordered story content blocks with a flattened legacy text representation.
 -- The browser may insert the new column only while creating its own private
 -- profile; later edits continue to pass through the authenticated Edge Function.
 

@@ -97,7 +97,7 @@ class SecurityHardeningTests(unittest.TestCase):
             ROOT
             / "supabase"
             / "migrations"
-            / "20260724160452_harden_private_profile_media.sql"
+            / "20260730121821_harden_private_profile_media.sql"
         ).read_text(encoding="utf-8").lower()
 
         self.assertIn('action: "create_order"', client)
@@ -127,7 +127,7 @@ class SecurityHardeningTests(unittest.TestCase):
             ROOT
             / "supabase"
             / "migrations"
-            / "20260724160452_harden_private_profile_media.sql"
+            / "20260730121821_harden_private_profile_media.sql"
         ).read_text(encoding="utf-8").lower()
         self.assertIn("'postgres', 'supabase_admin'", migration)
         self.assertIn("'alter default privileges for role %i", migration)
@@ -175,7 +175,7 @@ class SecurityHardeningTests(unittest.TestCase):
             ROOT
             / "supabase"
             / "migrations"
-            / "20260724160452_harden_private_profile_media.sql"
+            / "20260730121821_harden_private_profile_media.sql"
         ).read_text(encoding="utf-8").lower()
         edge = (ROOT / "supabase" / "functions" / "grave-photo" / "index.ts").read_text(encoding="utf-8")
         client = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")

@@ -1,4 +1,4 @@
--- Preserve the selected text-wrapping placement for every story photo block.
+-- Preserve each story photo block's selected text-wrapping placement.
 -- This follows the ordered story block migration and is backwards compatible:
 -- blocks without `align` keep the established full-width presentation.
 
