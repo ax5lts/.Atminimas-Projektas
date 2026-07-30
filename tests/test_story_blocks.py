@@ -261,7 +261,9 @@ class StoryBlocksContractTests(unittest.TestCase):
             self.editor_js,
             r"if\s*\(\s*!hasPersistableBlock\s*\)"
             r"[\s\S]{0,180}storyBlocks\s*=\s*\[\s*"
-            r"\{\s*type:\s*\"text\",\s*text:\s*\"\"\s*\}\s*\]",
+            r"\{\s*type:\s*\"text\",\s*text:\s*\"\""
+            r"[\s\S]{0,100}offsetX:\s*0[\s\S]{0,100}offsetY:\s*0"
+            r"\s*\}\s*\]",
         )
         self.assertIn("storyEmpty: storyEmptyMode", self.editor_js)
         self.assertRegex(
@@ -277,7 +279,8 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertRegex(
             normalizer,
-            r"result\.push\(\s*\{\s*type:\s*\"text\",\s*text:\s*text\s*\}\s*\)",
+            r"result\.push\(\s*\{\s*type:\s*\"text\",\s*text:\s*text"
+            r"[\s\S]{0,180}offsetX:[\s\S]{0,180}offsetY:",
         )
         renderer = balanced_block(
             self.memorial_js, r"function\s+buildStoryBlocks\s*\(",
@@ -418,6 +421,65 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertIn("display: flow-root", self.styles)
         self.assertIn("Kad tekstas aptekėtų nuotrauką", self.editor_html)
+
+    def test_story_blocks_move_independently_and_persist_positions(self):
+        for source in (
+            self.editor_js,
+            self.api_js,
+            self.memorial_js,
+            self.core,
+        ):
+            with self.subTest(source=source[:40]):
+                self.assertIn("offsetX", source)
+                self.assertIn("offsetY", source)
+
+        preview = balanced_block(
+            self.editor_js, r"function\s+renderStoryPreview\s*\(",
+        )
+        self.assertIn("storyLayoutHandle(index", preview)
+        self.assertIn("dataset.storyPreviewIndex", preview)
+        self.assertIn("setupStoryPreviewDragging()", preview)
+
+        drag = balanced_block(
+            self.editor_js, r"function\s+setupStoryPreviewDragging\s*\(",
+        )
+        self.assertIn("block.offsetX", drag)
+        self.assertIn("block.offsetY", drag)
+        self.assertIn("scheduleDraftSave()", drag)
+        self.assertIn('"ArrowLeft"', drag)
+        self.assertIn('"Home"', drag)
+
+        bind_drag = balanced_block(
+            self.editor_js, r"function\s+bindDrag\s*\(",
+        )
+        self.assertIn(
+            'piece === previewLongText && stage.classList.contains("has-story-blocks")',
+            bind_drag,
+        )
+
+        position_migration = "\n".join(
+            source
+            for name, source in self.migrations.items()
+            if "story_block_independent_positions" in name
+        )
+        self.assertTrue(position_migration)
+        self.assertIn("'offsetX', block_offset_x", position_migration)
+        self.assertIn("'offsetY', block_offset_y", position_migration)
+        self.assertIn("least(70, greatest(-70", position_migration)
+        self.assertIn("least(320, greatest(-320", position_migration)
+
+        renderer = balanced_block(
+            self.memorial_js, r"function\s+buildStoryBlocks\s*\(",
+        )
+        self.assertIn("applyStoryBlockPosition(text, block)", renderer)
+        self.assertIn("applyStoryBlockPosition(figure, block)", renderer)
+        self.assertIn("--story-offset-padding", renderer)
+        self.assertIn(".editor-story-layout-handle", self.styles)
+        self.assertIn(".memorial-story-block--positioned", self.styles)
+        self.assertIn(
+            "Pajudinus vieną bloką, kiti lieka savo vietoje",
+            self.editor_html,
+        )
 
     def test_photo_draft_errors_cannot_be_reported_as_saved(self):
         save_draft = balanced_block(

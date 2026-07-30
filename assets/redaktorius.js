@@ -284,22 +284,44 @@
     return value === "left" || value === "right" ? value : "full";
   }
 
+  function normalizeStoryOffset(value, minimum, maximum) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return 0;
+    return Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) / 1000;
+  }
+
+  function storyBlockPosition(block) {
+    return {
+      offsetX: normalizeStoryOffset(block && block.offsetX, -70, 70),
+      offsetY: normalizeStoryOffset(block && block.offsetY, -320, 320)
+    };
+  }
+
   function normalizeStoryBlocks(value) {
     if (!Array.isArray(value)) return [];
     return value.slice(0, MAX_STORY_BLOCKS).reduce(function (result, item) {
       if (!item || typeof item !== "object") return result;
       if (item.type === "text") {
-        result.push({ type: "text", text: String(item.text || "").slice(0, 10000) });
+        var textPosition = storyBlockPosition(item);
+        result.push({
+          type: "text",
+          text: String(item.text || "").slice(0, 10000),
+          offsetX: textPosition.offsetX,
+          offsetY: textPosition.offsetY
+        });
         return result;
       }
       if (item.type === "photo") {
         var photoOrder = Number(item.photoOrder);
+        var photoPosition = storyBlockPosition(item);
         result.push({
           type: "photo",
           photoOrder: Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS
             ? photoOrder
             : null,
-          align: normalizeStoryPhotoAlign(item.align)
+          align: normalizeStoryPhotoAlign(item.align),
+          offsetX: photoPosition.offsetX,
+          offsetY: photoPosition.offsetY
         });
       }
       return result;
@@ -310,14 +332,35 @@
     return storyBlocks.slice(0, MAX_STORY_BLOCKS).reduce(function (result, block) {
       if (block.type === "text") {
         var text = String(block.text || "").slice(0, 10000);
-        if (includeEmpty || text.trim()) result.push({ type: "text", text: text });
+        var textPosition = storyBlockPosition(block);
+        if (includeEmpty || text.trim()) {
+          result.push({
+            type: "text",
+            text: text,
+            offsetX: textPosition.offsetX,
+            offsetY: textPosition.offsetY
+          });
+        }
       } else if (block.type === "photo") {
         var photoOrder = Number(block.photoOrder);
         var align = normalizeStoryPhotoAlign(block.align);
+        var photoPosition = storyBlockPosition(block);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= MAX_PHOTOS) {
-          result.push({ type: "photo", photoOrder: photoOrder, align: align });
+          result.push({
+            type: "photo",
+            photoOrder: photoOrder,
+            align: align,
+            offsetX: photoPosition.offsetX,
+            offsetY: photoPosition.offsetY
+          });
         } else if (includeEmpty) {
-          result.push({ type: "photo", photoOrder: null, align: align });
+          result.push({
+            type: "photo",
+            photoOrder: null,
+            align: align,
+            offsetX: photoPosition.offsetX,
+            offsetY: photoPosition.offsetY
+          });
         }
       }
       return result;
@@ -332,7 +375,7 @@
         photoOrder >= 1 && photoOrder <= MAX_PHOTOS;
     });
     if (!hasPersistableBlock) {
-      storyBlocks = [{ type: "text", text: "" }];
+      storyBlocks = [{ type: "text", text: "", offsetX: 0, offsetY: 0 }];
       storyEmptyMode = true;
     }
   }
@@ -383,7 +426,7 @@
   function setStoryBlocks(value, acceptEmpty, explicitEmptyMode) {
     var normalized = normalizeStoryBlocks(value);
     if (!normalized.length && !acceptEmpty) return false;
-    if (!normalized.length) normalized = [{ type: "text", text: "" }];
+    if (!normalized.length) normalized = [{ type: "text", text: "", offsetX: 0, offsetY: 0 }];
     storyBlocks = normalized;
     storyBlocksLoaded = true;
     storyEmptyMode = typeof explicitEmptyMode === "boolean"
@@ -444,7 +487,13 @@
       if (emptyBlock) {
         emptyBlock.photoOrder = photoOrder;
       } else if (storyBlocks.length < MAX_STORY_BLOCKS) {
-        storyBlocks.push({ type: "photo", photoOrder: photoOrder, align: "full" });
+        storyBlocks.push({
+          type: "photo",
+          photoOrder: photoOrder,
+          align: "full",
+          offsetX: 0,
+          offsetY: 0
+        });
       }
       used.add(photoOrder);
     }
@@ -454,7 +503,9 @@
     if (!storyBlocksLoaded) {
       storyBlocks = [{
         type: "text",
-        text: form.elements.tekstas_200 ? String(form.elements.tekstas_200.value || "") : ""
+        text: form.elements.tekstas_200 ? String(form.elements.tekstas_200.value || "") : "",
+        offsetX: 0,
+        offsetY: 0
       }];
       storyBlocksLoaded = true;
       storyEmptyMode = false;
@@ -503,13 +554,20 @@
     previewLongText.innerHTML = "";
     stage.classList.add("has-story-blocks");
     var visibleBlocks = 0;
-    storyBlocks.forEach(function (block) {
+    var maximumPositiveOffsetY = 0;
+    storyBlocks.forEach(function (block, index) {
+      var position = storyBlockPosition(block);
       if (block.type === "text") {
         var value = String(block.text || "").trim();
         if (!value) return;
+        maximumPositiveOffsetY = Math.max(maximumPositiveOffsetY, position.offsetY);
         var text = document.createElement("div");
-        text.className = "editor-preview-story__text";
+        text.className = "editor-preview-story__text editor-story-layout-piece";
+        text.dataset.storyPreviewIndex = String(index);
+        text.style.setProperty("--story-offset-x", position.offsetX + "%");
+        text.style.setProperty("--story-offset-y", position.offsetY + "px");
         text.textContent = value;
+        text.appendChild(storyLayoutHandle(index, "teksto"));
         previewLongText.appendChild(text);
         visibleBlocks += 1;
         return;
@@ -517,9 +575,14 @@
       if (block.type !== "photo" || !block.photoOrder) return;
       var url = photoUrlAt(Number(block.photoOrder) - 1);
       if (!url) return;
+      maximumPositiveOffsetY = Math.max(maximumPositiveOffsetY, position.offsetY);
       var figure = document.createElement("figure");
       var align = normalizeStoryPhotoAlign(block.align);
-      figure.className = "editor-preview-story__photo editor-preview-story__photo--" + align;
+      figure.className = "editor-preview-story__photo editor-preview-story__photo--" + align +
+        " editor-story-layout-piece";
+      figure.dataset.storyPreviewIndex = String(index);
+      figure.style.setProperty("--story-offset-x", position.offsetX + "%");
+      figure.style.setProperty("--story-offset-y", position.offsetY + "px");
       var image = document.createElement("img");
       image.alt = storyPhotoAlt(block.photoOrder);
       image.decoding = "async";
@@ -534,6 +597,7 @@
         caption.textContent = captionValue;
         figure.appendChild(caption);
       }
+      figure.appendChild(storyLayoutHandle(index, "nuotraukos"));
       previewLongText.appendChild(figure);
       visibleBlocks += 1;
     });
@@ -543,7 +607,105 @@
       placeholder.textContent = "Gyvenimo istorijos blokai atsiras čia.";
       previewLongText.appendChild(placeholder);
     }
+    previewLongText.style.setProperty("--story-offset-padding", maximumPositiveOffsetY + "px");
+    setupStoryPreviewDragging();
     scheduleStageFit(true);
+  }
+
+  function storyLayoutHandle(index, label) {
+    var handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "editor-story-layout-handle";
+    handle.dataset.storyLayoutHandle = String(index);
+    handle.setAttribute("aria-label", "Perkelti " + label + " bloką");
+    handle.title = "Tempkite, kad perkeltumėte tik šį bloką";
+    handle.textContent = "↕";
+    return handle;
+  }
+
+  function applyStoryPreviewPosition(element, block) {
+    var position = storyBlockPosition(block);
+    block.offsetX = position.offsetX;
+    block.offsetY = position.offsetY;
+    element.style.setProperty("--story-offset-x", position.offsetX + "%");
+    element.style.setProperty("--story-offset-y", position.offsetY + "px");
+  }
+
+  function setupStoryPreviewDragging() {
+    previewLongText.querySelectorAll("[data-story-layout-handle]").forEach(function (handle) {
+      var element = handle.closest("[data-story-preview-index]");
+      var index = element ? Number(element.dataset.storyPreviewIndex) : -1;
+      var block = storyBlocks[index];
+      if (!element || !block) return;
+
+      handle.addEventListener("pointerdown", function (event) {
+        if (stage.classList.contains("is-simple-layout")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        handle.setPointerCapture(event.pointerId);
+        var startX = event.clientX;
+        var startY = event.clientY;
+        var start = storyBlockPosition(block);
+        var storyWidth = Math.max(1, previewLongText.getBoundingClientRect().width);
+        element.classList.add("is-dragging");
+
+        function move(moveEvent) {
+          block.offsetX = normalizeStoryOffset(
+            start.offsetX + (moveEvent.clientX - startX) / storyWidth * 100,
+            -70,
+            70
+          );
+          block.offsetY = normalizeStoryOffset(
+            start.offsetY + moveEvent.clientY - startY,
+            -320,
+            320
+          );
+          applyStoryPreviewPosition(element, block);
+          fitStageToContent(false, previewLongText);
+        }
+
+        function up() {
+          element.classList.remove("is-dragging");
+          scheduleStageFit(true);
+          scheduleDraftSave();
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", up);
+          handle.removeEventListener("pointercancel", up);
+        }
+
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+        handle.addEventListener("pointercancel", up);
+      });
+
+      handle.addEventListener("keydown", function (event) {
+        var horizontal = 0;
+        var vertical = 0;
+        var step = event.shiftKey ? 12 : 4;
+        if (event.key === "ArrowLeft") horizontal = -step;
+        else if (event.key === "ArrowRight") horizontal = step;
+        else if (event.key === "ArrowUp") vertical = -step;
+        else if (event.key === "ArrowDown") vertical = step;
+        else if (event.key === "Home") {
+          block.offsetX = 0;
+          block.offsetY = 0;
+        } else return;
+        event.preventDefault();
+        if (horizontal) {
+          block.offsetX = normalizeStoryOffset(
+            storyBlockPosition(block).offsetX + horizontal / Math.max(1, previewLongText.clientWidth) * 100,
+            -70,
+            70
+          );
+        }
+        if (vertical) {
+          block.offsetY = normalizeStoryOffset(storyBlockPosition(block).offsetY + vertical, -320, 320);
+        }
+        applyStoryPreviewPosition(element, block);
+        scheduleStageFit(true);
+        scheduleDraftSave();
+      });
+    });
   }
 
   function storyBlockControls(index) {
@@ -803,7 +965,7 @@
         }
         if (storyEmptyMode) storyBlocks = [];
         storyEmptyMode = false;
-        storyBlocks.push({ type: "text", text: "" });
+        storyBlocks.push({ type: "text", text: "", offsetX: 0, offsetY: 0 });
         renderStoryBlockEditor(storyBlocks.length - 1, "text");
         scheduleDraftSave();
       });
@@ -819,7 +981,9 @@
         storyBlocks.push({
           type: "photo",
           photoOrder: firstUnusedStoryPhotoOrder(),
-          align: "full"
+          align: "full",
+          offsetX: 0,
+          offsetY: 0
         });
         renderStoryBlockEditor(storyBlocks.length - 1, "photo");
         scheduleDraftSave();
@@ -2005,13 +2169,25 @@
 
   function desiredStageHeightPct(forcedPiece) {
     var width = stageWidth();
+    var stageRect = stage.getBoundingClientRect();
     var maximumHeightPct = stage.classList.contains("has-story-blocks")
       ? MAX_STORY_STAGE_HEIGHT_PCT
       : MAX_STAGE_HEIGHT_PCT;
     var bottom = 0;
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       if (piece !== forcedPiece && !pieceAffectsStageHeight(piece)) return;
-      bottom = Math.max(bottom, piece.offsetTop + piece.offsetHeight);
+      var pieceRect = piece.getBoundingClientRect();
+      bottom = Math.max(
+        bottom,
+        pieceRect.width || pieceRect.height
+          ? pieceRect.bottom - stageRect.top
+          : piece.offsetTop + piece.offsetHeight
+      );
+      if (piece === previewLongText) {
+        piece.querySelectorAll("[data-story-preview-index]").forEach(function (storyPiece) {
+          bottom = Math.max(bottom, storyPiece.getBoundingClientRect().bottom - stageRect.top);
+        });
+      }
     });
     var desired = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
     return Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(maximumHeightPct, desired));
@@ -2024,7 +2200,16 @@
     var width = stageWidth();
     var gapPx = width * 6 / 100;
     var savedTopPx = width * pieceTopPct(videoPiece) / 100;
-    var minimumTopPx = previewLongText.offsetTop + previewLongText.offsetHeight + gapPx;
+    var storyRect = previewLongText.getBoundingClientRect();
+    var stageRect = stage.getBoundingClientRect();
+    var storyBottom = Math.max(
+      previewLongText.offsetTop + previewLongText.offsetHeight,
+      storyRect.bottom - stageRect.top
+    );
+    previewLongText.querySelectorAll("[data-story-preview-index]").forEach(function (storyPiece) {
+      storyBottom = Math.max(storyBottom, storyPiece.getBoundingClientRect().bottom - stageRect.top);
+    });
+    var minimumTopPx = storyBottom + gapPx;
     videoPiece.style.top = Math.round(Math.max(savedTopPx, minimumTopPx)) + "px";
   }
 
@@ -2262,6 +2447,7 @@
   function bindDrag() {
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       piece.addEventListener("pointerdown", function (event) {
+        if (piece === previewLongText && stage.classList.contains("has-story-blocks")) return;
         if (event.target.closest("input, textarea, button, a")) return;
         if (event.target.closest(".editor-resize-handle, .editor-stretch-handle, .editor-crop-handle")) return;
         if (

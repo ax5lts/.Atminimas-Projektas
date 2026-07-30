@@ -63,18 +63,31 @@
   function normalizeStoryBlocks(atminimas) {
     var saved = parseJson(atminimas.story_blocks_json, []);
     if (!Array.isArray(saved)) return [];
+    function offset(raw, minimum, maximum) {
+      var number = Number(raw);
+      return Number.isFinite(number)
+        ? Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) / 1000
+        : 0;
+    }
     return saved.slice(0, 40).reduce(function (result, item) {
       if (!item || typeof item !== "object") return result;
       if (item.type === "text") {
         var text = String(item.text || "").slice(0, 10000);
-        result.push({ type: "text", text: text });
+        result.push({
+          type: "text",
+          text: text,
+          offsetX: offset(item.offsetX, -70, 70),
+          offsetY: offset(item.offsetY, -320, 320)
+        });
       } else if (item.type === "photo") {
         var photoOrder = Number(item.photoOrder);
         if (Number.isInteger(photoOrder) && photoOrder >= 1 && photoOrder <= 8) {
           result.push({
             type: "photo",
             photoOrder: photoOrder,
-            align: item.align === "left" || item.align === "right" ? item.align : "full"
+            align: item.align === "left" || item.align === "right" ? item.align : "full",
+            offsetX: offset(item.offsetX, -70, 70),
+            offsetY: offset(item.offsetY, -320, 320)
           });
         }
       }
@@ -211,12 +224,23 @@
     heading.textContent = "Gyvenimo istorija";
     section.appendChild(heading);
     var visibleBlocks = 0;
+    var maximumPositiveOffsetY = 0;
+
+    function applyStoryBlockPosition(element, block) {
+      var offsetX = Number(block.offsetX) || 0;
+      var offsetY = Number(block.offsetY) || 0;
+      maximumPositiveOffsetY = Math.max(maximumPositiveOffsetY, offsetY);
+      element.classList.add("memorial-story-block--positioned");
+      element.style.setProperty("--story-offset-x", offsetX + "%");
+      element.style.setProperty("--story-offset-y", offsetY + "px");
+    }
 
     blocks.forEach(function (block) {
       if (block.type === "text") {
         if (!String(block.text || "").trim()) return;
         var text = document.createElement("div");
         text.className = "memorial-story-block memorial-story-block--text";
+        applyStoryBlockPosition(text, block);
         text.textContent = block.text;
         section.appendChild(text);
         visibleBlocks += 1;
@@ -231,6 +255,7 @@
       var figure = document.createElement("figure");
       figure.className = "memorial-story-block memorial-story-block--photo memorial-story-block--photo-" +
         block.align;
+      applyStoryBlockPosition(figure, block);
       var button = document.createElement("button");
       button.type = "button";
       button.setAttribute("aria-label", "Atidaryti: " + (item.alt || "atminimo nuotrauka"));
@@ -251,6 +276,7 @@
       section.appendChild(figure);
       visibleBlocks += 1;
     });
+    section.style.setProperty("--story-offset-padding", maximumPositiveOffsetY + "px");
     section.hidden = visibleBlocks === 0;
     return section;
   }

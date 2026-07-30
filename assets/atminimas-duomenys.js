@@ -102,6 +102,12 @@
     var blocks = [];
     var flattenedTextLength = 0;
     var hasNonEmptyText = false;
+    function offset(raw, minimum, maximum) {
+      var number = Number(raw);
+      return Number.isFinite(number)
+        ? Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) / 1000
+        : 0;
+    }
 
     value.slice(0, 40).forEach(function (raw) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
@@ -110,7 +116,12 @@
         var separatorLength = trimmed && hasNonEmptyText ? 2 : 0;
         var available = Math.max(0, 10000 - flattenedTextLength - separatorLength);
         var text = trimmed.slice(0, available).replace(/\s+$/, "");
-        blocks.push({ type: "text", text: text });
+        blocks.push({
+          type: "text",
+          text: text,
+          offsetX: offset(raw.offsetX, -70, 70),
+          offsetY: offset(raw.offsetY, -320, 320)
+        });
         if (text) {
           flattenedTextLength += separatorLength + text.length;
           hasNonEmptyText = true;
@@ -123,7 +134,9 @@
           blocks.push({
             type: "photo",
             photoOrder: photoOrder,
-            align: raw.align === "left" || raw.align === "right" ? raw.align : "full"
+            align: raw.align === "left" || raw.align === "right" ? raw.align : "full",
+            offsetX: offset(raw.offsetX, -70, 70),
+            offsetY: offset(raw.offsetY, -320, 320)
           });
         }
       }

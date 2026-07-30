@@ -160,16 +160,35 @@ export function safeProfileLayout(value: unknown) {
 }
 
 export type StoryBlock =
-  | { type: "text"; text: string }
+  | {
+    type: "text";
+    text: string;
+    offsetX: number;
+    offsetY: number;
+  }
   | {
     type: "photo";
     photoOrder: number;
     align: "full" | "left" | "right";
+    offsetX: number;
+    offsetY: number;
   };
 
 const MAX_STORY_BLOCKS = 40;
 // Matches the existing 10000-character `tekstas_200` persistence boundary.
 const MAX_STORY_TEXT_LENGTH = 10_000;
+
+function safeStoryOffset(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+) {
+  if (typeof value !== "number" && typeof value !== "string") return 0;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.round(Math.max(minimum, Math.min(maximum, number)) * 1000) /
+    1000;
+}
 
 export function safeStoryBlocks(value: unknown): StoryBlock[] {
   if (!Array.isArray(value)) return [];
@@ -190,7 +209,12 @@ export function safeStoryBlocks(value: unknown): StoryBlock[] {
         MAX_STORY_TEXT_LENGTH - flattenedTextLength - separatorLength,
       );
       const text = trimmed.slice(0, available).trimEnd();
-      blocks.push({ type: "text", text });
+      blocks.push({
+        type: "text",
+        text,
+        offsetX: safeStoryOffset(block.offsetX, -70, 70),
+        offsetY: safeStoryOffset(block.offsetY, -320, 320),
+      });
       if (text) {
         flattenedTextLength += separatorLength + text.length;
         hasNonEmptyText = true;
@@ -208,7 +232,13 @@ export function safeStoryBlocks(value: unknown): StoryBlock[] {
         const align = block.align === "left" || block.align === "right"
           ? block.align
           : "full";
-        blocks.push({ type: "photo", photoOrder, align });
+        blocks.push({
+          type: "photo",
+          photoOrder,
+          align,
+          offsetX: safeStoryOffset(block.offsetX, -70, 70),
+          offsetY: safeStoryOffset(block.offsetY, -320, 320),
+        });
       }
     }
   }
