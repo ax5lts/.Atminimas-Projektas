@@ -361,7 +361,7 @@ class StoryBlocksContractTests(unittest.TestCase):
         preview = balanced_block(
             self.editor_js, r"function\s+renderStoryPreview\s*\(",
         )
-        self.assertIn("text.textContent = value", preview)
+        self.assertIn("textSelectButton.textContent = value", preview)
         self.assertNotRegex(preview, r"slice\(|excerpt|PREVIEW")
 
         self.assertIn("dataset.storyPhotoAlign", self.editor_js)
@@ -548,6 +548,40 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertIn(".editor-preview-story__photo.is-selected", self.styles)
         self.assertIn(".editor-story-photo-tools", self.styles)
+
+    def test_story_text_is_selectable_resizable_and_keeps_font_scale(self):
+        for source in (
+            self.editor_js,
+            self.api_js,
+            self.memorial_js,
+            self.core,
+        ):
+            with self.subTest(source=source[:40]):
+                self.assertIn("fontScale", source)
+
+        self.assertIn("MIN_STORY_TEXT_SCALE = 70", self.editor_js)
+        self.assertIn("MAX_STORY_TEXT_SCALE = 160", self.editor_js)
+        self.assertIn("dataset.storyItemSelect", self.editor_js)
+        self.assertIn("storyResizeHandle(index, \"teksto\")", self.editor_js)
+        self.assertIn("setupStoryPreviewResizing()", self.editor_js)
+        self.assertIn(".editor-story-resize-handle", self.styles)
+        self.assertIn("--story-text-scale", self.styles)
+
+        renderer = balanced_block(
+            self.memorial_js, r"function\s+buildStoryBlocks\s*\(",
+        )
+        self.assertIn('"--story-text-scale"', renderer)
+
+        display_migration = "\n".join(
+            source
+            for name, source in self.migrations.items()
+            if "story_text_display_controls" in name
+        )
+        self.assertTrue(display_migration)
+        self.assertIn("'fontScale', text_font_scale", display_migration)
+        self.assertIn("least(", display_migration)
+        self.assertIn("greatest(70", display_migration)
+        self.assertIn("'fontScale', 100", display_migration)
 
     def test_photo_draft_errors_cannot_be_reported_as_saved(self):
         save_draft = balanced_block(

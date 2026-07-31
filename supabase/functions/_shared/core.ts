@@ -163,6 +163,7 @@ export type StoryBlock =
   | {
     type: "text";
     text: string;
+    fontScale: number;
     offsetX: number;
     offsetY: number;
   }
@@ -204,6 +205,13 @@ function safeStoryPhotoWidth(
   return Math.round(Math.max(35, Math.min(100, number)));
 }
 
+function safeStoryTextScale(value: unknown) {
+  if (typeof value !== "number" && typeof value !== "string") return 100;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 100;
+  return Math.round(Math.max(70, Math.min(160, number)));
+}
+
 export function safeStoryBlocks(value: unknown): StoryBlock[] {
   if (!Array.isArray(value)) return [];
 
@@ -226,6 +234,7 @@ export function safeStoryBlocks(value: unknown): StoryBlock[] {
       blocks.push({
         type: "text",
         text,
+        fontScale: safeStoryTextScale(block.fontScale),
         offsetX: safeStoryOffset(block.offsetX, -70, 70),
         offsetY: safeStoryOffset(block.offsetY, -320, 320),
       });

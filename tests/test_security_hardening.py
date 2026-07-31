@@ -112,6 +112,32 @@ class SecurityHardeningTests(unittest.TestCase):
             r"grant\s+insert(?:\s*\([^;]+\))?\s+on\s+(?:table\s+)?public\.uzsakymai",
         )
 
+    def test_admin_prototype_publication_is_server_authorized_and_order_free(self):
+        client = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+        edge = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+        admin_page = (ROOT / "admin.html").read_text(encoding="utf-8")
+
+        self.assertIn('id="admin-prototype-link"', admin_page)
+        self.assertIn('action: "publish_prototype"', client)
+        self.assertIn("publishAdminPrototype", editor)
+        self.assertIn('if (action === "publish_prototype")', edge)
+        self.assertIn("!isOwner || !await adminAccess(client, user.id)", edge)
+        self.assertIn("aktyvus: true", edge)
+        self.assertIn("apmoketa: true", edge)
+        prototype_branch = edge[
+            edge.index('if (action === "publish_prototype")'):
+            edge.index('if (action === "create_order")')
+        ]
+        self.assertNotIn('.from("uzsakymai")', prototype_branch)
+
+    def test_admin_payment_readiness_explains_missing_shipping_prices(self):
+        page = (ROOT / "admin.html").read_text(encoding="utf-8")
+        script = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        self.assertIn('id="admin-payment-readiness"', page)
+        self.assertIn("Mokėjimas klientui išjungtas", script)
+        self.assertIn("row.enabled === true", script)
+
     def test_public_product_catalog_policy_does_not_read_admin_roles(self):
         migration = (
             ROOT

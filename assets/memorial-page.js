@@ -76,6 +76,12 @@
         ? Math.round(Math.max(35, Math.min(100, number)))
         : fallback;
     }
+    function textScale(raw) {
+      var number = Number(raw);
+      return Number.isFinite(number)
+        ? Math.round(Math.max(70, Math.min(160, number)))
+        : 100;
+    }
     return saved.slice(0, 40).reduce(function (result, item) {
       if (!item || typeof item !== "object") return result;
       if (item.type === "text") {
@@ -83,6 +89,7 @@
         result.push({
           type: "text",
           text: text,
+          fontScale: textScale(item.fontScale),
           offsetX: offset(item.offsetX, -70, 70),
           offsetY: offset(item.offsetY, -320, 320)
         });
@@ -250,6 +257,7 @@
         if (!String(block.text || "").trim()) return;
         var text = document.createElement("div");
         text.className = "memorial-story-block memorial-story-block--text";
+        text.style.setProperty("--story-text-scale", Number(block.fontScale) / 100);
         applyStoryBlockPosition(text, block);
         text.textContent = block.text;
         section.appendChild(text);

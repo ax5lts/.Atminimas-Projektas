@@ -37,6 +37,11 @@
   var storyPhotoToolsTitle = document.getElementById("editor-story-photo-tools-title");
   var storyPhotoSizeInput = document.getElementById("editor-story-photo-size");
   var storyPhotoSizeValue = document.getElementById("editor-story-photo-size-value");
+  var storyPhotoOnlyControls = storyPhotoTools
+    ? storyPhotoTools.querySelector("[data-story-photo-only]")
+    : null;
+  var prototypeNotice = document.getElementById("editor-prototype-notice");
+  var editorCanvas = document.querySelector(".editor-canvas");
   var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
@@ -50,6 +55,8 @@
   var MAX_STORY_CHARS = 10000;
   var MIN_STORY_PHOTO_WIDTH = 35;
   var MAX_STORY_PHOTO_WIDTH = 100;
+  var MIN_STORY_TEXT_SCALE = 70;
+  var MAX_STORY_TEXT_SCALE = 160;
   var DATE_MIN_YEAR = 1800;
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
@@ -99,6 +106,8 @@
   var editorParams = new URLSearchParams(window.location.search);
   var editId = (editorParams.get("edit") || "").trim();
   var resumeOrder = editorParams.get("resume") === "order";
+  var prototypeRequested = editorParams.get("prototype") === "1";
+  var isAdminPrototype = false;
   var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
   var isDemoMode = demoId === "maironis" || demoId === "jonas";
   var DRAFT_KEY = editId
@@ -157,7 +166,7 @@
 
   var requestedProductType = requestedProduct();
   var productType = "metal";
-  var productAvailabilityReady = isDemoMode || !!editId;
+  var productAvailabilityReady = isDemoMode || !!editId || prototypeRequested;
   if (!productAvailabilityReady) submitButton.disabled = true;
 
   function applySelectedProduct(type) {
@@ -184,7 +193,7 @@
     if (productUnavailable) productUnavailable.hidden = false;
   }
 
-  if (!isDemoMode && !editId && window.AtminimasProductCatalog) {
+  if (!isDemoMode && !editId && !prototypeRequested && window.AtminimasProductCatalog) {
     if (productSummary) productSummary.textContent = "Tikrinamas pasirinkto produkto prieinamumas…";
     AtminimasProductCatalog.load().then(function (catalog) {
       var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
@@ -207,7 +216,7 @@
     }).catch(function () {
       setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     });
-  } else if (!isDemoMode && !editId) {
+  } else if (!isDemoMode && !editId && !prototypeRequested) {
     setProductUnavailable("Nepavyko paleisti produkto patikros. Atnaujinkite puslapį arba grįžkite į parduotuvę.");
   }
 
@@ -216,6 +225,7 @@
   }
 
   function editorOrderReturnUrl() {
+    if (prototypeRequested) return "redaktorius.html?prototype=1";
     return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=order";
   }
 
@@ -305,6 +315,12 @@
     return value === "cover" ? "cover" : "contain";
   }
 
+  function normalizeStoryTextScale(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return 100;
+    return Math.round(Math.max(MIN_STORY_TEXT_SCALE, Math.min(MAX_STORY_TEXT_SCALE, number)));
+  }
+
   function storyPhotoAppearance(block) {
     var align = normalizeStoryPhotoAlign(block && block.align);
     return {
@@ -335,6 +351,7 @@
         result.push({
           type: "text",
           text: String(item.text || "").slice(0, 10000),
+          fontScale: normalizeStoryTextScale(item.fontScale),
           offsetX: textPosition.offsetX,
           offsetY: textPosition.offsetY
         });
@@ -369,6 +386,7 @@
           result.push({
             type: "text",
             text: text,
+            fontScale: normalizeStoryTextScale(block.fontScale),
             offsetX: textPosition.offsetX,
             offsetY: textPosition.offsetY
           });
@@ -412,7 +430,7 @@
         photoOrder >= 1 && photoOrder <= MAX_PHOTOS;
     });
     if (!hasPersistableBlock) {
-      storyBlocks = [{ type: "text", text: "", offsetX: 0, offsetY: 0 }];
+      storyBlocks = [{ type: "text", text: "", fontScale: 100, offsetX: 0, offsetY: 0 }];
       storyEmptyMode = true;
     }
   }
@@ -463,7 +481,7 @@
   function setStoryBlocks(value, acceptEmpty, explicitEmptyMode) {
     var normalized = normalizeStoryBlocks(value);
     if (!normalized.length && !acceptEmpty) return false;
-    if (!normalized.length) normalized = [{ type: "text", text: "", offsetX: 0, offsetY: 0 }];
+    if (!normalized.length) normalized = [{ type: "text", text: "", fontScale: 100, offsetX: 0, offsetY: 0 }];
     storyBlocks = normalized;
     storyBlocksLoaded = true;
     storyEmptyMode = typeof explicitEmptyMode === "boolean"
@@ -543,6 +561,7 @@
       storyBlocks = [{
         type: "text",
         text: form.elements.tekstas_200 ? String(form.elements.tekstas_200.value || "") : "",
+        fontScale: 100,
         offsetX: 0,
         offsetY: 0
       }];
@@ -591,7 +610,7 @@
   function storyPhotoPreviewElement(index) {
     if (!previewLongText || !Number.isInteger(index)) return null;
     return previewLongText.querySelector(
-      "[data-story-photo-container='" + index + "']"
+      "[data-story-preview-index='" + index + "']"
     );
   }
 
@@ -611,57 +630,97 @@
     );
   }
 
+  function applyStoryTextAppearance(element, block) {
+    if (!element || !block || block.type !== "text") return;
+    block.fontScale = normalizeStoryTextScale(block.fontScale);
+    element.style.setProperty("--story-text-scale", block.fontScale / 100);
+  }
+
   function syncStoryPhotoInteractivity() {
     if (!previewLongText) return;
     var enabled = !stage.classList.contains("is-simple-layout");
-    previewLongText.querySelectorAll("[data-story-photo-select]").forEach(function (button) {
+    previewLongText.querySelectorAll("[data-story-item-select]").forEach(function (button) {
       button.disabled = !enabled;
+    });
+    previewLongText.querySelectorAll("[data-story-resize-handle]").forEach(function (handle) {
+      handle.disabled = !enabled;
     });
   }
 
   function selectedStoryPhotoBlock() {
     var block = storyBlocks[selectedStoryPhotoIndex];
-    return block && block.type === "photo" && block.photoOrder ? block : null;
+    if (!block || (block.type !== "text" && block.type !== "photo")) return null;
+    return block.type === "photo" && !block.photoOrder ? null : block;
+  }
+
+  function positionStoryPhotoTools(element) {
+    if (!storyPhotoTools || storyPhotoTools.hidden || !element || !editorCanvas) return;
+    var hostRect = editorCanvas.getBoundingClientRect();
+    var elementRect = element.getBoundingClientRect();
+    var toolsRect = storyPhotoTools.getBoundingClientRect();
+    var maximumLeft = Math.max(8, editorCanvas.scrollWidth - toolsRect.width - 8);
+    var left = elementRect.left - hostRect.left + editorCanvas.scrollLeft +
+      (elementRect.width - toolsRect.width) / 2;
+    left = Math.max(8, Math.min(maximumLeft, left));
+    var below = elementRect.bottom - hostRect.top + editorCanvas.scrollTop + 10;
+    var above = elementRect.top - hostRect.top + editorCanvas.scrollTop - toolsRect.height - 10;
+    var visibleBottom = editorCanvas.scrollTop + editorCanvas.clientHeight;
+    var top = below + toolsRect.height <= visibleBottom || above < editorCanvas.scrollTop
+      ? below
+      : above;
+    storyPhotoTools.style.left = Math.round(left) + "px";
+    storyPhotoTools.style.top = Math.max(8, Math.round(top)) + "px";
   }
 
   function syncStoryPhotoTools() {
-    if (!storyPhotoTools) return;
+    if (!storyPhotoTools || !previewLongText) return;
     var block = selectedStoryPhotoBlock();
     var element = storyPhotoPreviewElement(selectedStoryPhotoIndex);
-    previewLongText.querySelectorAll("[data-story-photo-container]").forEach(function (figure) {
-      var selected = figure === element && !!block;
-      figure.classList.toggle("is-selected", selected);
-      var button = figure.querySelector("[data-story-photo-select]");
+    previewLongText.querySelectorAll("[data-story-preview-index]").forEach(function (previewElement) {
+      var selected = previewElement === element && !!block;
+      previewElement.classList.toggle("is-selected", selected);
+      var button = previewElement.querySelector("[data-story-item-select]");
       if (button) button.setAttribute("aria-pressed", String(selected));
     });
     if (!block || !element || stage.classList.contains("is-simple-layout")) {
       storyPhotoTools.hidden = true;
       return;
     }
-    var appearance = storyPhotoAppearance(block);
+    var isPhoto = block.type === "photo";
+    var size = isPhoto
+      ? storyPhotoAppearance(block).widthPct
+      : normalizeStoryTextScale(block.fontScale);
     storyPhotoTools.hidden = false;
     if (storyPhotoToolsTitle) {
-      storyPhotoToolsTitle.textContent = Number(block.photoOrder) + " nuotraukos koregavimas";
+      storyPhotoToolsTitle.textContent = isPhoto
+        ? Number(block.photoOrder) + " nuotraukos dydis"
+        : "Teksto dydis";
     }
-    if (storyPhotoSizeInput) storyPhotoSizeInput.value = String(appearance.widthPct);
+    if (storyPhotoSizeInput) {
+      storyPhotoSizeInput.min = String(isPhoto ? MIN_STORY_PHOTO_WIDTH : MIN_STORY_TEXT_SCALE);
+      storyPhotoSizeInput.max = String(isPhoto ? MAX_STORY_PHOTO_WIDTH : MAX_STORY_TEXT_SCALE);
+      storyPhotoSizeInput.value = String(size);
+    }
     if (storyPhotoSizeValue) {
-      storyPhotoSizeValue.value = appearance.widthPct + " %";
-      storyPhotoSizeValue.textContent = appearance.widthPct + " %";
+      storyPhotoSizeValue.value = size + " %";
+      storyPhotoSizeValue.textContent = size + " %";
     }
+    if (storyPhotoOnlyControls) storyPhotoOnlyControls.hidden = !isPhoto;
     storyPhotoTools.querySelectorAll("[data-story-photo-fit]").forEach(function (button) {
       button.setAttribute(
         "aria-pressed",
-        String(button.dataset.storyPhotoFit === appearance.fit)
+        String(isPhoto && button.dataset.storyPhotoFit === storyPhotoAppearance(block).fit)
       );
     });
+    positionStoryPhotoTools(element);
   }
 
   function clearStoryPhotoSelection() {
     selectedStoryPhotoIndex = -1;
     if (previewLongText) {
-      previewLongText.querySelectorAll("[data-story-photo-container]").forEach(function (figure) {
-        figure.classList.remove("is-selected");
-        var button = figure.querySelector("[data-story-photo-select]");
+      previewLongText.querySelectorAll("[data-story-preview-index]").forEach(function (previewElement) {
+        previewElement.classList.remove("is-selected");
+        var button = previewElement.querySelector("[data-story-item-select]");
         if (button) button.setAttribute("aria-pressed", "false");
       });
     }
@@ -673,8 +732,8 @@
     if (
       stage.classList.contains("is-simple-layout") ||
       !block ||
-      block.type !== "photo" ||
-      !block.photoOrder
+      (block.type !== "photo" && block.type !== "text") ||
+      (block.type === "photo" && !block.photoOrder)
     ) return;
     selectedStoryPhotoIndex = index;
     syncStoryPhotoTools();
@@ -685,10 +744,18 @@
     var block = selectedStoryPhotoBlock();
     if (!block) return;
     if (width !== undefined) {
-      block.widthPct = normalizeStoryPhotoWidth(width, block.align);
+      if (block.type === "photo") {
+        block.widthPct = normalizeStoryPhotoWidth(width, block.align);
+      } else {
+        block.fontScale = normalizeStoryTextScale(width);
+      }
     }
-    if (fit !== undefined) block.fit = normalizeStoryPhotoFit(fit);
-    applyStoryPhotoAppearance(storyPhotoPreviewElement(selectedStoryPhotoIndex), block);
+    if (fit !== undefined && block.type === "photo") {
+      block.fit = normalizeStoryPhotoFit(fit);
+    }
+    var element = storyPhotoPreviewElement(selectedStoryPhotoIndex);
+    if (block.type === "photo") applyStoryPhotoAppearance(element, block);
+    else applyStoryTextAppearance(element, block);
     syncStoryPhotoTools();
     scheduleStageFit(true);
     scheduleDraftSave();
@@ -706,8 +773,11 @@
       if (sizeButton) {
         var block = selectedStoryPhotoBlock();
         if (!block) return;
+        var currentSize = block.type === "photo"
+          ? storyPhotoAppearance(block).widthPct
+          : normalizeStoryTextScale(block.fontScale);
         updateSelectedStoryPhoto(
-          storyPhotoAppearance(block).widthPct + Number(sizeButton.dataset.storyPhotoSize || 0)
+          currentSize + Number(sizeButton.dataset.storyPhotoSize || 0)
         );
         return;
       }
@@ -719,15 +789,28 @@
       if (event.target.closest("[data-story-photo-reset]")) {
         var selectedBlock = selectedStoryPhotoBlock();
         if (!selectedBlock) return;
-        selectedBlock.widthPct = defaultStoryPhotoWidth(selectedBlock.align);
-        selectedBlock.fit = "contain";
-        updateSelectedStoryPhoto(selectedBlock.widthPct, selectedBlock.fit);
+        if (selectedBlock.type === "photo") {
+          selectedBlock.widthPct = defaultStoryPhotoWidth(selectedBlock.align);
+          selectedBlock.fit = "contain";
+          updateSelectedStoryPhoto(selectedBlock.widthPct, selectedBlock.fit);
+        } else {
+          selectedBlock.fontScale = 100;
+          updateSelectedStoryPhoto(100);
+        }
         return;
       }
       if (event.target.closest("[data-story-photo-close]")) {
         clearStoryPhotoSelection();
       }
     });
+    window.addEventListener("resize", function () {
+      positionStoryPhotoTools(storyPhotoPreviewElement(selectedStoryPhotoIndex));
+    });
+    if (editorCanvas) {
+      editorCanvas.addEventListener("scroll", function () {
+        positionStoryPhotoTools(storyPhotoPreviewElement(selectedStoryPhotoIndex));
+      }, { passive: true });
+    }
   }
 
   function renderStoryPreview() {
@@ -747,8 +830,20 @@
         text.dataset.storyPreviewIndex = String(index);
         text.style.setProperty("--story-offset-x", position.offsetX + "%");
         text.style.setProperty("--story-offset-y", position.offsetY + "px");
-        text.textContent = value;
+        applyStoryTextAppearance(text, block);
+        var textSelectButton = document.createElement("button");
+        textSelectButton.type = "button";
+        textSelectButton.className = "editor-story-text-select";
+        textSelectButton.dataset.storyItemSelect = String(index);
+        textSelectButton.setAttribute("aria-label", "Koreguoti teksto dydį");
+        textSelectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
+        textSelectButton.textContent = value;
+        textSelectButton.addEventListener("click", function (event) {
+          selectStoryPhoto(index, event.detail === 0);
+        });
+        text.appendChild(textSelectButton);
         text.appendChild(storyLayoutHandle(index, "teksto"));
+        text.appendChild(storyResizeHandle(index, "teksto"));
         previewLongText.appendChild(text);
         visibleBlocks += 1;
         return;
@@ -770,6 +865,7 @@
       selectButton.type = "button";
       selectButton.className = "editor-story-photo-select";
       selectButton.dataset.storyPhotoSelect = String(index);
+      selectButton.dataset.storyItemSelect = String(index);
       selectButton.setAttribute(
         "aria-label",
         "Koreguoti " + Number(block.photoOrder) + " nuotraukos dydį ir rodymą"
@@ -794,6 +890,7 @@
         figure.appendChild(caption);
       }
       figure.appendChild(storyLayoutHandle(index, "nuotraukos"));
+      figure.appendChild(storyResizeHandle(index, "nuotraukos"));
       previewLongText.appendChild(figure);
       visibleBlocks += 1;
     });
@@ -807,6 +904,7 @@
     syncStoryPhotoInteractivity();
     syncStoryPhotoTools();
     setupStoryPreviewDragging();
+    setupStoryPreviewResizing();
     scheduleStageFit(true);
   }
 
@@ -818,6 +916,17 @@
     handle.setAttribute("aria-label", "Perkelti " + label + " bloką");
     handle.title = "Tempkite, kad perkeltumėte tik šį bloką";
     handle.textContent = "↕";
+    return handle;
+  }
+
+  function storyResizeHandle(index, label) {
+    var handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "editor-story-resize-handle";
+    handle.dataset.storyResizeHandle = String(index);
+    handle.setAttribute("aria-label", "Keisti " + label + " dydį");
+    handle.title = "Tempkite į šoną, kad pakeistumėte dydį";
+    handle.textContent = "↘";
     return handle;
   }
 
@@ -902,6 +1011,67 @@
         applyStoryPreviewPosition(element, block);
         scheduleStageFit(true);
         scheduleDraftSave();
+      });
+    });
+  }
+
+  function setupStoryPreviewResizing() {
+    previewLongText.querySelectorAll("[data-story-resize-handle]").forEach(function (handle) {
+      var element = handle.closest("[data-story-preview-index]");
+      var index = element ? Number(element.dataset.storyPreviewIndex) : -1;
+      var block = storyBlocks[index];
+      if (!element || !block) return;
+
+      handle.addEventListener("pointerdown", function (event) {
+        if (stage.classList.contains("is-simple-layout")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectStoryPhoto(index, false);
+        handle.setPointerCapture(event.pointerId);
+        var startX = event.clientX;
+        var startSize = block.type === "photo"
+          ? storyPhotoAppearance(block).widthPct
+          : normalizeStoryTextScale(block.fontScale);
+        var storyWidth = Math.max(1, previewLongText.getBoundingClientRect().width);
+        element.classList.add("is-resizing");
+
+        function move(moveEvent) {
+          var delta = block.type === "photo"
+            ? (moveEvent.clientX - startX) / storyWidth * 100
+            : (moveEvent.clientX - startX) * 0.45;
+          updateSelectedStoryPhoto(startSize + delta);
+        }
+
+        function up() {
+          element.classList.remove("is-resizing");
+          scheduleStageFit(true);
+          scheduleDraftSave();
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", up);
+          handle.removeEventListener("pointercancel", up);
+        }
+
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+        handle.addEventListener("pointercancel", up);
+      });
+
+      handle.addEventListener("keydown", function (event) {
+        var direction = event.key === "ArrowLeft" || event.key === "ArrowDown"
+          ? -1
+          : (event.key === "ArrowRight" || event.key === "ArrowUp" ? 1 : 0);
+        if (!direction && event.key !== "Home") return;
+        event.preventDefault();
+        selectStoryPhoto(index, false);
+        var size = block.type === "photo"
+          ? storyPhotoAppearance(block).widthPct
+          : normalizeStoryTextScale(block.fontScale);
+        if (event.key === "Home") {
+          size = block.type === "photo" ? defaultStoryPhotoWidth(block.align) : 100;
+        } else {
+          size += direction * (event.shiftKey ? 10 : 5);
+        }
+        updateSelectedStoryPhoto(size);
       });
     });
   }
@@ -1172,7 +1342,7 @@
         }
         if (storyEmptyMode) storyBlocks = [];
         storyEmptyMode = false;
-        storyBlocks.push({ type: "text", text: "", offsetX: 0, offsetY: 0 });
+        storyBlocks.push({ type: "text", text: "", fontScale: 100, offsetX: 0, offsetY: 0 });
         renderStoryBlockEditor(storyBlocks.length - 1, "text");
         scheduleDraftSave();
       });
@@ -3040,6 +3210,10 @@
       statusEl.textContent = "Nuotraukų paruošti nepavyko. Pasirinkite jas dar kartą.";
       return;
     }
+    if (prototypeRequested && !isAdminPrototype) {
+      statusEl.textContent = "Nemokamą prototipą gali kurti tik prisijungęs administratorius.";
+      return;
+    }
     await waitForAuxiliaryMediaPersistence(false);
     var photos = processedPhotos.filter(Boolean).slice(0, MAX_PHOTOS);
     var video = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
@@ -3093,6 +3267,29 @@
         setDraftState("Visi pakeitimai išsaugoti", "saved");
         return;
       }
+      if (isAdminPrototype) {
+        var prototype = await AtminimasApi.publishAdminPrototype(result.identifier);
+        var prototypePageUrl = prototype.page_url ||
+          ("sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier));
+        await discardCurrentDraft();
+        statusEl.textContent = "Viešas administratoriaus prototipas ir QR sukurti be mokėjimo.";
+        previewCode.textContent = "Prototipas paskelbtas";
+        openLink.href = prototypePageUrl;
+        openLink.textContent = "Atidaryti viešą prototipą";
+        checkoutLink.hidden = true;
+        clientLink.href = "admin.html";
+        clientLink.textContent = "Grįžti į administravimą";
+        qrLink.href = prototype.qr_url || AtminimasApi.qrImageUrl(
+          new URL(prototypePageUrl, window.location.href).href
+        );
+        orderCode.textContent = "Administratoriaus prototipas – užsakymo ir mokėjimo nereikia.";
+        var prototypeHeading = resultBox.querySelector("h3");
+        if (prototypeHeading) prototypeHeading.textContent = "Viešas prototipas sukurtas";
+        resultBox.hidden = false;
+        showSaveProgress(100, "Prototipas ir QR sukurti.");
+        setDraftState("Prototipas paskelbtas", "saved");
+        return;
+      }
       var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
@@ -3120,6 +3317,32 @@
   });
 
   async function initEditor() {
+    if (prototypeRequested && !isSignedIn()) {
+      statusEl.textContent = "Prisijunkite administratoriaus paskyra, tada grįšite kurti prototipo.";
+      submitButton.disabled = true;
+      setTimeout(function () {
+        window.location.href = "prisijungti.html?next=" +
+          encodeURIComponent("redaktorius.html?prototype=1");
+      }, 900);
+      return;
+    }
+    if (prototypeRequested) {
+      isAdminPrototype = !!(window.AtminimasAuth && await AtminimasAuth.isAdmin());
+      if (!isAdminPrototype) {
+        statusEl.textContent = "Ši paskyra neturi administratoriaus teisių kurti nemokamą prototipą.";
+        submitButton.disabled = true;
+        return;
+      }
+      productAvailabilityReady = true;
+      if (productUnavailable) productUnavailable.hidden = true;
+      if (prototypeNotice) prototypeNotice.hidden = false;
+      if (accountNoteEl) accountNoteEl.hidden = true;
+      if (productSummary) {
+        productSummary.textContent = "Administratoriaus prototipas – produktas, pristatymas ir mokėjimas nekuriami.";
+      }
+      submitButton.disabled = false;
+      document.body.classList.add("editor-prototype-mode");
+    }
     if (!isDemoMode && editId && !isSignedIn()) {
       statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite redaguoti puslapio.";
       submitButton.disabled = true;
@@ -3132,6 +3355,8 @@
     if (isDemoMode) {
       if (accountNoteEl) accountNoteEl.hidden = true;
       submitButton.textContent = "Atidaryti galutinį pavyzdį";
+    } else if (isAdminPrototype) {
+      submitButton.textContent = "Sukurti nemokamą prototipą ir QR";
     } else if (editId) {
       if (accountNoteEl) accountNoteEl.hidden = true;
       submitButton.textContent = "Išsaugoti pakeitimus";

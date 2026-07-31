@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260730-7">
+<link rel="stylesheet" href="css/styles.css?v=20260731-1">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -50,6 +50,9 @@
             <a href="parduotuve.html">Grįžti į parduotuvę</a>
           </p>
           <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis bus saugomas šiame įrenginyje, o prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą.</p>
+          <p class="editor-prototype-notice" id="editor-prototype-notice" hidden>
+            Administratoriaus prototipas: puslapis ir QR bus paskelbti be užsakymo bei mokėjimo.
+          </p>
           <span class="editor-draft-state" id="editor-draft-state" role="status">Juodraštis saugomas automatiškai</span>
         </div>
       </div>
@@ -292,21 +295,21 @@
       </div>
       <aside class="editor-story-photo-tools" id="editor-story-photo-tools" aria-labelledby="editor-story-photo-tools-title" hidden>
         <div class="editor-story-photo-tools__header">
-          <strong id="editor-story-photo-tools-title">Pasirinkta nuotrauka</strong>
+          <strong id="editor-story-photo-tools-title">Pasirinktas elementas</strong>
           <div>
             <button type="button" data-story-photo-reset>Atstatyti</button>
-            <button type="button" data-story-photo-close aria-label="Baigti nuotraukos koregavimą">×</button>
+            <button type="button" data-story-photo-close aria-label="Baigti elemento koregavimą">×</button>
           </div>
         </div>
         <div class="editor-story-photo-tools__size">
-          <button type="button" data-story-photo-size="-5" aria-label="Mažinti nuotrauką">−</button>
+          <button type="button" data-story-photo-size="-5" aria-label="Mažinti pasirinktą elementą">−</button>
           <label for="editor-story-photo-size">
             <span>Dydis <output id="editor-story-photo-size-value" for="editor-story-photo-size">100 %</output></span>
             <input id="editor-story-photo-size" type="range" min="35" max="100" step="1" value="100">
           </label>
-          <button type="button" data-story-photo-size="5" aria-label="Didinti nuotrauką">+</button>
+          <button type="button" data-story-photo-size="5" aria-label="Didinti pasirinktą elementą">+</button>
         </div>
-        <div class="editor-story-photo-tools__fit" role="group" aria-label="Nuotraukos rodymas">
+        <div class="editor-story-photo-tools__fit" data-story-photo-only role="group" aria-label="Nuotraukos rodymas">
           <button type="button" data-story-photo-fit="contain" aria-pressed="true">Visa nuotrauka</button>
           <button type="button" data-story-photo-fit="cover" aria-pressed="false">Užpildyti plotą</button>
         </div>
@@ -424,8 +427,8 @@
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260730-4"></script>
-<script src="assets/redaktorius.js?v=20260730-8"></script>
+<script src="assets/atminimas-duomenys.js?v=20260731-1"></script>
+<script src="assets/redaktorius.js?v=20260731-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

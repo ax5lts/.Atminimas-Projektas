@@ -18,6 +18,7 @@
   var businessSettingsPanel = document.getElementById("admin-business-settings");
   var businessSettingsForm = document.getElementById("business-settings-form");
   var businessSettingsStatus = document.getElementById("business-settings-status");
+  var paymentReadiness = document.getElementById("admin-payment-readiness");
   var productionPanel = document.getElementById("admin-production");
   var productionRows = document.getElementById("production-rows");
   var productionRefresh = document.getElementById("production-refresh");
@@ -391,6 +392,15 @@
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
     businessSettingsForm.elements.dpd_price.value = centsToInput(shipping.DPD && shipping.DPD.price_cents);
+    var activeShipping = results[2].filter(function (row) {
+      return row.enabled === true && Number.isInteger(row.price_cents);
+    });
+    if (paymentReadiness) {
+      paymentReadiness.dataset.state = activeShipping.length ? "ready" : "error";
+      paymentReadiness.textContent = activeShipping.length
+        ? "Mokėjimo eiga paruošta: aktyvūs pristatymo būdai – " + activeShipping.map(function (row) { return row.carrier; }).join(", ") + "."
+        : "Mokėjimas klientui išjungtas, kol neįrašyta bent viena tikra pristatymo kaina. Įrašykite kainą ir išsaugokite nustatymus.";
+    }
     businessSettingsPanel.hidden = false;
   }
 

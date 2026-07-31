@@ -115,6 +115,12 @@
         ? Math.round(Math.max(35, Math.min(100, number)))
         : fallback;
     }
+    function textScale(raw) {
+      var number = Number(raw);
+      return Number.isFinite(number)
+        ? Math.round(Math.max(70, Math.min(160, number)))
+        : 100;
+    }
 
     value.slice(0, 40).forEach(function (raw) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
@@ -126,6 +132,7 @@
         blocks.push({
           type: "text",
           text: text,
+          fontScale: textScale(raw.fontScale),
           offsetX: offset(raw.offsetX, -70, 70),
           offsetY: offset(raw.offsetY, -320, 320)
         });
@@ -331,6 +338,13 @@
     };
   }
 
+  async function publishAdminPrototype(identifier) {
+    return manageProfile({
+      action: "publish_prototype",
+      profile_id: identifier
+    });
+  }
+
   function functionUrl(name) {
     return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
   }
@@ -401,6 +415,7 @@
     updateAtminimas: updateAtminimas,
     deleteAtminimas: deleteAtminimas,
     createUzsakymas: createUzsakymas,
+    publishAdminPrototype: publishAdminPrototype,
     uploadBuilderMedia: uploadBuilderMedia,
     qrImageUrl: qrImageUrl
   };

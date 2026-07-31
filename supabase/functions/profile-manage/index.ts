@@ -185,6 +185,34 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Puslapis nerastas" }, 404);
     }
 
+    if (action === "publish_prototype") {
+      if (!isOwner || !await adminAccess(client, user.id)) {
+        return json(
+          { error: "Prototipą gali skelbti tik jo administratorius" },
+          403,
+        );
+      }
+      const { error: publishError } = await client.from("profiliai").update({
+        aktyvus: true,
+        apmoketa: true,
+        statusas: "apmoketa",
+      }).eq("id", profileId).eq("owner_id", user.id);
+      if (publishError) throw publishError;
+
+      const page = new URL("sablonas-viskas.html", publicSiteUrl());
+      page.searchParams.set("slug", profileId);
+      const pageUrl = page.href;
+      const qrUrl = `${
+        env("SUPABASE_URL").replace(/\/$/, "")
+      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}`;
+      return json({
+        ok: true,
+        profile_id: profileId,
+        page_url: pageUrl,
+        qr_url: qrUrl,
+      });
+    }
+
     if (action === "create_order") {
       if (!isOwner) {
         return json(
