@@ -562,10 +562,22 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn("MIN_STORY_TEXT_SCALE = 70", self.editor_js)
         self.assertIn("MAX_STORY_TEXT_SCALE = 160", self.editor_js)
         self.assertIn("dataset.storyItemSelect", self.editor_js)
+        self.assertIn(
+            'textSelectButton = document.createElement("span")',
+            self.editor_js,
+        )
+        self.assertNotIn(
+            'textSelectButton = document.createElement("button")',
+            self.editor_js,
+        )
         self.assertIn("storyResizeHandle(index, \"teksto\")", self.editor_js)
         self.assertIn("setupStoryPreviewResizing()", self.editor_js)
         self.assertIn(".editor-story-resize-handle", self.styles)
         self.assertIn("--story-text-scale", self.styles)
+        self.assertRegex(
+            self.styles,
+            r"\.editor-story-text-select\s*\{[\s\S]{0,120}display:\s*inline",
+        )
 
         renderer = balanced_block(
             self.memorial_js, r"function\s+buildStoryBlocks\s*\(",

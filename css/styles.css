@@ -1394,8 +1394,7 @@ video {
 }
 
 .editor-story-text-select {
-  display: block;
-  width: 100%;
+  display: inline;
   padding: 0;
   border: 0;
   color: inherit;
@@ -1408,8 +1407,13 @@ video {
   cursor: pointer;
 }
 
-.editor-story-text-select:disabled {
+.editor-story-text-select[aria-disabled="true"] {
   cursor: default;
+}
+
+.editor-story-text-select:focus-visible {
+  outline: 2px dashed rgba(47, 128, 104, 0.78);
+  outline-offset: 2px;
 }
 
 .editor-preview-story__photo,
@@ -1482,9 +1486,13 @@ video {
 }
 
 .editor-preview-story__photo.is-selected,
-.editor-preview-story__photo:focus-within,
-.editor-preview-story__text.is-selected {
+.editor-preview-story__photo:focus-within {
   z-index: 5;
+  outline: 3px solid #2f8068;
+  outline-offset: 4px;
+}
+
+.editor-preview-story__text.is-selected {
   outline: 3px solid #2f8068;
   outline-offset: 4px;
 }

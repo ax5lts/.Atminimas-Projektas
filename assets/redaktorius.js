@@ -639,8 +639,13 @@
   function syncStoryPhotoInteractivity() {
     if (!previewLongText) return;
     var enabled = !stage.classList.contains("is-simple-layout");
-    previewLongText.querySelectorAll("[data-story-item-select]").forEach(function (button) {
-      button.disabled = !enabled;
+    previewLongText.querySelectorAll("[data-story-item-select]").forEach(function (control) {
+      if ("disabled" in control) {
+        control.disabled = !enabled;
+      } else {
+        control.tabIndex = enabled ? 0 : -1;
+        control.setAttribute("aria-disabled", String(!enabled));
+      }
     });
     previewLongText.querySelectorAll("[data-story-resize-handle]").forEach(function (handle) {
       handle.disabled = !enabled;
@@ -831,15 +836,21 @@
         text.style.setProperty("--story-offset-x", position.offsetX + "%");
         text.style.setProperty("--story-offset-y", position.offsetY + "px");
         applyStoryTextAppearance(text, block);
-        var textSelectButton = document.createElement("button");
-        textSelectButton.type = "button";
+        var textSelectButton = document.createElement("span");
         textSelectButton.className = "editor-story-text-select";
         textSelectButton.dataset.storyItemSelect = String(index);
+        textSelectButton.tabIndex = 0;
+        textSelectButton.setAttribute("role", "button");
         textSelectButton.setAttribute("aria-label", "Koreguoti teksto dydį");
         textSelectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
         textSelectButton.textContent = value;
         textSelectButton.addEventListener("click", function (event) {
           selectStoryPhoto(index, event.detail === 0);
+        });
+        textSelectButton.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          selectStoryPhoto(index, true);
         });
         text.appendChild(textSelectButton);
         text.appendChild(storyLayoutHandle(index, "teksto"));
