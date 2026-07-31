@@ -169,6 +169,11 @@
   var productAvailabilityReady = isDemoMode || !!editId || prototypeRequested;
   if (!productAvailabilityReady) submitButton.disabled = true;
 
+  function setVideoSlotVisible(visible) {
+    var wrap = previewVideo ? previewVideo.closest(".editor-video-slot") : null;
+    if (wrap) wrap.hidden = !visible;
+  }
+
   function applySelectedProduct(type) {
     productType = productOptions[type] ? type : "metal";
     var selectedProductOption = productOptions[productType];
@@ -2137,9 +2142,11 @@
       var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
       previewVideo.src = URL.createObjectURL(video);
       previewVideo.hidden = false;
+      setVideoSlotVisible(true);
       if (empty) empty.hidden = true;
     } else if (video) {
       await deleteDraftFile("video");
+      setVideoSlotVisible(false);
       statusEl.textContent = "Anksčiau pasirinktas vaizdo įrašas viršijo 50 MB ribą, todėl pasirinkite mažesnį failą.";
     }
     var captions = await getDraftFile("captions");
@@ -2238,6 +2245,7 @@
     if (video) {
       var videoWrap = previewVideo.closest(".editor-video-slot");
       var videoEmpty = videoWrap ? videoWrap.querySelector(".editor-empty-photo") : null;
+      setVideoSlotVisible(true);
       if (video.url) {
         previewVideo.src = video.url;
         previewVideo.hidden = false;
@@ -2248,6 +2256,8 @@
         if (videoEmpty) videoEmpty.hidden = false;
         statusEl.textContent = "Vaizdo įrašo peržiūra laikinai nepasiekiama, tačiau failas bus išsaugotas.";
       }
+    } else {
+      setVideoSlotVisible(false);
     }
     scheduleStageFit(true);
   }
@@ -3097,6 +3107,7 @@
       savedVideoFile = null;
       previewVideo.hidden = true;
       previewVideo.removeAttribute("src");
+      setVideoSlotVisible(false);
       if (empty) empty.hidden = false;
       statusEl.textContent = "";
       queueAuxiliaryMediaPersistence("video", null);
@@ -3108,6 +3119,7 @@
       savedVideoFile = null;
       previewVideo.hidden = true;
       previewVideo.removeAttribute("src");
+      setVideoSlotVisible(false);
       if (empty) empty.hidden = false;
       statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
       queueAuxiliaryMediaPersistence("video", null);
@@ -3117,6 +3129,7 @@
     savedVideoFile = file;
     previewVideo.src = URL.createObjectURL(file);
     previewVideo.hidden = false;
+    setVideoSlotVisible(true);
     if (empty) empty.hidden = true;
     statusEl.textContent = "Video pasirinktas: " + file.name;
     queueAuxiliaryMediaPersistence("video", file);

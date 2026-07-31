@@ -104,6 +104,17 @@ class EditorWizardTests(unittest.TestCase):
         self.assertIn("file.size > MAX_VIDEO_BYTES", self.script)
         self.assertIn("AtminimasAuth.ensureFreshSession()", self.script)
 
+    def test_optional_video_slot_is_hidden_until_a_video_exists(self):
+        video_slot = re.search(
+            r'<div class="editor-piece editor-video-slot"[^>]*>',
+            self.page,
+        ).group(0)
+        self.assertIn(" hidden", video_slot)
+        self.assertIn("function setVideoSlotVisible(visible)", self.script)
+        self.assertIn("wrap.hidden = !visible;", self.script)
+        self.assertGreaterEqual(self.script.count("setVideoSlotVisible(true);"), 3)
+        self.assertGreaterEqual(self.script.count("setVideoSlotVisible(false);"), 4)
+
     def test_new_order_fails_closed_when_catalog_is_unavailable(self):
         self.assertIn('id="editor-product-unavailable"', self.page)
         self.assertIn("function setProductUnavailable(message)", self.script)
