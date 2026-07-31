@@ -107,7 +107,14 @@ class EditorWizardTests(unittest.TestCase):
     def test_new_order_fails_closed_when_catalog_is_unavailable(self):
         self.assertIn('id="editor-product-unavailable"', self.page)
         self.assertIn("function setProductUnavailable(message)", self.script)
-        self.assertIn("var productAvailabilityReady = isDemoMode || !!editId;", self.script)
+        self.assertIn(
+            "var productAvailabilityReady = isDemoMode || !!editId || prototypeRequested;",
+            self.script,
+        )
+        self.assertIn(
+            "if (!isDemoMode && !editId && !prototypeRequested && window.AtminimasProductCatalog)",
+            self.script,
+        )
         self.assertIn("catalog.remote && catalog.metal", self.script)
         self.assertNotIn("}).finally(function ()", self.script)
 
