@@ -297,12 +297,29 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_homepage_has_qr_and_multi_service_flows(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
         self.assertIn('href="parduotuve.html">Rinktis lentelę</a>', html)
         self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
         self.assertIn('class="landing-proof"', html)
         self.assertIn("Pradėkite nemokėdami", html)
         self.assertIn("Puslapis iš pradžių privatus", html)
         self.assertIn("Pamatykite tikrą pavyzdį", html)
+        product_rules = re.findall(
+            r"\.landing-intro__product\s*\{([^}]*)\}",
+            styles,
+        )
+        self.assertGreaterEqual(len(product_rules), 2)
+        product_rule = product_rules[0]
+        self.assertIn("left: 50%", product_rule)
+        self.assertIn("top: 52%", product_rule)
+        self.assertIn("transform: translate(-50%, -50%)", product_rule)
+        self.assertNotIn("right:", product_rule)
+        self.assertNotIn("bottom:", product_rule)
+        mobile_product_rule = product_rules[1]
+        self.assertIn("left: 50%", mobile_product_rule)
+        self.assertIn("top: 54%", mobile_product_rule)
+        self.assertIn("width: min(112vw, 500px)", mobile_product_rule)
+        self.assertIn("transform: translate(-50%, -50%)", mobile_product_rule)
         self.assertEqual(html.count('name="services"'), 3)
         for service in ("zvakes", "geles", "kapu_tvarkymas"):
             self.assertIn('value="{0}"'.format(service), html)
