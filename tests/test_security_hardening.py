@@ -162,6 +162,30 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertIn("enabled = true", authenticated_policy)
         self.assertIn("public.user_roles", authenticated_policy)
 
+    def test_public_shipping_catalog_policy_does_not_read_admin_roles(self):
+        migration = (
+            ROOT
+            / "supabase"
+            / "migrations"
+            / "20260731173000_fix_shipping_catalog_public_read.sql"
+        ).read_text(encoding="utf-8").lower()
+        public_policy_start = migration.index(
+            'create policy "viesas skaito aktyvius pristatymo budus"'
+        )
+        authenticated_policy_start = migration.index(
+            'create policy "prisijunges skaito pristatymo kataloga"'
+        )
+        public_policy = migration[public_policy_start:authenticated_policy_start]
+
+        self.assertIn("to anon", public_policy)
+        self.assertNotIn("authenticated", public_policy)
+        self.assertIn("using (enabled = true)", public_policy)
+        self.assertNotIn("user_roles", public_policy)
+        authenticated_policy = migration[authenticated_policy_start:]
+        self.assertIn("to authenticated", authenticated_policy)
+        self.assertIn("enabled = true", authenticated_policy)
+        self.assertIn("public.user_roles", authenticated_policy)
+
     def test_legal_forms_use_the_rate_limited_edge_function(self):
         client = (ROOT / "assets" / "legal-forms.js").read_text(encoding="utf-8")
         edge = (ROOT / "supabase" / "functions" / "legal-submission" / "index.ts").read_text(encoding="utf-8")
