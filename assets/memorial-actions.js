@@ -99,7 +99,7 @@
     var objectUrl = URL.createObjectURL(blob);
     var link = document.createElement("a");
     link.href = objectUrl;
-    link.download = "atminimas-" + profile.id + "-qr.svg";
+    link.download = "atminimas-" + profile.id + "-qr.png";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -157,7 +157,7 @@
   }
 
   function openPhotos() {
-    var first = document.querySelector(".builder-photo, .nuotrauka-kortele, .memorial-story-gallery button");
+    var first = document.querySelector(".builder-photo, .nuotrauka-kortele, .memorial-story-gallery button, .memorial-story-block--photo button");
     if (first) first.click();
     else toast("Šiame puslapyje nuotraukų nėra.");
   }

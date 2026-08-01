@@ -128,9 +128,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         qr = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
         lockers = (ROOT / "supabase" / "functions" / "parcel-lockers" / "index.ts").read_text(encoding="utf-8")
         self.assertIn('npm:qrcode@1.5.4', qr)
+        self.assertIn('const format = requestUrl.searchParams.get("format") || "png"', qr)
+        self.assertIn('QRCode.toDataURL(value', qr)
+        self.assertIn('"Content-Type": "image/png"', qr)
+        self.assertIn('filename="atminimas-qr.png"', qr)
         self.assertIn('new URL("sablonas-viskas.html", publicSiteUrl())', qr)
         self.assertIn("target.origin !== expected.origin", qr)
         self.assertIn("target.pathname !== expected.pathname", qr)
+        self.assertIn("handleOptions(request)", qr)
+        self.assertIn("...CORS_HEADERS", qr)
         self.assertIn('"lp-express"', lockers)
         self.assertIn("slice(0, 1500)", lockers)
 
@@ -213,6 +219,20 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertNotIn("api.qrserver.com", path.read_text(encoding="utf-8"))
 
+    def test_user_qr_downloads_are_png_while_production_keeps_svg(self):
+        api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        actions = (ROOT / "assets" / "memorial-actions.js").read_text(encoding="utf-8")
+        manager = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+        worker = (ROOT / "supabase" / "functions" / "automation-worker" / "index.ts").read_text(encoding="utf-8")
+
+        for source in (api, admin, user, manager):
+            self.assertIn("&format=png", source)
+        self.assertIn('download = "atminimas-" + profile.id + "-qr.png"', actions)
+        self.assertIn("-qr.png'>Atsisiųsti QR</a>", user)
+        self.assertIn("&format=svg", worker)
+
     def test_legal_and_delivery_pages_exist(self):
         for name in (
             "rekvizitai.html",
@@ -264,18 +284,18 @@ class AtminimasSmokeTests(unittest.TestCase):
                     self.supabase_request("/rest/v1/{0}?select=id&limit=1".format(table))
                 self.assertIn(private_error.exception.code, (401, 403))
 
-    def test_internal_qr_function_returns_svg(self):
+    def test_qr_function_returns_png_by_default(self):
         value = urllib.parse.quote(
-            "https://example.com/sablonas-viskas.html?slug=qa-test",
+            "https://ax5lts.github.io/.Atminimas-Projektas/sablonas-viskas.html?slug=qa-test",
             safe="",
         )
         with urllib.request.urlopen(
-            self.supabase_url + "/functions/v1/qr-code?data=" + value,
+            self.supabase_url + "/functions/v1/qr-code?data=" + value + "&format=png",
             timeout=20,
         ) as response:
             self.assertEqual(response.status, 200)
-            self.assertIn("image/svg+xml", response.headers.get("Content-Type", ""))
-            self.assertIn(b"<svg", response.read(500))
+            self.assertIn("image/png", response.headers.get("Content-Type", ""))
+            self.assertEqual(response.read(8), b"\x89PNG\r\n\x1a\n")
 
     def test_parcel_locker_function_returns_lithuanian_locations(self):
         with urllib.request.urlopen(
@@ -409,7 +429,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260724-2', user_page)
+        self.assertIn('assets/user.js?v=20260801-1', user_page)
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -571,7 +591,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260731-1', html)
+        self.assertIn('assets/admin.js?v=20260801-1', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)
@@ -1133,6 +1153,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("atminimas.saved-memorials.v1", actions)
         self.assertIn('action: "candle"', actions)
         self.assertIn('action: "memory"', actions)
+        self.assertIn(".memorial-story-block--photo button", actions)
         self.assertIn("crypto.subtle.digest", edge)
         self.assertIn("visitorHash(request, `${id}|candle|${bucket}`)", edge)
         self.assertIn("visitorHash(request, `${id}|memory|${bucket}`)", edge)

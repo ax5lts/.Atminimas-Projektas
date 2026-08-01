@@ -704,6 +704,19 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn("section.appendChild(figure)", renderer)
         self.assertNotRegex(renderer, r"blocks\.(?:filter|sort)\s*\(")
 
+    def test_public_story_keeps_an_accessible_name_without_a_visible_heading(self):
+        legacy_renderer = balanced_block(
+            self.memorial_js,
+            r"function\s+buildStorySection\s*\(",
+        )
+        block_renderer = balanced_block(
+            self.memorial_js,
+            r"function\s+buildStoryBlocks\s*\(",
+        )
+        for renderer in (legacy_renderer, block_renderer):
+            self.assertIn('setAttribute("aria-label", "Gyvenimo istorija")', renderer)
+            self.assertNotIn('createElement("h2")', renderer)
+
     def test_mobile_preview_actions_are_compact_and_non_sticky(self):
         self.assertRegex(
             self.editor_html,

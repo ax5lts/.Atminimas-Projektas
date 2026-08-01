@@ -204,7 +204,7 @@ Deno.serve(async (request: Request) => {
       const pageUrl = page.href;
       const qrUrl = `${
         env("SUPABASE_URL").replace(/\/$/, "")
-      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}`;
+      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}&format=png`;
       return json({
         ok: true,
         profile_id: profileId,
@@ -241,7 +241,7 @@ Deno.serve(async (request: Request) => {
       const pageUrl = page.href;
       const qrUrl = `${
         env("SUPABASE_URL").replace(/\/$/, "")
-      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}`;
+      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}&format=png`;
       const { data: order, error: orderError } = await client
         .from("uzsakymai")
         .insert({

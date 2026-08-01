@@ -91,7 +91,7 @@
 
   function qrUrl(publicUrl) {
     var absolute = new URL(publicUrl, cfg().PUBLIC_SITE_URL || window.location.href).href;
-    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute);
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute) + "&format=png";
   }
 
   function safeUrl(value) {
@@ -409,7 +409,7 @@
       var moreActions =
         "<a class='button button--ghost' href='" + publicUrl + "'>Peržiūrėti puslapį</a>" +
         "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a>" +
-        "<a class='button button--ghost' href='" + profileQrUrl + "' download='qr.svg'>Atsisiųsti QR</a>" +
+        "<a class='button button--ghost' href='" + profileQrUrl + "' download='atminimas-" + html(row.id) + "-qr.png'>Atsisiųsti QR</a>" +
         (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
         (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
         "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Rodyti viešai") + "</button>" +
