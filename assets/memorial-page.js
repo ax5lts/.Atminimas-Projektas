@@ -222,12 +222,10 @@
   function buildStorySection(text) {
     var section = document.createElement("section");
     section.className = "memorial-story";
-    var heading = document.createElement("h2");
-    heading.textContent = "Gyvenimo istorija";
+    section.setAttribute("aria-label", "Gyvenimo istorija");
     var content = document.createElement("div");
     content.className = "memorial-story__text";
     content.textContent = text;
-    section.appendChild(heading);
     section.appendChild(content);
     return section;
   }
@@ -235,11 +233,7 @@
   function buildStoryBlocks(blocks, allImages) {
     var section = document.createElement("section");
     section.className = "memorial-story memorial-story-blocks";
-    section.setAttribute("aria-labelledby", "memorial-story-blocks-title");
-    var heading = document.createElement("h2");
-    heading.id = "memorial-story-blocks-title";
-    heading.textContent = "Gyvenimo istorija";
-    section.appendChild(heading);
+    section.setAttribute("aria-label", "Gyvenimo istorija");
     var visibleBlocks = 0;
     var maximumPositiveOffsetY = 0;
 

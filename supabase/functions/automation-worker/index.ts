@@ -105,7 +105,7 @@ async function processInvoice(event: AutomationEvent) {
 async function processQr(event: AutomationEvent) {
   if (!event.order_id) throw new Error("Trūksta užsakymo numerio");
   const order = await orderDetails(event.order_id);
-  const qrUrl = `${env("SUPABASE_URL")}/functions/v1/qr-code?data=${encodeURIComponent(order.puslapio_url)}`;
+  const qrUrl = `${env("SUPABASE_URL")}/functions/v1/qr-code?data=${encodeURIComponent(order.puslapio_url)}&format=svg`;
   const response = await fetch(qrUrl);
   if (!response.ok) throw new Error(`QR generatorius grąžino ${response.status}`);
   const svg = await response.text();

@@ -70,7 +70,7 @@
   }
 
   function qrImageUrl(pageUrl) {
-    return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl);
+    return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl) + "&format=png";
   }
 
   function slugify(value) {

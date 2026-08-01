@@ -105,7 +105,7 @@
   }
 
   function qrUrl(id) {
-    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl(id));
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl(id)) + "&format=png";
   }
 
   function shortId(value) {
