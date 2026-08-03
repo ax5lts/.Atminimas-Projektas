@@ -1404,11 +1404,12 @@ video {
   text-align: inherit;
   white-space: inherit;
   overflow-wrap: inherit;
-  cursor: pointer;
+  cursor: text;
 }
 
-.editor-story-text-select[aria-disabled="true"] {
-  cursor: default;
+.editor-story-text-select[contenteditable="true"] {
+  min-height: 1.5em;
+  border-radius: 4px;
 }
 
 .editor-story-text-select:focus-visible {
@@ -5645,6 +5646,141 @@ body[data-loading]::after {
   margin: 0 0 7px;
 }
 
+.editor-utility-bar {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  justify-content: space-between;
+  margin: 0 0 10px;
+}
+
+.editor-history-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.editor-history-actions button,
+.editor-quick-preview {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  color: #f5f6f7;
+  background: rgba(255, 255, 255, 0.07);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-quick-preview {
+  border-color: rgba(158, 212, 195, 0.4);
+  color: #e4f6ef;
+  background: rgba(158, 212, 195, 0.12);
+}
+
+.editor-history-actions button:hover:not(:disabled),
+.editor-history-actions button:focus-visible,
+.editor-quick-preview:hover,
+.editor-quick-preview:focus-visible {
+  border-color: rgba(158, 212, 195, 0.72);
+  background: rgba(158, 212, 195, 0.2);
+}
+
+.editor-history-actions button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.editor-completion {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 12px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.editor-completion header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  color: #f5f6f7;
+  font-size: 0.8rem;
+}
+
+.editor-completion header span {
+  color: #9ed4c3;
+  font-weight: 850;
+}
+
+.editor-completion ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-completion li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px;
+  border-radius: 9px;
+  color: #c9ced5;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.editor-completion li > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.editor-completion li div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.editor-completion li strong,
+.editor-completion li small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-completion li strong {
+  font-size: 0.68rem;
+}
+
+.editor-completion li small {
+  color: #aeb5bd;
+  font-size: 0.61rem;
+}
+
+.editor-completion li.is-complete {
+  color: #e7f6f0;
+  background: rgba(121, 197, 157, 0.12);
+}
+
+.editor-completion li.is-complete > span {
+  border-color: #79c59d;
+  color: #183b32;
+  background: #9ed4c3;
+}
+
 .editor-draft-state {
   display: inline-flex;
   align-items: center;
@@ -5678,7 +5814,7 @@ body[data-loading]::after {
 
 .editor-stepper {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   margin: 0;
 }
@@ -6208,6 +6344,60 @@ body[data-loading]::after {
   font-weight: 700;
 }
 
+.editor-photo-position,
+.editor-photo-fit-options {
+  display: grid;
+  gap: 6px;
+}
+
+.editor-photo-position {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.editor-photo-fit-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-photo-position button,
+.editor-photo-fit-options button {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 46px;
+  padding: 7px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 9px;
+  color: #d9dde2;
+  background: rgba(255, 255, 255, 0.05);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+.editor-photo-position__icon {
+  color: #9ed4c3;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.editor-photo-position button[aria-pressed="true"],
+.editor-photo-fit-options button[aria-pressed="true"] {
+  border-color: #9ed4c3;
+  color: #fff;
+  background: rgba(158, 212, 195, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(158, 212, 195, 0.24);
+}
+
+.editor-photo-position button:hover,
+.editor-photo-position button:focus-visible,
+.editor-photo-fit-options button:hover,
+.editor-photo-fit-options button:focus-visible {
+  border-color: rgba(158, 212, 195, 0.76);
+}
+
 .editor-story-block__photo {
   display: grid;
   grid-template-columns: minmax(112px, 0.75fr) minmax(0, 1.25fr);
@@ -6383,6 +6573,32 @@ img[data-story-photo-preview],
   width: 100%;
   min-height: 44px;
   padding: 9px 12px;
+}
+
+.editor-additional-settings {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.editor-additional-settings summary {
+  padding: 13px 14px;
+  color: #e9ebee;
+  font-size: 0.84rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.editor-additional-settings[open] summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.editor-additional-settings__content {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
 }
 
 .editor-story-add-actions {
@@ -6641,6 +6857,44 @@ img[data-story-photo-preview],
   .editor-product-card img {
     width: 58px;
     height: 64px;
+  }
+
+  .editor-product-card .editor-note {
+    display: none;
+  }
+
+  .editor-utility-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .editor-history-actions button,
+  .editor-quick-preview {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
+
+  .editor-completion {
+    padding: 9px;
+  }
+
+  .editor-completion li {
+    grid-template-columns: 22px minmax(0, 1fr);
+    padding: 6px;
+  }
+
+  .editor-completion li > span {
+    width: 22px;
+    height: 22px;
+  }
+
+  .editor-completion li small {
+    display: none;
+  }
+
+  .editor-completion li strong {
+    font-size: 0.62rem;
   }
 
   .editor-photo-order__item {

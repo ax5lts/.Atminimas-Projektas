@@ -30,6 +30,9 @@
   var photoDetailsEl = document.getElementById("editor-photo-details");
   var storyBlocksEl = document.getElementById("editor-story-blocks");
   var storyOrderStatusEl = document.getElementById("editor-story-order-status");
+  var undoButton = document.getElementById("editor-undo");
+  var redoButton = document.getElementById("editor-redo");
+  var completionCountEl = document.getElementById("editor-completion-count");
   var addStoryTextButton = document.querySelector("[data-story-add='text']");
   var addStoryPhotoButton = document.querySelector("[data-story-add='photo']");
   var advancedLayoutToggle = document.querySelector("[data-advanced-layout-toggle]");
@@ -126,11 +129,10 @@
   var productSummary = document.getElementById("editor-product-summary");
   var productUnavailable = document.getElementById("editor-product-unavailable");
   var productUnavailableMessage = document.getElementById("editor-product-unavailable-message");
-  var editorSteps = ["text", "colors", "files", "preview"];
+  var editorSteps = ["text", "colors", "preview"];
   var editorStepLabels = {
     text: "Turinys",
     colors: "Dizainas",
-    files: "Papildomai",
     preview: "Peržiūra"
   };
   var currentEditorStep = "text";
@@ -141,6 +143,12 @@
   var storyBlocksLoaded = false;
   var storyEmptyMode = false;
   var selectedStoryPhotoIndex = -1;
+  var undoHistory = [];
+  var redoHistory = [];
+  var historySaveTimer = null;
+  var historyRestoring = false;
+  var historyReady = false;
+  var lastHistoryJson = "";
   var productOptions = {
     metal: {
       image: "assets/qr-plienas-480.webp",
@@ -280,6 +288,7 @@
     if (colorCurrent) colorCurrent.style.backgroundColor = hex;
     stage.style.backgroundColor = hex;
     syncColorSelection(hex);
+    updateCompletionChecklist();
     if (persist) scheduleDraftSave();
   }
 
@@ -646,6 +655,11 @@
     if (!previewLongText) return;
     var enabled = !stage.classList.contains("is-simple-layout");
     previewLongText.querySelectorAll("[data-story-item-select]").forEach(function (control) {
+      if (control.matches("[contenteditable='true']")) {
+        control.tabIndex = 0;
+        control.removeAttribute("aria-disabled");
+        return;
+      }
       if ("disabled" in control) {
         control.disabled = !enabled;
       } else {
@@ -691,7 +705,9 @@
       var selected = previewElement === element && !!block;
       previewElement.classList.toggle("is-selected", selected);
       var button = previewElement.querySelector("[data-story-item-select]");
-      if (button) button.setAttribute("aria-pressed", String(selected));
+      if (button && button.getAttribute("role") !== "textbox") {
+        button.setAttribute("aria-pressed", String(selected));
+      }
     });
     if (!block || !element || stage.classList.contains("is-simple-layout")) {
       storyPhotoTools.hidden = true;
@@ -732,7 +748,9 @@
       previewLongText.querySelectorAll("[data-story-preview-index]").forEach(function (previewElement) {
         previewElement.classList.remove("is-selected");
         var button = previewElement.querySelector("[data-story-item-select]");
-        if (button) button.setAttribute("aria-pressed", "false");
+        if (button && button.getAttribute("role") !== "textbox") {
+          button.setAttribute("aria-pressed", "false");
+        }
       });
     }
     if (storyPhotoTools) storyPhotoTools.hidden = true;
@@ -846,17 +864,38 @@
         textSelectButton.className = "editor-story-text-select";
         textSelectButton.dataset.storyItemSelect = String(index);
         textSelectButton.tabIndex = 0;
-        textSelectButton.setAttribute("role", "button");
-        textSelectButton.setAttribute("aria-label", "Koreguoti teksto dydį");
-        textSelectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
+        textSelectButton.contentEditable = "true";
+        textSelectButton.spellcheck = true;
+        textSelectButton.setAttribute("role", "textbox");
+        textSelectButton.setAttribute("aria-multiline", "true");
+        textSelectButton.setAttribute("aria-label", "Redaguoti šią gyvenimo istorijos dalį");
         textSelectButton.textContent = value;
-        textSelectButton.addEventListener("click", function (event) {
-          selectStoryPhoto(index, event.detail === 0);
+        textSelectButton.addEventListener("focus", function () {
+          if (!stage.classList.contains("is-simple-layout")) selectStoryPhoto(index, false);
         });
-        textSelectButton.addEventListener("keydown", function (event) {
-          if (event.key !== "Enter" && event.key !== " ") return;
+        textSelectButton.addEventListener("paste", function (event) {
           event.preventDefault();
-          selectStoryPhoto(index, true);
+          var plainText = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+          document.execCommand("insertText", false, plainText);
+        });
+        textSelectButton.addEventListener("input", function () {
+          block.text = String(textSelectButton.innerText || textSelectButton.textContent || "");
+          limitStoryBlocksToWords();
+          if (textSelectButton.innerText !== block.text) {
+            textSelectButton.textContent = block.text;
+            var range = document.createRange();
+            range.selectNodeContents(textSelectButton);
+            range.collapse(false);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          syncLegacyStoryText();
+          syncStoryTextEditors();
+          updateStoryWordCount();
+          updateCompletionChecklist();
+          scheduleStageFit(true);
+          scheduleDraftSave();
         });
         text.appendChild(textSelectButton);
         text.appendChild(storyLayoutHandle(index, "teksto"));
@@ -1241,23 +1280,36 @@
         selectLabel.appendChild(select);
         photoFields.appendChild(selectLabel);
 
-        var alignLabel = document.createElement("label");
+        var alignLabel = document.createElement("div");
         alignLabel.className = "editor-story-block__field";
         var alignCopy = document.createElement("span");
         alignCopy.textContent = "Vieta prie teksto";
-        var alignSelect = document.createElement("select");
+        var alignSelect = document.createElement("div");
+        alignSelect.className = "editor-photo-position";
         alignSelect.dataset.storyPhotoAlign = "";
+        alignSelect.setAttribute("data-story-photo-align", "");
+        alignSelect.setAttribute("role", "group");
+        alignSelect.setAttribute("aria-label", "Nuotraukos vieta prie teksto");
         [
-          { value: "full", label: "Per visą plotį (atskira eilutė)" },
-          { value: "left", label: "Kairėje – tekstas apteka dešinėje" },
-          { value: "right", label: "Dešinėje – tekstas apteka kairėje" }
+          { value: "left", label: "Kairėje", icon: "◧", title: "Kairėje – tekstas apteka dešinėje" },
+          { value: "full", label: "Per vidurį", icon: "▣", title: "Per visą plotį (atskira eilutė)" },
+          { value: "right", label: "Dešinėje", icon: "◨", title: "Dešinėje – tekstas apteka kairėje" }
         ].forEach(function (choice) {
-          var alignOption = document.createElement("option");
-          alignOption.value = choice.value;
-          alignOption.textContent = choice.label;
+          var alignOption = document.createElement("button");
+          alignOption.type = "button";
+          alignOption.dataset.storyPhotoAlignValue = choice.value;
+          alignOption.setAttribute("aria-pressed", String(normalizeStoryPhotoAlign(block.align) === choice.value));
+          alignOption.setAttribute("title", choice.title);
+          var alignIcon = document.createElement("span");
+          alignIcon.className = "editor-photo-position__icon";
+          alignIcon.setAttribute("aria-hidden", "true");
+          alignIcon.textContent = choice.icon;
+          var alignText = document.createElement("span");
+          alignText.textContent = choice.label;
+          alignOption.appendChild(alignIcon);
+          alignOption.appendChild(alignText);
           alignSelect.appendChild(alignOption);
         });
-        alignSelect.value = normalizeStoryPhotoAlign(block.align);
         alignLabel.appendChild(alignCopy);
         alignLabel.appendChild(alignSelect);
         photoFields.appendChild(alignLabel);
@@ -1287,22 +1339,26 @@
           sizeLabel.appendChild(sizeInput);
           directControls.appendChild(sizeLabel);
 
-          var fitLabel = document.createElement("label");
+          var fitLabel = document.createElement("div");
           fitLabel.className = "editor-story-block__field";
           var fitCopy = document.createElement("span");
           fitCopy.textContent = "Kaip rodyti";
-          var fitSelect = document.createElement("select");
-          fitSelect.dataset.storyPhotoFit = "";
+          var fitSelect = document.createElement("div");
+          fitSelect.className = "editor-photo-fit-options";
+          fitSelect.setAttribute("role", "group");
+          fitSelect.setAttribute("aria-label", "Kaip rodyti nuotrauką");
           [
-            { value: "contain", label: "Rodyti visą nuotrauką" },
-            { value: "cover", label: "Užpildyti plotą (apkirpti kraštus)" }
+            { value: "contain", label: "Visa nuotrauka", title: "Rodyti visą nuotrauką" },
+            { value: "cover", label: "Užpildyti", title: "Užpildyti plotą (apkirpti kraštus)" }
           ].forEach(function (choice) {
-            var fitOption = document.createElement("option");
-            fitOption.value = choice.value;
+            var fitOption = document.createElement("button");
+            fitOption.type = "button";
+            fitOption.dataset.storyPhotoFitValue = choice.value;
+            fitOption.setAttribute("aria-pressed", String(appearance.fit === choice.value));
+            fitOption.setAttribute("title", choice.title);
             fitOption.textContent = choice.label;
             fitSelect.appendChild(fitOption);
           });
-          fitSelect.value = appearance.fit;
           fitLabel.appendChild(fitCopy);
           fitLabel.appendChild(fitSelect);
           directControls.appendChild(fitLabel);
@@ -1357,6 +1413,7 @@
 
     syncLegacyStoryText();
     updateStoryWordCount();
+    updateCompletionChecklist();
     updateStoryOrderStatus();
     renderStoryPreview();
     if (Number.isInteger(focusIndex)) {
@@ -1409,34 +1466,10 @@
     });
 
     storyBlocksEl.addEventListener("change", function (event) {
-      if (!event.target.matches("[data-story-photo-select], [data-story-photo-align], [data-story-photo-fit]")) return;
+      if (!event.target.matches("[data-story-photo-select]")) return;
       var card = event.target.closest("[data-story-block-index]");
       var index = card ? Number(card.dataset.storyBlockIndex) : -1;
       if (!storyBlocks[index] || storyBlocks[index].type !== "photo") return;
-      if (event.target.matches("[data-story-photo-align]")) {
-        var previousAlign = normalizeStoryPhotoAlign(storyBlocks[index].align);
-        var nextAlign = normalizeStoryPhotoAlign(event.target.value);
-        if (
-          storyPhotoAppearance(storyBlocks[index]).widthPct === defaultStoryPhotoWidth(previousAlign)
-        ) {
-          storyBlocks[index].widthPct = defaultStoryPhotoWidth(nextAlign);
-        }
-        storyBlocks[index].align = nextAlign;
-        var nextAppearance = storyPhotoAppearance(storyBlocks[index]);
-        var widthInput = card.querySelector("[data-story-photo-width]");
-        var widthOutput = card.querySelector("[data-story-photo-width-output]");
-        if (widthInput) widthInput.value = String(nextAppearance.widthPct);
-        if (widthOutput) widthOutput.textContent = nextAppearance.widthPct + " %";
-        renderStoryPreview();
-        scheduleDraftSave();
-        return;
-      }
-      if (event.target.matches("[data-story-photo-fit]")) {
-        storyBlocks[index].fit = normalizeStoryPhotoFit(event.target.value);
-        renderStoryPreview();
-        scheduleDraftSave();
-        return;
-      }
       var nextOrder = Number(event.target.value);
       storyBlocks[index].photoOrder = Number.isInteger(nextOrder) && nextOrder >= 1 && nextOrder <= storyPhotoCount()
         ? nextOrder
@@ -1517,6 +1550,40 @@
       var card = event.target.closest("[data-story-block-index]");
       if (!card) return;
       var index = Number(card.dataset.storyBlockIndex);
+      var alignButton = event.target.closest("[data-story-photo-align-value]");
+      if (alignButton) {
+        var alignBlock = storyBlocks[index];
+        if (!alignBlock || alignBlock.type !== "photo") return;
+        var previousAlign = normalizeStoryPhotoAlign(alignBlock.align);
+        var nextAlign = normalizeStoryPhotoAlign(alignButton.dataset.storyPhotoAlignValue);
+        if (storyPhotoAppearance(alignBlock).widthPct === defaultStoryPhotoWidth(previousAlign)) {
+          alignBlock.widthPct = defaultStoryPhotoWidth(nextAlign);
+        }
+        alignBlock.align = nextAlign;
+        card.querySelectorAll("[data-story-photo-align-value]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.storyPhotoAlignValue === nextAlign));
+        });
+        var nextAppearance = storyPhotoAppearance(alignBlock);
+        var widthInput = card.querySelector("[data-story-photo-width]");
+        var widthOutput = card.querySelector("[data-story-photo-width-output]");
+        if (widthInput) widthInput.value = String(nextAppearance.widthPct);
+        if (widthOutput) widthOutput.textContent = nextAppearance.widthPct + " %";
+        renderStoryPreview();
+        scheduleDraftSave();
+        return;
+      }
+      var fitButton = event.target.closest("[data-story-photo-fit-value]");
+      if (fitButton) {
+        var fitBlock = storyBlocks[index];
+        if (!fitBlock || fitBlock.type !== "photo") return;
+        fitBlock.fit = normalizeStoryPhotoFit(fitButton.dataset.storyPhotoFitValue);
+        card.querySelectorAll("[data-story-photo-fit-value]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.storyPhotoFitValue === fitBlock.fit));
+        });
+        renderStoryPreview();
+        scheduleDraftSave();
+        return;
+      }
       var editPreview = event.target.closest("[data-story-edit-preview]");
       if (editPreview) {
         var photoBlock = storyBlocks[index];
@@ -2018,6 +2085,85 @@
     return state;
   }
 
+  function editorHistorySnapshot() {
+    return {
+      form: draftFormData(),
+      storyBlocks: collectStoryBlocks(true),
+      storyEmpty: storyEmptyMode,
+      layout: collectLayout()
+    };
+  }
+
+  function syncEditorHistoryButtons() {
+    if (undoButton) undoButton.disabled = undoHistory.length <= 1;
+    if (redoButton) redoButton.disabled = redoHistory.length === 0;
+  }
+
+  function recordEditorHistory(force) {
+    if (!historyReady || historyRestoring) return;
+    var snapshot = editorHistorySnapshot();
+    var json = JSON.stringify(snapshot);
+    if (!force && json === lastHistoryJson) return;
+    undoHistory.push(snapshot);
+    if (undoHistory.length > 50) undoHistory.shift();
+    redoHistory = [];
+    lastHistoryJson = json;
+    syncEditorHistoryButtons();
+  }
+
+  function scheduleEditorHistory() {
+    if (!historyReady || historyRestoring) return;
+    clearTimeout(historySaveTimer);
+    historySaveTimer = setTimeout(function () {
+      recordEditorHistory(false);
+    }, 350);
+  }
+
+  function restoreEditorHistory(snapshot) {
+    if (!snapshot) return;
+    historyRestoring = true;
+    clearTimeout(historySaveTimer);
+    restoreDraftFields(snapshot.form);
+    setStoryBlocks(snapshot.storyBlocks, true, snapshot.storyEmpty);
+    syncDatePickersFromHidden();
+    setBackgroundColor(snapshot.form && snapshot.form.fono_spalva, false);
+    renderStoryBlockEditor();
+    syncPreview();
+    applyLayout(snapshot.layout);
+    refreshResponsiveStage(true);
+    lastHistoryJson = JSON.stringify(snapshot);
+    historyRestoring = false;
+    saveDraftNow();
+    syncEditorHistoryButtons();
+  }
+
+  function undoEditorChange() {
+    if (undoHistory.length <= 1) return;
+    redoHistory.push(undoHistory.pop());
+    restoreEditorHistory(undoHistory[undoHistory.length - 1]);
+  }
+
+  function redoEditorChange() {
+    if (!redoHistory.length) return;
+    var snapshot = redoHistory.pop();
+    undoHistory.push(snapshot);
+    restoreEditorHistory(snapshot);
+  }
+
+  function setupEditorHistory() {
+    historyReady = true;
+    recordEditorHistory(true);
+    if (undoButton) undoButton.addEventListener("click", undoEditorChange);
+    if (redoButton) redoButton.addEventListener("click", redoEditorChange);
+    document.addEventListener("keydown", function (event) {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
+      if (event.target.closest("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      if (event.shiftKey) redoEditorChange();
+      else undoEditorChange();
+    });
+  }
+
   function saveDraftNow() {
     if (isRestoringDraft) return false;
     if (photosProcessing) {
@@ -2059,6 +2205,7 @@
     clearTimeout(draftSaveTimer);
     setDraftState("Saugomi pakeitimai…", "saving");
     draftSaveTimer = setTimeout(saveDraftNow, 150);
+    scheduleEditorHistory();
   }
 
   function restoreDraftFields(formState) {
@@ -2526,6 +2673,32 @@
     setDraftState("Galite keisti pavyzdį – duomenys nebus viešinami", "saved");
   }
 
+  function setCompletionItem(key, complete, pendingText) {
+    var item = document.querySelector("[data-editor-check='" + key + "']");
+    if (!item) return;
+    item.classList.toggle("is-complete", complete);
+    var marker = item.querySelector(":scope > span");
+    var help = item.querySelector("small");
+    if (marker) marker.textContent = complete ? "✓" : String(["person", "story", "design"].indexOf(key) + 1);
+    if (help) help.textContent = complete ? "Paruošta" : pendingText;
+  }
+
+  function updateCompletionChecklist() {
+    var hasPerson = !!String(form.elements.vardas.value || "").trim();
+    var hasStory = storyBlocks.some(function (block) {
+      return block.type === "text"
+        ? !!String(block.text || "").trim()
+        : block.type === "photo" && !!Number(block.photoOrder);
+    });
+    var hasDesign = !!(backgroundInput && normalizeHex(backgroundInput.value));
+    setCompletionItem("person", hasPerson, "Įrašykite vardą");
+    setCompletionItem("story", hasStory, "Pridėkite tekstą arba nuotrauką");
+    setCompletionItem("design", hasDesign, "Pasirinkite foną");
+    if (completionCountEl) {
+      completionCountEl.textContent = [hasPerson, hasStory, hasDesign].filter(Boolean).length + " iš 3";
+    }
+  }
+
   function syncPreview() {
     ensureStoryBlocks(false);
     syncLegacyStoryText();
@@ -2546,6 +2719,7 @@
     setBackgroundColor(background, false);
     fitName();
     updateStoryWordCount();
+    updateCompletionChecklist();
   }
 
   function fitName() {
@@ -2571,6 +2745,41 @@
       };
       img.src = objectUrl;
     });
+  }
+
+  async function autoArrangeNewStoryPhotos(files, firstPhotoOrder) {
+    var start = Math.max(1, Number(firstPhotoOrder) || 1);
+    await Promise.all((files || []).map(async function (file, index) {
+      var photoOrder = index + 1;
+      if (!file || photoOrder < start) return;
+      var block = storyBlocks.find(function (item) {
+        return item.type === "photo" && Number(item.photoOrder) === photoOrder;
+      });
+      if (!block) return;
+      var position = storyBlockPosition(block);
+      var appearance = storyPhotoAppearance(block);
+      var untouched = normalizeStoryPhotoAlign(block.align) === "full" &&
+        appearance.widthPct === 100 && appearance.fit === "contain" &&
+        position.offsetX === 0 && position.offsetY === 0;
+      if (!untouched) return;
+      try {
+        var img = await imageFromFile(file);
+        var ratio = img.naturalWidth / Math.max(1, img.naturalHeight);
+        if (ratio < 0.88) {
+          block.align = photoOrder % 2 === 0 ? "right" : "left";
+          block.widthPct = 48;
+        } else if (ratio > 1.25) {
+          block.align = "full";
+          block.widthPct = 86;
+        } else {
+          block.align = "full";
+          block.widthPct = 72;
+        }
+        block.fit = "contain";
+      } catch (err) {
+        console.warn("Automatic photo layout failed", err);
+      }
+    }));
   }
 
   function isNearBlack(data, index) {
@@ -2693,6 +2902,8 @@
     await Promise.all(localCropPromises);
     if (generation !== photoProcessingGeneration) return;
     processedPhotos = localProcessedPhotos;
+    await autoArrangeNewStoryPhotos(processedPhotos, previousPhotoCount + 1);
+    if (generation !== photoProcessingGeneration) return;
     try {
       await persistProcessedPhotoOrder();
     } catch (err) {
@@ -2708,7 +2919,7 @@
     if (!photoDraftPersistenceFailed) scheduleDraftSave();
     statusEl.textContent = allFiles.length > MAX_PHOTOS
       ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
-      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Jų ir teksto tvarką keiskite tempdami korteles arba rodyklėmis." : "");
+      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Pradinis dydis ir vieta parinkti automatiškai – juos galite keisti iškart kortelėje." : "");
   }
 
   function pct(value, total) {
@@ -3437,7 +3648,9 @@
     }
     var videoForSubmission = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
     if (videoForSubmission && videoForSubmission.size > MAX_VIDEO_BYTES) {
-      activateEditorStep("files", true);
+      activateEditorStep("colors", true);
+      var additionalSettings = document.querySelector(".editor-additional-settings");
+      if (additionalSettings) additionalSettings.open = true;
       statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
       videoInput.focus();
       return;
@@ -3654,6 +3867,7 @@
     bindResize();
     bindStretch();
     bindCrop();
+    setupEditorHistory();
   }
 
   initEditor();

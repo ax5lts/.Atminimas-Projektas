@@ -974,14 +974,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('"Permissions-Policy": "camera=(), microphone=(), geolocation=(self)"', server)
         self.assertIn("frame-src https://www.openstreetmap.org", server)
 
-    def test_editor_has_four_mobile_steps_reorder_and_save_progress(self):
+    def test_editor_has_three_mobile_steps_reorder_and_save_progress(self):
         page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        for step in ("text", "colors", "files", "preview"):
+        for step in ("text", "colors", "preview"):
             self.assertIn('data-editor-step="{0}"'.format(step), page)
             self.assertIn('data-editor-step-button="{0}"'.format(step), page)
+        self.assertNotIn('data-editor-step="files"', page)
         self.assertIn('id="editor-photo-order"', page)
         self.assertIn('id="editor-save-progress"', page)
         self.assertIn("activateEditorStep", editor)

@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260803-2">
+<link rel="stylesheet" href="css/styles.css?v=20260803-3">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -56,18 +56,32 @@
           <span class="editor-draft-state" id="editor-draft-state" role="status">Juodraštis saugomas automatiškai</span>
         </div>
       </div>
+      <div class="editor-utility-bar" aria-label="Redaktoriaus veiksmai">
+        <div class="editor-history-actions" role="group" aria-label="Pakeitimų istorija">
+          <button type="button" id="editor-undo" disabled aria-label="Atšaukti paskutinį pakeitimą">↶ Atšaukti</button>
+          <button type="button" id="editor-redo" disabled aria-label="Pakartoti atšauktą pakeitimą">↷ Pakartoti</button>
+        </div>
+        <button class="editor-quick-preview" type="button" data-editor-preview-open>Peržiūrėti puslapį</button>
+      </div>
+      <section class="editor-completion" aria-labelledby="editor-completion-title">
+        <header><strong id="editor-completion-title">Puslapio paruošimas</strong><span id="editor-completion-count">0 iš 3</span></header>
+        <ul>
+          <li data-editor-check="person"><span aria-hidden="true">1</span><div><strong>Asmens informacija</strong><small>Įrašykite vardą</small></div></li>
+          <li data-editor-check="story"><span aria-hidden="true">2</span><div><strong>Istorija</strong><small>Pridėkite tekstą arba nuotrauką</small></div></li>
+          <li data-editor-check="design"><span aria-hidden="true">3</span><div><strong>Dizainas</strong><small>Fonas jau parinktas</small></div></li>
+        </ul>
+      </section>
       <nav class="editor-stepper" aria-label="Puslapio kūrimo žingsniai">
         <button class="is-active" type="button" data-editor-step-button="text" aria-controls="editor-section-text" aria-current="step"><span>1</span>Turinys</button>
         <button type="button" data-editor-step-button="colors" aria-controls="editor-section-colors"><span>2</span>Dizainas</button>
-        <button type="button" data-editor-step-button="files" aria-controls="editor-section-files"><span>3</span>Papildomai</button>
-        <button type="button" data-editor-step-button="preview" aria-controls="editor-section-preview"><span>4</span>Peržiūra</button>
+        <button type="button" data-editor-step-button="preview" aria-controls="editor-section-preview"><span>3</span>Peržiūra</button>
       </nav>
-      <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 4: Turinys</p>
-      <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-valuetext="1 žingsnis iš 4: Turinys"><span id="editor-step-progress"></span></div>
+      <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 3: Turinys</p>
+      <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-valuetext="1 žingsnis iš 3: Turinys"><span id="editor-step-progress"></span></div>
       <form id="editor-form" class="editor-form" novalidate aria-describedby="editor-step-status">
         <section class="editor-step is-active" id="editor-section-text" data-editor-step="text" aria-labelledby="editor-step-text-title" aria-hidden="false">
           <header class="editor-step__header">
-            <span>1 žingsnis iš 4</span>
+            <span>1 žingsnis iš 3</span>
             <h2 id="editor-step-text-title" tabindex="-1">Asmuo ir gyvenimo istorija</h2>
             <p>Įrašykite pagrindinius duomenis, įkelkite nuotraukas ir sudėliokite istoriją paprasta blokų tvarka.</p>
           </header>
@@ -175,9 +189,9 @@
 
         <section class="editor-step" id="editor-section-colors" data-editor-step="colors" aria-labelledby="editor-step-colors-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
-            <span>2 žingsnis iš 4</span>
-            <h2 id="editor-step-colors-title" tabindex="-1">Puslapio dizainas</h2>
-            <p>Pasirinkite ramų foną. Teksto kontrastas peržiūroje prisitaikys automatiškai.</p>
+            <span>2 žingsnis iš 3</span>
+            <h2 id="editor-step-colors-title" tabindex="-1">Dizainas</h2>
+            <p>Pasirinkite foną. Jei nereikia vaizdo įrašo ar papildomų aprašymų, iškart tęskite į peržiūrą.</p>
           </header>
           <fieldset class="editor-color-picker">
             <legend>Puslapio fonas</legend>
@@ -207,42 +221,39 @@
             </div>
             <p class="editor-field-help">Pasirinkite vieną iš ramių, gamtos įkvėptų spalvų. Peržiūra pasikeis iš karto.</p>
           </fieldset>
-        </section>
-
-        <section class="editor-step" id="editor-section-files" data-editor-step="files" aria-labelledby="editor-step-files-title" aria-hidden="true" hidden>
-          <header class="editor-step__header">
-            <span>3 žingsnis iš 4</span>
-            <h2 id="editor-step-files-title" tabindex="-1">Papildomi failai ir aprašymai</h2>
-            <p>Jei reikia, pridėkite vaizdo įrašą ir patikslinkite nuotraukų aprašymus. Šį žingsnį galima praleisti.</p>
-          </header>
-          <label>
-            Vaizdo įrašas (1 failas, iki 50 MB)
-            <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*" aria-describedby="editor-video-help">
-            <span class="editor-file-help" id="editor-video-help">Didžiausias failo dydis – 50 MB. Tinka MP4, MOV ir kiti įprasti vaizdo formatai.</span>
-          </label>
-          <label>
-            Video subtitrai (WebVTT; privaloma, jei vaizdo įraše yra kalba ar svarbūs garsai)
-            <input type="file" name="captions" id="editor-captions" accept=".vtt,text/vtt">
-          </label>
-          <fieldset class="editor-alt-fields" id="editor-photo-details" hidden>
-            <legend>Nuotraukų užrašai ir apibūdinimai</legend>
-            <p class="editor-field-help">Rodomi tik pasirinktų nuotraukų laukai. Užrašas matomas po nuotrauka, o apibūdinimas padeda ekrano skaitytuvų naudotojams.</p>
-            <div class="editor-photo-description-grid">
-              <article class="editor-photo-description" data-photo-description="1" hidden><p class="editor-photo-description__title">1 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_1" rows="2" maxlength="240" placeholder="Pvz., Su šeima prie Baltijos jūros, 1985 m."></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_1" maxlength="180" placeholder="Kas pavaizduota nuotraukoje?"></label></article>
-              <article class="editor-photo-description" data-photo-description="2" hidden><p class="editor-photo-description__title">2 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_2" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_2" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="3" hidden><p class="editor-photo-description__title">3 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_3" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_3" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="4" hidden><p class="editor-photo-description__title">4 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_4" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_4" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="5" hidden><p class="editor-photo-description__title">5 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_5" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_5" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="6" hidden><p class="editor-photo-description__title">6 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_6" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_6" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="7" hidden><p class="editor-photo-description__title">7 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_7" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_7" maxlength="180"></label></article>
-              <article class="editor-photo-description" data-photo-description="8" hidden><p class="editor-photo-description__title">8 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_8" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_8" maxlength="180"></label></article>
+          <details class="editor-additional-settings">
+            <summary><span><strong>Papildomi nustatymai</strong><small>Vaizdo įrašas, subtitrai ir išsamūs nuotraukų aprašymai</small></span></summary>
+            <div class="editor-additional-settings__content">
+              <label>
+                Vaizdo įrašas <span class="optional">(nebūtina, iki 50 MB)</span>
+                <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*" aria-describedby="editor-video-help">
+                <span class="editor-file-help" id="editor-video-help">Tinka MP4, MOV ir kiti įprasti vaizdo formatai.</span>
+              </label>
+              <label>
+                Video subtitrai <span class="optional">(WebVTT; reikia tik kai vaizdo įraše yra kalba ar svarbūs garsai)</span>
+                <input type="file" name="captions" id="editor-captions" accept=".vtt,text/vtt">
+              </label>
+              <fieldset class="editor-alt-fields" id="editor-photo-details" hidden>
+                <legend>Nuotraukų užrašai ir apibūdinimai</legend>
+                <p class="editor-field-help">Užrašas matomas po nuotrauka, o apibūdinimas padeda ekrano skaitytuvų naudotojams.</p>
+                <div class="editor-photo-description-grid">
+                  <article class="editor-photo-description" data-photo-description="1" hidden><p class="editor-photo-description__title">1 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_1" rows="2" maxlength="240" placeholder="Pvz., Su šeima prie Baltijos jūros, 1985 m."></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_1" maxlength="180" placeholder="Kas pavaizduota nuotraukoje?"></label></article>
+                  <article class="editor-photo-description" data-photo-description="2" hidden><p class="editor-photo-description__title">2 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_2" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_2" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="3" hidden><p class="editor-photo-description__title">3 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_3" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_3" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="4" hidden><p class="editor-photo-description__title">4 nuotrauka</p><label>Matomas užrašas<textarea name="photo_caption_4" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_4" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="5" hidden><p class="editor-photo-description__title">5 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_5" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_5" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="6" hidden><p class="editor-photo-description__title">6 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_6" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_6" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="7" hidden><p class="editor-photo-description__title">7 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_7" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_7" maxlength="180"></label></article>
+                  <article class="editor-photo-description" data-photo-description="8" hidden><p class="editor-photo-description__title">8 nuotrauka <small>galerijoje</small></p><label>Matomas užrašas<textarea name="photo_caption_8" rows="2" maxlength="240"></textarea></label><label>Vaizdo apibūdinimas <span class="optional">(nebūtina)</span><input type="text" name="photo_alt_8" maxlength="180"></label></article>
+                </div>
+              </fieldset>
             </div>
-          </fieldset>
+          </details>
         </section>
 
         <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
-            <span>4 žingsnis iš 4</span>
+            <span>3 žingsnis iš 3</span>
             <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir užsakymas</h2>
             <p>Patikrinkite puslapį, patvirtinkite teises į turinį ir išsaugokite.</p>
           </header>
@@ -423,7 +434,7 @@
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260801-1"></script>
-<script src="assets/redaktorius.js?v=20260803-2"></script>
+<script src="assets/redaktorius.js?v=20260803-3"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

@@ -13,14 +13,14 @@ class EditorWizardTests(unittest.TestCase):
         cls.script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         cls.styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
-    def test_four_steps_start_with_only_first_step_visible(self):
+    def test_three_steps_start_with_only_first_step_visible(self):
         sections = re.findall(
             r'<section class="editor-step([^"]*)"[^>]+data-editor-step="([^"]+)"[^>]*>',
             self.page,
         )
         self.assertEqual(
             [name for _, name in sections],
-            ["text", "colors", "files", "preview"],
+            ["text", "colors", "preview"],
         )
         self.assertIn("is-active", sections[0][0])
         first_tag = re.search(
@@ -28,7 +28,7 @@ class EditorWizardTests(unittest.TestCase):
             self.page,
         ).group(0)
         self.assertIn('aria-hidden="false"', first_tag)
-        for step in ("colors", "files", "preview"):
+        for step in ("colors", "preview"):
             tag = re.search(
                 rf'<section class="editor-step"[^>]+data-editor-step="{step}"[^>]*>',
                 self.page,
@@ -37,7 +37,7 @@ class EditorWizardTests(unittest.TestCase):
             self.assertRegex(tag, r"\shidden(?:\s|>)")
 
     def test_stepper_controls_steps_and_exposes_progress(self):
-        for step in ("text", "colors", "files", "preview"):
+        for step in ("text", "colors", "preview"):
             self.assertRegex(
                 self.page,
                 rf'data-editor-step-button="{step}"[^>]+aria-controls="editor-section-{step}"',
@@ -45,6 +45,25 @@ class EditorWizardTests(unittest.TestCase):
         self.assertIn('role="progressbar"', self.page)
         self.assertIn('aria-valuenow="1"', self.page)
         self.assertIn('id="editor-step-status" role="status" aria-live="polite"', self.page)
+        self.assertNotIn('data-editor-step="files"', self.page)
+
+    def test_optional_media_is_folded_into_design_step(self):
+        self.assertIn('class="editor-additional-settings"', self.page)
+        self.assertIn("Papildomi nustatymai", self.page)
+        colors = re.search(
+            r'data-editor-step="colors"[\s\S]+?data-editor-step="preview"',
+            self.page,
+        ).group(0)
+        self.assertIn('id="editor-video"', colors)
+        self.assertIn('id="editor-photo-details"', colors)
+
+    def test_quick_preview_history_and_completion_are_available(self):
+        self.assertIn('id="editor-undo"', self.page)
+        self.assertIn('id="editor-redo"', self.page)
+        self.assertIn('id="editor-completion-count"', self.page)
+        self.assertIn('class="editor-quick-preview"', self.page)
+        self.assertIn("function setupEditorHistory()", self.script)
+        self.assertIn("function updateCompletionChecklist()", self.script)
 
     def test_script_hides_inactive_steps_and_moves_focus(self):
         self.assertIn("step.hidden = !active;", self.script)

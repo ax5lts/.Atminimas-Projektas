@@ -572,6 +572,29 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn(".editor-story-block__direct-controls", self.styles)
         self.assertIn(".editor-story-block__thumbnail-button", self.styles)
 
+    def test_new_photos_receive_an_automatic_starting_layout(self):
+        automatic = balanced_block(
+            self.editor_js, r"async\s+function\s+autoArrangeNewStoryPhotos\s*\(",
+        )
+        self.assertIn("img.naturalWidth", automatic)
+        self.assertIn("img.naturalHeight", automatic)
+        self.assertIn("block.widthPct = 48", automatic)
+        self.assertIn("block.widthPct = 86", automatic)
+        self.assertIn("block.widthPct = 72", automatic)
+        self.assertIn(
+            "await autoArrangeNewStoryPhotos(processedPhotos, previousPhotoCount + 1)",
+            self.editor_js,
+        )
+
+    def test_preview_story_text_can_be_edited_directly(self):
+        preview = balanced_block(
+            self.editor_js, r"function\s+renderStoryPreview\s*\(",
+        )
+        self.assertIn('textSelectButton.contentEditable = "true"', preview)
+        self.assertIn('textSelectButton.setAttribute("role", "textbox")', preview)
+        self.assertIn('textSelectButton.addEventListener("input"', preview)
+        self.assertIn("syncStoryTextEditors()", preview)
+
     def test_story_text_is_selectable_resizable_and_keeps_font_scale(self):
         for source in (
             self.editor_js,
