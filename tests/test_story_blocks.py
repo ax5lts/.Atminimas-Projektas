@@ -549,6 +549,29 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn(".editor-preview-story__photo.is-selected", self.styles)
         self.assertIn(".editor-story-photo-tools", self.styles)
 
+    def test_photo_can_be_resized_and_opened_for_movement_from_the_content_step(self):
+        photo_upload = self.editor_html.index('id="editor-photos"')
+        story_list = self.editor_html.index('id="editor-story-blocks"')
+        preview_step = self.editor_html.index('data-editor-step="preview"')
+        self.assertLess(photo_upload, story_list)
+        self.assertLess(story_list, preview_step)
+
+        for marker in (
+            "data-story-photo-width",
+            "data-story-photo-width-output",
+            "data-story-photo-fit",
+            "data-story-edit-preview",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.editor_js)
+
+        self.assertIn("Judinti nuotrauką peržiūroje", self.editor_js)
+        self.assertIn("setAdvancedLayoutOpen(true, false)", self.editor_js)
+        self.assertIn("openPreviewDialog(editPreview)", self.editor_js)
+        self.assertIn("selectStoryPhoto(index, true)", self.editor_js)
+        self.assertIn(".editor-story-block__direct-controls", self.styles)
+        self.assertIn(".editor-story-block__thumbnail-button", self.styles)
+
     def test_story_text_is_selectable_resizable_and_keeps_font_scale(self):
         for source in (
             self.editor_js,

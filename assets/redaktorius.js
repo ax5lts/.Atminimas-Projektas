@@ -29,6 +29,7 @@
   var photoOrderEl = document.getElementById("editor-photo-order");
   var photoDetailsEl = document.getElementById("editor-photo-details");
   var storyBlocksEl = document.getElementById("editor-story-blocks");
+  var storyOrderStatusEl = document.getElementById("editor-story-order-status");
   var addStoryTextButton = document.querySelector("[data-story-add='text']");
   var addStoryPhotoButton = document.querySelector("[data-story-add='photo']");
   var advancedLayoutToggle = document.querySelector("[data-advanced-layout-toggle]");
@@ -42,6 +43,7 @@
     : null;
   var prototypeNotice = document.getElementById("editor-prototype-notice");
   var editorCanvas = document.querySelector(".editor-canvas");
+  var openPreviewDialog = null;
   var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
@@ -124,12 +126,11 @@
   var productSummary = document.getElementById("editor-product-summary");
   var productUnavailable = document.getElementById("editor-product-unavailable");
   var productUnavailableMessage = document.getElementById("editor-product-unavailable-message");
-  var editorSteps = ["text", "colors", "files", "positions", "preview"];
+  var editorSteps = ["text", "colors", "files", "preview"];
   var editorStepLabels = {
-    text: "Informacija",
+    text: "Turinys",
     colors: "Dizainas",
-    files: "Failai",
-    positions: "Išdėstymas",
+    files: "Papildomai",
     preview: "Peržiūra"
   };
   var currentEditorStep = "text";
@@ -1092,6 +1093,33 @@
     });
   }
 
+  function storyBlockOrderSummary() {
+    if (storyEmptyMode || !storyBlocks.length) return "Istorijos blokų dar nėra.";
+    return "Dabartinė tvarka: " + storyBlocks.map(function (block, index) {
+      var label = block.type === "photo" ? "nuotrauka" : "tekstas";
+      return (index + 1) + " – " + label;
+    }).join(", ") + ".";
+  }
+
+  function updateStoryOrderStatus(message) {
+    if (!storyOrderStatusEl) return;
+    storyOrderStatusEl.textContent = (message ? message + " " : "") + storyBlockOrderSummary();
+  }
+
+  function moveStoryBlock(from, targetIndex) {
+    if (from === targetIndex || from < 0 || targetIndex < 0 || from >= storyBlocks.length || targetIndex >= storyBlocks.length) {
+      return false;
+    }
+    clearStoryPhotoSelection();
+    var moved = storyBlocks.splice(from, 1)[0];
+    storyBlocks.splice(targetIndex, 0, moved);
+    renderStoryBlockEditor(targetIndex, moved.type);
+    updateStoryOrderStatus((moved.type === "photo" ? "Nuotrauka" : "Tekstas") +
+      " perkeltas į " + (targetIndex + 1) + " vietą.");
+    scheduleDraftSave();
+    return true;
+  }
+
   function storyBlockControls(index) {
     var controls = document.createElement("span");
     controls.className = "editor-story-block__controls";
@@ -1099,16 +1127,19 @@
     up.type = "button";
     up.dataset.storyMove = "-1";
     up.textContent = "↑ Aukštyn";
+    up.setAttribute("aria-label", "Perkelti šį bloką viena vieta aukštyn");
     up.disabled = index === 0;
     var down = document.createElement("button");
     down.type = "button";
     down.dataset.storyMove = "1";
     down.textContent = "↓ Žemyn";
+    down.setAttribute("aria-label", "Perkelti šį bloką viena vieta žemyn");
     down.disabled = index === storyBlocks.length - 1;
     var remove = document.createElement("button");
     remove.type = "button";
     remove.dataset.storyDelete = "";
     remove.textContent = "Ištrinti";
+    remove.setAttribute("aria-label", "Ištrinti šį turinio bloką");
     controls.appendChild(up);
     controls.appendChild(down);
     controls.appendChild(remove);
@@ -1133,10 +1164,18 @@
 
       var header = document.createElement("header");
       header.className = "editor-story-block__header";
+      var dragHandle = document.createElement("button");
+      dragHandle.className = "editor-story-block__drag";
+      dragHandle.type = "button";
+      dragHandle.dataset.storyDrag = String(index);
+      dragHandle.setAttribute("aria-label", "Tempti " + (index + 1) + " turinio bloką; klaviatūra naudokite rodykles aukštyn ir žemyn");
+      dragHandle.title = "Tempkite į norimą vietą";
+      dragHandle.textContent = "⋮⋮";
       var title = document.createElement("strong");
       title.textContent = block.type === "text"
-        ? ("Teksto blokas " + (index + 1))
-        : ("Nuotraukos blokas " + (index + 1));
+        ? ((index + 1) + ". Tekstas")
+        : ((index + 1) + ". Nuotrauka");
+      header.appendChild(dragHandle);
       header.appendChild(title);
       header.appendChild(storyBlockControls(index));
       card.appendChild(header);
@@ -1159,13 +1198,22 @@
       } else {
         var photoLayout = document.createElement("div");
         photoLayout.className = "editor-story-block__photo";
+        var thumbnailButton = document.createElement("button");
+        thumbnailButton.className = "editor-story-block__thumbnail-button";
+        thumbnailButton.type = "button";
+        thumbnailButton.dataset.storyEditPreview = "";
+        thumbnailButton.setAttribute("aria-label", "Judinti ir keisti " + (index + 1) + " nuotraukos dydį peržiūroje");
         var thumbnail = document.createElement("img");
         thumbnail.className = "editor-story-block__thumbnail";
         thumbnail.alt = "";
         var previewUrl = block.photoOrder ? photoUrlAt(Number(block.photoOrder) - 1) : "";
         if (previewUrl) thumbnail.src = previewUrl;
-        else thumbnail.hidden = true;
-        photoLayout.appendChild(thumbnail);
+        else thumbnailButton.hidden = true;
+        var thumbnailAction = document.createElement("span");
+        thumbnailAction.textContent = "Judinti ir didinti";
+        thumbnailButton.appendChild(thumbnail);
+        thumbnailButton.appendChild(thumbnailAction);
+        photoLayout.appendChild(thumbnailButton);
 
         var photoFields = document.createElement("div");
         photoFields.className = "editor-story-block__photo-fields";
@@ -1215,6 +1263,58 @@
         photoFields.appendChild(alignLabel);
 
         if (block.photoOrder) {
+          var appearance = storyPhotoAppearance(block);
+          var directControls = document.createElement("div");
+          directControls.className = "editor-story-block__direct-controls";
+
+          var sizeLabel = document.createElement("label");
+          sizeLabel.className = "editor-story-block__field editor-story-block__size";
+          var sizeCopy = document.createElement("span");
+          sizeCopy.textContent = "Nuotraukos dydis";
+          var sizeOutput = document.createElement("output");
+          sizeOutput.dataset.storyPhotoWidthOutput = "";
+          sizeOutput.textContent = appearance.widthPct + " %";
+          var sizeInput = document.createElement("input");
+          sizeInput.type = "range";
+          sizeInput.min = String(MIN_STORY_PHOTO_WIDTH);
+          sizeInput.max = String(MAX_STORY_PHOTO_WIDTH);
+          sizeInput.step = "1";
+          sizeInput.value = String(appearance.widthPct);
+          sizeInput.dataset.storyPhotoWidth = "";
+          sizeInput.setAttribute("aria-label", "Nuotraukos dydis procentais");
+          sizeLabel.appendChild(sizeCopy);
+          sizeLabel.appendChild(sizeOutput);
+          sizeLabel.appendChild(sizeInput);
+          directControls.appendChild(sizeLabel);
+
+          var fitLabel = document.createElement("label");
+          fitLabel.className = "editor-story-block__field";
+          var fitCopy = document.createElement("span");
+          fitCopy.textContent = "Kaip rodyti";
+          var fitSelect = document.createElement("select");
+          fitSelect.dataset.storyPhotoFit = "";
+          [
+            { value: "contain", label: "Rodyti visą nuotrauką" },
+            { value: "cover", label: "Užpildyti plotą (apkirpti kraštus)" }
+          ].forEach(function (choice) {
+            var fitOption = document.createElement("option");
+            fitOption.value = choice.value;
+            fitOption.textContent = choice.label;
+            fitSelect.appendChild(fitOption);
+          });
+          fitSelect.value = appearance.fit;
+          fitLabel.appendChild(fitCopy);
+          fitLabel.appendChild(fitSelect);
+          directControls.appendChild(fitLabel);
+          photoFields.appendChild(directControls);
+
+          var editPreview = document.createElement("button");
+          editPreview.className = "button button--ghost editor-story-block__edit-preview";
+          editPreview.type = "button";
+          editPreview.dataset.storyEditPreview = "";
+          editPreview.textContent = "Judinti nuotrauką peržiūroje";
+          photoFields.appendChild(editPreview);
+
           var captionLabel = document.createElement("label");
           captionLabel.className = "editor-story-block__field";
           var captionCopy = document.createElement("span");
@@ -1231,23 +1331,33 @@
         } else {
           var emptyHelp = document.createElement("p");
           emptyHelp.className = "editor-story-block__empty";
-          emptyHelp.textContent = "Pasirinkite jau pridėtą nuotrauką arba įkelkite ją 3 žingsnyje.";
+          emptyHelp.textContent = "Pasirinkite jau pridėtą nuotrauką arba įkelkite ją aukščiau šiame žingsnyje.";
           var openFiles = document.createElement("button");
           openFiles.type = "button";
           openFiles.className = "button button--ghost editor-story-block__open-files";
           openFiles.dataset.storyOpenFiles = "";
-          openFiles.textContent = "Pridėti nuotraukas";
+          openFiles.textContent = "Pasirinkti nuotraukas";
           emptyHelp.appendChild(openFiles);
           photoFields.appendChild(emptyHelp);
         }
         photoLayout.appendChild(photoFields);
         card.appendChild(photoLayout);
       }
+      if (index < storyBlocks.length - 1) {
+        var insertText = document.createElement("button");
+        insertText.className = "editor-story-block__insert";
+        insertText.type = "button";
+        insertText.dataset.storyInsertText = "";
+        insertText.textContent = "+ Įterpti teksto dalį po šiuo bloku";
+        insertText.setAttribute("aria-label", "Įterpti naują teksto dalį po " + (index + 1) + " bloku");
+        card.appendChild(insertText);
+      }
       storyBlocksEl.appendChild(card);
     });
 
     syncLegacyStoryText();
     updateStoryWordCount();
+    updateStoryOrderStatus();
     renderStoryPreview();
     if (Number.isInteger(focusIndex)) {
       window.requestAnimationFrame(function () {
@@ -1287,6 +1397,10 @@
       } else if (event.target.matches("[data-story-photo-caption]") && block.photoOrder) {
         var captionField = form.elements["photo_caption_" + block.photoOrder];
         if (captionField) captionField.value = event.target.value;
+      } else if (event.target.matches("[data-story-photo-width]") && block.type === "photo") {
+        block.widthPct = normalizeStoryPhotoWidth(event.target.value, block.align);
+        var sizeOutput = card.querySelector("[data-story-photo-width-output]");
+        if (sizeOutput) sizeOutput.textContent = block.widthPct + " %";
       }
       syncLegacyStoryText();
       updateStoryWordCount();
@@ -1295,7 +1409,7 @@
     });
 
     storyBlocksEl.addEventListener("change", function (event) {
-      if (!event.target.matches("[data-story-photo-select], [data-story-photo-align]")) return;
+      if (!event.target.matches("[data-story-photo-select], [data-story-photo-align], [data-story-photo-fit]")) return;
       var card = event.target.closest("[data-story-block-index]");
       var index = card ? Number(card.dataset.storyBlockIndex) : -1;
       if (!storyBlocks[index] || storyBlocks[index].type !== "photo") return;
@@ -1308,6 +1422,17 @@
           storyBlocks[index].widthPct = defaultStoryPhotoWidth(nextAlign);
         }
         storyBlocks[index].align = nextAlign;
+        var nextAppearance = storyPhotoAppearance(storyBlocks[index]);
+        var widthInput = card.querySelector("[data-story-photo-width]");
+        var widthOutput = card.querySelector("[data-story-photo-width-output]");
+        if (widthInput) widthInput.value = String(nextAppearance.widthPct);
+        if (widthOutput) widthOutput.textContent = nextAppearance.widthPct + " %";
+        renderStoryPreview();
+        scheduleDraftSave();
+        return;
+      }
+      if (event.target.matches("[data-story-photo-fit]")) {
+        storyBlocks[index].fit = normalizeStoryPhotoFit(event.target.value);
         renderStoryPreview();
         scheduleDraftSave();
         return;
@@ -1321,24 +1446,110 @@
       scheduleDraftSave();
     });
 
+    storyBlocksEl.addEventListener("keydown", function (event) {
+      var handle = event.target.closest("[data-story-drag]");
+      if (!handle) return;
+      var from = Number(handle.dataset.storyDrag);
+      var to = from;
+      if (event.key === "ArrowUp") to = Math.max(0, from - 1);
+      else if (event.key === "ArrowDown") to = Math.min(storyBlocks.length - 1, from + 1);
+      else if (event.key === "Home") to = 0;
+      else if (event.key === "End") to = storyBlocks.length - 1;
+      else return;
+      event.preventDefault();
+      moveStoryBlock(from, to);
+    });
+
+    storyBlocksEl.addEventListener("pointerdown", function (event) {
+      var handle = event.target.closest("[data-story-drag]");
+      if (!handle) return;
+      var card = handle.closest("[data-story-block-index]");
+      if (!card) return;
+      event.preventDefault();
+      handle.setPointerCapture(event.pointerId);
+      handle.dataset.storyDragFrom = card.dataset.storyBlockIndex;
+      card.classList.add("is-dragging");
+    });
+
+    storyBlocksEl.addEventListener("pointermove", function (event) {
+      var handle = event.target.closest("[data-story-drag][data-story-drag-from]");
+      if (!handle) return;
+      var target = document.elementFromPoint(event.clientX, event.clientY);
+      var targetCard = target && target.closest ? target.closest("[data-story-block-index]") : null;
+      storyBlocksEl.querySelectorAll(".is-drop-target").forEach(function (card) {
+        card.classList.remove("is-drop-target");
+      });
+      if (targetCard && targetCard !== handle.closest("[data-story-block-index]")) {
+        targetCard.classList.add("is-drop-target");
+      }
+    });
+
+    function finishStoryBlockDrag(event, cancelled) {
+      var handle = event.target.closest("[data-story-drag][data-story-drag-from]");
+      if (!handle) return;
+      var sourceCard = handle.closest("[data-story-block-index]");
+      var target = cancelled ? null : document.elementFromPoint(event.clientX, event.clientY);
+      var targetCard = target && target.closest ? target.closest("[data-story-block-index]") : null;
+      var from = Number(handle.dataset.storyDragFrom);
+      delete handle.dataset.storyDragFrom;
+      if (sourceCard) sourceCard.classList.remove("is-dragging");
+      storyBlocksEl.querySelectorAll(".is-drop-target").forEach(function (card) {
+        card.classList.remove("is-drop-target");
+      });
+      if (!targetCard) return;
+      moveStoryBlock(from, Number(targetCard.dataset.storyBlockIndex));
+    }
+
+    storyBlocksEl.addEventListener("pointerup", function (event) {
+      finishStoryBlockDrag(event, false);
+    });
+
+    storyBlocksEl.addEventListener("pointercancel", function (event) {
+      finishStoryBlockDrag(event, true);
+    });
+
     storyBlocksEl.addEventListener("click", function (event) {
       var openFiles = event.target.closest("[data-story-open-files]");
       if (openFiles) {
-        activateEditorStep("files", true);
+        photosInput.click();
         return;
       }
       var card = event.target.closest("[data-story-block-index]");
       if (!card) return;
       var index = Number(card.dataset.storyBlockIndex);
+      var editPreview = event.target.closest("[data-story-edit-preview]");
+      if (editPreview) {
+        var photoBlock = storyBlocks[index];
+        if (!photoBlock || photoBlock.type !== "photo" || !photoBlock.photoOrder) return;
+        setAdvancedLayoutOpen(true, false);
+        if (openPreviewDialog) openPreviewDialog(editPreview);
+        window.requestAnimationFrame(function () {
+          selectStoryPhoto(index, true);
+        });
+        return;
+      }
+      if (event.target.closest("[data-story-insert-text]")) {
+        if (storyBlocks.length >= MAX_STORY_BLOCKS) {
+          updateStoryOrderStatus("Pasiektas " + MAX_STORY_BLOCKS + " turinio blokų limitas.");
+          return;
+        }
+        storyBlocks.splice(index + 1, 0, {
+          type: "text",
+          text: "",
+          fontScale: 100,
+          offsetX: 0,
+          offsetY: 0
+        });
+        storyEmptyMode = false;
+        renderStoryBlockEditor(index + 1, "text");
+        updateStoryOrderStatus("Nauja teksto dalis įterpta po " + (index + 1) + " bloku.");
+        scheduleDraftSave();
+        return;
+      }
       var move = event.target.closest("[data-story-move]");
       if (move) {
         var targetIndex = index + Number(move.dataset.storyMove);
-        if (targetIndex < 0 || targetIndex >= storyBlocks.length) return;
-        clearStoryPhotoSelection();
-        var moved = storyBlocks.splice(index, 1)[0];
-        storyBlocks.splice(targetIndex, 0, moved);
-        renderStoryBlockEditor(targetIndex, moved.type);
-        scheduleDraftSave();
+        moveStoryBlock(index, targetIndex);
         return;
       }
       if (event.target.closest("[data-story-delete]")) {
@@ -1346,6 +1557,7 @@
         storyBlocks.splice(index, 1);
         ensurePersistableStoryMode();
         renderStoryBlockEditor(Math.min(index, storyBlocks.length - 1));
+        updateStoryOrderStatus("Blokas ištrintas.");
         scheduleDraftSave();
       }
     });
@@ -1369,11 +1581,22 @@
           statusEl.textContent = "Galima pridėti iki " + MAX_STORY_BLOCKS + " turinio blokų.";
           return;
         }
+        var unusedPhotoOrder = firstUnusedStoryPhotoOrder();
+        if (unusedPhotoOrder === null) {
+          if (!storyPhotoCount()) {
+            updateStoryOrderStatus("Pirmiausia pasirinkite bent vieną nuotrauką.");
+            photosInput.click();
+          } else {
+            updateStoryOrderStatus("Visos įkeltos nuotraukos jau yra istorijoje.");
+            photosInput.focus();
+          }
+          return;
+        }
         if (storyEmptyMode) storyBlocks = [];
         storyEmptyMode = false;
         storyBlocks.push({
           type: "photo",
-          photoOrder: firstUnusedStoryPhotoOrder(),
+          photoOrder: unusedPhotoOrder,
           align: "full",
           widthPct: 100,
           fit: "contain",
@@ -2485,7 +2708,7 @@
     if (!photoDraftPersistenceFailed) scheduleDraftSave();
     statusEl.textContent = allFiles.length > MAX_PHOTOS
       ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
-      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Eiliškumą galite keisti tempdami." : "");
+      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Jų ir teksto tvarką keiskite tempdami korteles arba rodyklėmis." : "");
   }
 
   function pct(value, total) {
@@ -2673,21 +2896,27 @@
     });
   }
 
-  function setupAdvancedLayout() {
-    if (!advancedLayoutToggle || !advancedLayoutEl) return;
-    stage.classList.add("is-simple-layout");
+  function setAdvancedLayoutOpen(open, scrollToControls) {
+    if (advancedLayoutEl) advancedLayoutEl.hidden = !open;
+    if (advancedLayoutToggle) {
+      advancedLayoutToggle.setAttribute("aria-expanded", String(open));
+      advancedLayoutToggle.textContent = open ? "Baigti tikslų koregavimą" : "Tiksliai koreguoti išdėstymą";
+    }
+    stage.classList.toggle("is-simple-layout", !open);
     syncStoryPhotoInteractivity();
+    if (!open) clearStoryPhotoSelection();
+    if (open && scrollToControls && advancedLayoutEl) {
+      advancedLayoutEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function setupAdvancedLayout() {
+    stage.classList.add("is-simple-layout");
+    setAdvancedLayoutOpen(false, false);
+    if (!advancedLayoutToggle || !advancedLayoutEl) return;
     advancedLayoutToggle.addEventListener("click", function () {
       var open = advancedLayoutEl.hidden;
-      advancedLayoutEl.hidden = !open;
-      advancedLayoutToggle.setAttribute("aria-expanded", String(open));
-      advancedLayoutToggle.textContent = open ? "Slėpti papildomus nustatymus" : "Noriu koreguoti pats";
-      stage.classList.toggle("is-simple-layout", !open);
-      syncStoryPhotoInteractivity();
-      if (!open) clearStoryPhotoSelection();
-      if (open) {
-        advancedLayoutEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
+      setAdvancedLayoutOpen(open, open);
     });
   }
 
@@ -2805,8 +3034,8 @@
     var close = document.querySelector("[data-editor-preview-close]");
     var canvas = document.querySelector(".editor-canvas");
     var previewOpener = null;
-    function openPreview(event) {
-      previewOpener = event && event.currentTarget ? event.currentTarget : null;
+    function openPreview(opener) {
+      previewOpener = opener && opener.currentTarget ? opener.currentTarget : opener;
       document.body.classList.add("editor-preview-open");
       if (canvas) {
         canvas.scrollTop = 0;
@@ -2816,6 +3045,7 @@
       if (close) close.focus();
       window.requestAnimationFrame(function () { refreshResponsiveStage(true); });
     }
+    openPreviewDialog = openPreview;
     function closePreview() {
       document.body.classList.remove("editor-preview-open");
       clearStoryPhotoSelection();
@@ -3148,6 +3378,9 @@
 
   if (clearDraftButton) {
     clearDraftButton.addEventListener("click", function () {
+      if (!window.confirm("Pradėti iš naujo? Dabartinis tekstas, nuotraukos ir kiti šio juodraščio pakeitimai bus pašalinti iš šio įrenginio.")) {
+        return;
+      }
       clearDraft().catch(function (err) {
         console.warn(err);
         statusEl.textContent = "Nepavyko išvalyti juodraščio.";

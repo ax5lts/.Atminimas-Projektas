@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260731-2">
+<link rel="stylesheet" href="css/styles.css?v=20260803-2">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -49,7 +49,7 @@
             <span id="editor-product-unavailable-message"></span>
             <a href="parduotuve.html">Grįžti į parduotuvę</a>
           </p>
-          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis bus saugomas šiame įrenginyje, o prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą.</p>
+          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas, todėl galite užverti redaktorių ir pratęsti vėliau; prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą.</p>
           <p class="editor-prototype-notice" id="editor-prototype-notice" hidden>
             Administratoriaus prototipas: puslapis ir QR bus paskelbti be užsakymo bei mokėjimo.
           </p>
@@ -57,20 +57,19 @@
         </div>
       </div>
       <nav class="editor-stepper" aria-label="Puslapio kūrimo žingsniai">
-        <button class="is-active" type="button" data-editor-step-button="text" aria-controls="editor-section-text" aria-current="step"><span>1</span>Informacija</button>
+        <button class="is-active" type="button" data-editor-step-button="text" aria-controls="editor-section-text" aria-current="step"><span>1</span>Turinys</button>
         <button type="button" data-editor-step-button="colors" aria-controls="editor-section-colors"><span>2</span>Dizainas</button>
-        <button type="button" data-editor-step-button="files" aria-controls="editor-section-files"><span>3</span>Failai</button>
-        <button type="button" data-editor-step-button="positions" aria-controls="editor-section-positions"><span>4</span>Išdėstymas</button>
-        <button type="button" data-editor-step-button="preview" aria-controls="editor-section-preview"><span>5</span>Peržiūra</button>
+        <button type="button" data-editor-step-button="files" aria-controls="editor-section-files"><span>3</span>Papildomai</button>
+        <button type="button" data-editor-step-button="preview" aria-controls="editor-section-preview"><span>4</span>Peržiūra</button>
       </nav>
-      <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 5: Informacija</p>
-      <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="1 žingsnis iš 5: Informacija"><span id="editor-step-progress"></span></div>
+      <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 4: Turinys</p>
+      <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-valuetext="1 žingsnis iš 4: Turinys"><span id="editor-step-progress"></span></div>
       <form id="editor-form" class="editor-form" novalidate aria-describedby="editor-step-status">
         <section class="editor-step is-active" id="editor-section-text" data-editor-step="text" aria-labelledby="editor-step-text-title" aria-hidden="false">
           <header class="editor-step__header">
-            <span>1 žingsnis iš 5</span>
-            <h2 id="editor-step-text-title" tabindex="-1">Asmens informacija</h2>
-            <p>Įrašykite pagrindinius duomenis ir gyvenimo istoriją. Viską galėsite pakeisti vėliau.</p>
+            <span>1 žingsnis iš 4</span>
+            <h2 id="editor-step-text-title" tabindex="-1">Asmuo ir gyvenimo istorija</h2>
+            <p>Įrašykite pagrindinius duomenis, įkelkite nuotraukas ir sudėliokite istoriją paprasta blokų tvarka.</p>
           </header>
           <label>
             Vardas
@@ -151,13 +150,24 @@
           </label>
           <fieldset class="editor-story-builder" aria-describedby="editor-story-help">
             <legend id="editor-story-builder-title">Gyvenimo istorija</legend>
-            <p class="editor-field-help" id="editor-story-help">Kurkite istoriją dalimis. Teksto ir nuotraukų blokai galutiniame puslapyje bus rodomi tokia pačia eilės tvarka.</p>
-            <p class="editor-story-wrap-help">Kad tekstas aptekėtų nuotrauką, nuotraukos bloke pasirinkite kairę arba dešinę pusę ir rodyklėmis perkelkite šį bloką prieš norimą teksto dalį.</p>
+            <p class="editor-field-help" id="editor-story-help">Kiekviena kortelė yra viena būsimo puslapio dalis. Jų tvarka šiame sąraše bus tokia pati ir galutiniame puslapyje.</p>
+            <ol class="editor-story-quick-guide" aria-label="Kaip sudėti gyvenimo istoriją">
+              <li><strong>Įkelkite nuotraukas</strong><span>Pasirinkite visas nuotraukas, kurias norėsite panaudoti.</span></li>
+              <li><strong>Rašykite dalimis</strong><span>Pridėkite atskirą teksto kortelę kiekvienai istorijos daliai.</span></li>
+              <li><strong>Koreguokite iškart</strong><span>Keiskite dydį kortelėje, o paspaudę nuotrauką galėsite ją judinti peržiūroje.</span></li>
+            </ol>
+            <label class="editor-story-upload">
+              <span><strong>Nuotraukos</strong><small>Iki 8 nuotraukų. Pasirinkus failus, jų kortelės atsiras istorijoje automatiškai.</small></span>
+              <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
+              <span class="editor-file-help" id="editor-photo-file-list">Nuotraukos dar nepasirinktos.</span>
+            </label>
+            <div class="editor-photo-order editor-photo-order--story" id="editor-photo-order" hidden aria-label="Nuotraukų eiliškumas"></div>
             <textarea name="tekstas_200" id="editor-story-legacy" maxlength="10000" hidden aria-hidden="true" tabindex="-1"></textarea>
             <div class="editor-story-blocks" id="editor-story-blocks" data-story-blocks role="list" aria-label="Gyvenimo istorijos turinio blokai"></div>
+            <p class="editor-story-order-status" id="editor-story-order-status" role="status" aria-live="polite"></p>
             <div class="editor-story-add-actions" role="group" aria-label="Pridėti gyvenimo istorijos turinį">
-              <button class="button button--ghost" type="button" data-story-add="text" aria-controls="editor-story-blocks">+ Pridėti tekstą</button>
-              <button class="button button--ghost" type="button" data-story-add="photo" aria-controls="editor-story-blocks">+ Pridėti nuotrauką</button>
+              <button class="button button--ghost" type="button" data-story-add="text" aria-controls="editor-story-blocks" aria-label="Pridėti tekstą">+ Nauja teksto dalis</button>
+              <button class="button button--ghost" type="button" data-story-add="photo" aria-controls="editor-story-blocks" aria-label="Pridėti nuotrauką">+ Įdėti įkeltą nuotrauką</button>
             </div>
             <p class="editor-word-count" id="editor-word-count">0 / 1000 žodžių · 0 / 10000 ženklų</p>
           </fieldset>
@@ -165,7 +175,7 @@
 
         <section class="editor-step" id="editor-section-colors" data-editor-step="colors" aria-labelledby="editor-step-colors-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
-            <span>2 žingsnis iš 5</span>
+            <span>2 žingsnis iš 4</span>
             <h2 id="editor-step-colors-title" tabindex="-1">Puslapio dizainas</h2>
             <p>Pasirinkite ramų foną. Teksto kontrastas peržiūroje prisitaikys automatiškai.</p>
           </header>
@@ -201,16 +211,10 @@
 
         <section class="editor-step" id="editor-section-files" data-editor-step="files" aria-labelledby="editor-step-files-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
-            <span>3 žingsnis iš 5</span>
-            <h2 id="editor-step-files-title" tabindex="-1">Nuotraukos ir vaizdo įrašas</h2>
-            <p>Nuotraukos prieš įkeliant sumažinamos ir optimizuojamos šiame įrenginyje.</p>
+            <span>3 žingsnis iš 4</span>
+            <h2 id="editor-step-files-title" tabindex="-1">Papildomi failai ir aprašymai</h2>
+            <p>Jei reikia, pridėkite vaizdo įrašą ir patikslinkite nuotraukų aprašymus. Šį žingsnį galima praleisti.</p>
           </header>
-          <label>
-            Nuotraukos (iki 8; pirmos 4 laisvai dėliojamos, kitos rodomos galerijoje)
-            <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
-            <span class="editor-file-help" id="editor-photo-file-list">Nuotraukos dar nepasirinktos.</span>
-          </label>
-          <div class="editor-photo-order" id="editor-photo-order" hidden aria-label="Nuotraukų eiliškumas"></div>
           <label>
             Vaizdo įrašas (1 failas, iki 50 MB)
             <input type="file" name="video" id="editor-video" accept="video/mp4,video/quicktime,video/*" aria-describedby="editor-video-help">
@@ -236,17 +240,18 @@
           </fieldset>
         </section>
 
-        <section class="editor-step" id="editor-section-positions" data-editor-step="positions" aria-labelledby="editor-step-positions-title" aria-hidden="true" hidden>
+        <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
-            <span>4 žingsnis iš 5</span>
-            <h2 id="editor-step-positions-title" tabindex="-1">Turinio išdėstymas</h2>
-            <p>Tekstas ir nuotraukos bus rodomi 1 žingsnyje pasirinkta blokų tvarka. Kiekvieną istorijos bloką galėsite perkelti atskirai.</p>
+            <span>4 žingsnis iš 4</span>
+            <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir užsakymas</h2>
+            <p>Patikrinkite puslapį, patvirtinkite teises į turinį ir išsaugokite.</p>
           </header>
+          <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Peržiūrėti kaip telefone</button>
           <div class="editor-layout-summary">
             <span aria-hidden="true">✓</span>
-            <div><strong>Automatinis išdėstymas paruoštas</strong><small>Galite iškart tęsti į peržiūrą. Blokų eiliškumą bet kada pakeisite 1 žingsnyje.</small></div>
+            <div><strong>Išdėstymas sutvarkytas automatiškai</strong><small>Nuotraukas jau galėjote didinti ir judinti 1 žingsnyje. Čia liko tik galutinė patikra.</small></div>
           </div>
-          <button class="button button--ghost" type="button" data-advanced-layout-toggle aria-expanded="false" aria-controls="editor-advanced-layout">Noriu koreguoti pats</button>
+          <button class="button button--ghost" type="button" data-advanced-layout-toggle aria-expanded="false" aria-controls="editor-advanced-layout">Tiksliai koreguoti išdėstymą</button>
           <div class="editor-advanced-layout" id="editor-advanced-layout" hidden>
             <div class="editor-transform-tools" aria-label="Senesnio nuotraukų išdėstymo keitimo režimas" hidden>
               <span>Kaip keisti pasirinktą nuotrauką?</span>
@@ -257,19 +262,9 @@
                 <button type="button" data-transform-mode="crop">Apkirpti</button>
               </div>
             </div>
-            <p class="editor-note">Peržiūroje paspauskite nuotrauką, kad galėtumėte ją didinti, mažinti ar pakeisti jos užpildymą. Keičiant kairėje ar dešinėje priglaustos nuotraukos dydį, tekstas persilaužia ir pasislenka automatiškai. Kiekvienas teksto ir nuotraukos blokas taip pat turi atskirą perkėlimo rankenėlę. Pajudinus vieną bloką, kiti lieka savo vietoje.</p>
-            <p class="editor-note">Puslapio apačia prisitaiko automatiškai: nuleidus elementą puslapis pailgės, o likusi tuščia vieta bus sutrumpinta.</p>
+            <p class="editor-note">Peržiūroje pasirinkite teksto ar nuotraukos bloką. Tuomet galėsite pakeisti jo dydį arba padėtį. Kad tekstas aptekėtų nuotrauką, pasirinkite jos vietą kairėje arba dešinėje. Pajudinus vieną bloką, kiti lieka savo vietoje. Puslapio apačia prisitaiko automatiškai. Šie nustatymai skirti tik smulkiam pataisymui.</p>
             <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Atidaryti koregavimo peržiūrą</button>
           </div>
-        </section>
-
-        <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title" aria-hidden="true" hidden>
-          <header class="editor-step__header">
-            <span>5 žingsnis iš 5</span>
-            <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir užsakymas</h2>
-            <p>Patikrinkite puslapį, patvirtinkite teises į turinį ir išsaugokite.</p>
-          </header>
-          <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Peržiūrėti kaip telefone</button>
           <fieldset class="legal-confirmations">
             <legend>Privalomi patvirtinimai</legend>
             <label><input type="checkbox" name="rights_confirm" value="yes" required> Patvirtinu, kad turiu teisę skelbti pateiktus tekstus, nuotraukas ir vaizdo įrašus, įskaitant mirusio asmens atvaizdą.</label>
@@ -280,7 +275,7 @@
           <progress class="editor-save-progress" id="editor-save-progress" max="100" value="0" hidden>0%</progress>
           <div class="editor-final-actions preview-actions" data-preview-actions>
             <button class="button" type="submit">Tęsti užsakymą</button>
-            <button class="button button--ghost" type="button" id="editor-clear-draft">Išvalyti juodraštį</button>
+            <button class="button button--ghost" type="button" id="editor-clear-draft">Pradėti iš naujo</button>
           </div>
           <p class="form-status" id="editor-status" role="status" aria-live="polite"></p>
         </section>
@@ -428,7 +423,7 @@
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260801-1"></script>
-<script src="assets/redaktorius.js?v=20260731-3"></script>
+<script src="assets/redaktorius.js?v=20260803-2"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
 <script src="assets/site-ui.js?v=20260716-1"></script>
 </body>

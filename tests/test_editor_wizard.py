@@ -13,14 +13,14 @@ class EditorWizardTests(unittest.TestCase):
         cls.script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         cls.styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
-    def test_five_steps_start_with_only_first_step_visible(self):
+    def test_four_steps_start_with_only_first_step_visible(self):
         sections = re.findall(
             r'<section class="editor-step([^"]*)"[^>]+data-editor-step="([^"]+)"[^>]*>',
             self.page,
         )
         self.assertEqual(
             [name for _, name in sections],
-            ["text", "colors", "files", "positions", "preview"],
+            ["text", "colors", "files", "preview"],
         )
         self.assertIn("is-active", sections[0][0])
         first_tag = re.search(
@@ -28,7 +28,7 @@ class EditorWizardTests(unittest.TestCase):
             self.page,
         ).group(0)
         self.assertIn('aria-hidden="false"', first_tag)
-        for step in ("colors", "files", "positions", "preview"):
+        for step in ("colors", "files", "preview"):
             tag = re.search(
                 rf'<section class="editor-step"[^>]+data-editor-step="{step}"[^>]*>',
                 self.page,
@@ -37,7 +37,7 @@ class EditorWizardTests(unittest.TestCase):
             self.assertRegex(tag, r"\shidden(?:\s|>)")
 
     def test_stepper_controls_steps_and_exposes_progress(self):
-        for step in ("text", "colors", "files", "positions", "preview"):
+        for step in ("text", "colors", "files", "preview"):
             self.assertRegex(
                 self.page,
                 rf'data-editor-step-button="{step}"[^>]+aria-controls="editor-section-{step}"',
