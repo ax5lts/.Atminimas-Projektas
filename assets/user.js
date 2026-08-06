@@ -89,9 +89,10 @@
     });
   }
 
-  function qrUrl(publicUrl) {
+  function qrUrl(publicUrl, format) {
     var absolute = new URL(publicUrl, cfg().PUBLIC_SITE_URL || window.location.href).href;
-    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute) + "&format=png";
+    var outputFormat = format === "jpg" ? "jpg" : "png";
+    return cfg().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(absolute) + "&format=" + outputFormat;
   }
 
   function safeUrl(value) {
@@ -301,6 +302,22 @@
     URL.revokeObjectURL(objectUrl);
   }
 
+  async function downloadQr(profileId, format) {
+    var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(profileId);
+    var outputFormat = format === "jpg" ? "jpg" : "png";
+    var response = await apiFetch(qrUrl(publicUrl, outputFormat));
+    if (!response.ok) throw new Error("QR kodo atsisiųsti nepavyko.");
+    var blob = await response.blob();
+    var objectUrl = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = "atminimas-" + profileId + "-qr." + outputFormat;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   async function setVisibility(profileId, active) {
     var res = await apiFetch(rpcUrl("set_my_profile_visibility"), {
       method: "POST",
@@ -383,13 +400,8 @@
       "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,tracking_url,apmoketa,payment_status,fulfillment_status,customer_approved_at,total_cents,currency,created_at&order=created_at.desc"
     ), { headers: AtminimasAuth.headers(false) });
     var orders = orderResponse.ok ? await orderResponse.json() : [];
-    var relatedResponses = await Promise.all([
-      apiFetch(restUrl("production_jobs", "select=order_id,status,qr_svg_path,qr_pdf_path&order=created_at.desc"), { headers: AtminimasAuth.headers(false) }),
-      apiFetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) })
-    ]);
-    var productionJobs = relatedResponses[0].ok ? await relatedResponses[0].json() : [];
-    var invoices = relatedResponses[1].ok ? await relatedResponses[1].json() : [];
-    var productionByOrder = Object.fromEntries(productionJobs.map(function (item) { return [item.order_id, item]; }));
+    var invoiceResponse = await apiFetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) });
+    var invoices = invoiceResponse.ok ? await invoiceResponse.json() : [];
     var invoiceByOrder = Object.fromEntries(invoices.map(function (item) { return [item.order_id, item]; }));
     var orderByProfile = {};
     orders.forEach(function (order) {
@@ -399,9 +411,7 @@
     listEl.innerHTML = rows.map(function (row) {
       var name = [row.vardas, row.pavarde].filter(Boolean).join(" ") || row.id;
       var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
-      var profileQrUrl = qrUrl(publicUrl);
       var order = orderByProfile[row.id];
-      var production = order ? productionByOrder[order.id] : null;
       var invoice = order ? invoiceByOrder[order.id] : null;
       var shipment = order
         ? "<div class='user-card-status'><span>Užsakymas</span><strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><span>Pristatymas</span><strong>" + html(shippingName(order.shipping_status)) + "</strong></div>"
@@ -409,9 +419,9 @@
       var moreActions =
         "<a class='button button--ghost' href='" + publicUrl + "'>Peržiūrėti puslapį</a>" +
         "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a>" +
-        "<a class='button button--ghost' href='" + profileQrUrl + "' download='atminimas-" + html(row.id) + "-qr.png'>Atsisiųsti QR</a>" +
+        "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>QR PNG</button>" +
+        "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='jpg'>QR JPG</button>" +
         (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
-        (production && (production.qr_svg_path || production.qr_pdf_path) ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='qr'>Gamybos QR</button>" : "") +
         "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Rodyti viešai") + "</button>" +
         "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti puslapį</button>";
       return (
@@ -430,6 +440,20 @@
   }
 
   listEl.addEventListener("click", async function (event) {
+    var qrButton = event.target.closest("button[data-qr-profile]");
+    if (qrButton) {
+      qrButton.disabled = true;
+      statusEl.textContent = "QR kodas ruošiamas...";
+      try {
+        await downloadQr(qrButton.dataset.qrProfile, qrButton.dataset.qrFormat);
+        statusEl.textContent = "QR kodas atsisiųstas.";
+      } catch (error) {
+        statusEl.textContent = error.message || "QR kodo atsisiųsti nepavyko.";
+      } finally {
+        qrButton.disabled = false;
+      }
+      return;
+    }
     var deleteButton = event.target.closest("button[data-delete-profile]");
     if (deleteButton) {
       var profileName = deleteButton.dataset.profileName || "šį puslapį";

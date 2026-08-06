@@ -380,7 +380,7 @@
       supabaseJson(restUrl("shipping_catalog", "select=carrier,price_cents,enabled&order=carrier"))
     ]);
     var business = results[0][0] || {};
-    ["legal_name", "activity_form", "registration_code", "vat_code", "address", "email", "phone", "invoice_document_type"].forEach(function (name) {
+    ["legal_name", "activity_form", "registration_code", "vat_code", "address", "email", "phone", "manufacturer_name", "manufacturer_email", "invoice_document_type"].forEach(function (name) {
       if (businessSettingsForm.elements[name]) businessSettingsForm.elements[name].value = business[name] || (name === "invoice_document_type" ? "payment_confirmation" : "");
     });
     businessSettingsForm.elements.ready_for_invoicing.checked = !!business.ready_for_invoicing;
@@ -423,6 +423,8 @@
       address: values.address || null,
       email: values.email || null,
       phone: values.phone || null,
+      manufacturer_name: values.manufacturer_name || null,
+      manufacturer_email: values.manufacturer_email || null,
       invoice_document_type: values.invoice_document_type || "payment_confirmation",
       ready_for_invoicing: values.ready_for_invoicing === "on",
       updated_at: new Date().toISOString()
@@ -463,18 +465,25 @@
       var profile = order && profileFor(order.profilis_id);
       var name = profile ? [profile.vardas, profile.pavarde].filter(Boolean).join(" ") : (order ? order.profilis_id : job.order_id);
       var statuses = ["queued", "qr_ready", "in_production", "quality_check", "ready_to_ship", "completed", "cancelled"];
+      var sentDetails = job.manufacturer_email_sent_at
+        ? "<small class='muted'>Išsiųsta " + html(formatDate(job.manufacturer_email_sent_at)) + (job.manufacturer_email_recipient ? " → " + html(job.manufacturer_email_recipient) : "") + "</small>"
+        : "<small class='muted'>Gamintojui dar neišsiųsta</small>";
+      var qrActions = job.qr_svg_path
+        ? "<div class='actions admin-actions'><button class='button button--ghost' type='button' data-download-document='qr'>Atsisiųsti SVG</button>" +
+          "<button class='button' type='button' data-email-production data-already-sent='" + (!!job.manufacturer_email_sent_at) + "'>" + (job.manufacturer_email_sent_at ? "Siųsti SVG dar kartą" : "Siųsti SVG gamintojui") + "</button></div>" + sentDetails
+        : "<span class='muted'>Ruošiamas</span>";
       return "<tr data-production-id='" + html(job.id) + "' data-order-id='" + html(job.order_id) + "'>" +
         "<td><strong>" + html(name) + "</strong><br><span class='muted'>#" + html(shortId(job.order_id)) + "</span></td>" +
         "<td><select data-production-status>" + statuses.map(function (status) { return "<option value='" + status + "' " + (job.status === status ? "selected" : "") + ">" + status + "</option>"; }).join("") + "</select></td>" +
         "<td><input type='date' data-production-date value='" + html(job.scheduled_for || "") + "'></td>" +
-        "<td>" + (job.qr_svg_path ? "<button class='button button--ghost' type='button' data-download-document='qr'>Atsisiųsti QR</button>" : "<span class='muted'>Ruošiamas</span>") + "</td>" +
+        "<td>" + qrActions + "</td>" +
         "<td><textarea data-production-note rows='2' maxlength='3000'>" + html(job.admin_note || "") + "</textarea></td>" +
         "<td><button class='button' type='button' data-save-production>Išsaugoti</button></td></tr>";
     }).join("") || "<tr><td colspan='6'>Gamybos darbų nėra.</td></tr>";
   }
 
   async function loadProduction() {
-    productionCache = await supabaseJson(restUrl("production_jobs", "select=id,order_id,status,qr_svg_path,qr_pdf_path,scheduled_for,admin_note,customer_approved_at,created_at,updated_at&order=created_at.asc"));
+    productionCache = await supabaseJson(restUrl("production_jobs", "select=id,order_id,status,qr_svg_path,qr_pdf_path,manufacturer_email_recipient,manufacturer_email_sent_at,scheduled_for,admin_note,customer_approved_at,created_at,updated_at&order=created_at.asc"));
     productionPanel.hidden = false;
     renderProduction();
     updateOverview();
@@ -493,6 +502,18 @@
       })
     });
     setStatus("Gamybos darbas atnaujintas.");
+    await loadProduction();
+  }
+
+  async function emailProduction(orderId, resend) {
+    var response = await fetch(functionUrl("production-email"), {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { "Content-Type": "application/json" }),
+      body: JSON.stringify({ order_id: orderId, resend: !!resend })
+    });
+    var result = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(result.error || "SVG gamintojui išsiųsti nepavyko.");
+    setStatus("SVG išsiųstas gamintojui: " + result.recipient);
     await loadProduction();
   }
 
@@ -1063,6 +1084,18 @@
       downloadDocument(tr.dataset.orderId, download.dataset.downloadDocument).catch(function (err) {
         setStatus(err.message || "Nepavyko atsisiųsti failo.");
       }).finally(function () { download.disabled = false; });
+      return;
+    }
+    var emailButton = event.target.closest("[data-email-production]");
+    if (emailButton) {
+      var resend = emailButton.dataset.alreadySent === "true";
+      if (resend && !window.confirm("Šis SVG jau buvo išsiųstas. Siųsti gamintojui dar kartą?")) return;
+      if (!resend && !window.confirm("Išsiųsti šio užsakymo SVG failą nustatytam lentelių gamintojui?")) return;
+      emailButton.disabled = true;
+      setStatus("SVG siunčiamas gamintojui...");
+      emailProduction(tr.dataset.orderId, resend).catch(function (err) {
+        setStatus(err.message || "SVG gamintojui išsiųsti nepavyko.");
+      }).finally(function () { emailButton.disabled = false; });
       return;
     }
     var save = event.target.closest("[data-save-production]");
