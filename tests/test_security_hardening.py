@@ -279,6 +279,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertRegex(config, r"(?s)\[functions\.profile-manage\]\s*verify_jwt\s*=\s*true")
         self.assertRegex(config, r"(?s)\[functions\.payment-create\]\s*verify_jwt\s*=\s*true")
         self.assertRegex(config, r"(?s)\[functions\.document-download\]\s*verify_jwt\s*=\s*true")
+        self.assertRegex(config, r"(?s)\[functions\.production-email\]\s*verify_jwt\s*=\s*true")
         self.assertRegex(config, r"(?s)\[functions\.shipping-create\]\s*verify_jwt\s*=\s*true")
         self.assertRegex(config, r"(?s)\[functions\.profile-content\]\s*verify_jwt\s*=\s*false")
         self.assertRegex(config, r"(?s)\[functions\.legal-submission\]\s*verify_jwt\s*=\s*false")

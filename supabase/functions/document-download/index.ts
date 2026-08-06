@@ -24,8 +24,12 @@ Deno.serve(async (request: Request) => {
     ).eq("role", "admin").maybeSingle();
     const ownerId = (order?.profiliai as { owner_id?: string } | null)
       ?.owner_id;
-    if (!order || (ownerId !== user.id && role?.role !== "admin")) {
+    const isAdmin = role?.role === "admin";
+    if (!order || (ownerId !== user.id && !isAdmin)) {
       return json({ error: "Prieiga draudžiama" }, 403);
+    }
+    if (type === "qr" && !isAdmin) {
+      return json({ error: "Gamybos SVG skirtas tik administratoriui" }, 403);
     }
 
     let path: string | null = null;

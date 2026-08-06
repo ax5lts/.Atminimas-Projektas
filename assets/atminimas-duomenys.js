@@ -69,8 +69,9 @@
     return new URL(path, getConfig().PUBLIC_SITE_URL || global.location.href).href;
   }
 
-  function qrImageUrl(pageUrl) {
-    return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl) + "&format=png";
+  function qrImageUrl(pageUrl, format) {
+    var outputFormat = ["png", "jpg", "svg"].indexOf(format) >= 0 ? format : "png";
+    return getConfig().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/qr-code?data=" + encodeURIComponent(pageUrl) + "&format=" + outputFormat;
   }
 
   function slugify(value) {

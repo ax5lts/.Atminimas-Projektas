@@ -4,6 +4,7 @@ type Attachment = { filename: string; content: string };
 
 export async function sendEmail(input: {
   to: string;
+  replyTo?: string;
   subject: string;
   heading: string;
   paragraphs: string[];
@@ -50,6 +51,7 @@ export async function sendEmail(input: {
     body: JSON.stringify({
       from,
       to: [input.to],
+      reply_to: input.replyTo || undefined,
       subject: input.subject,
       html,
       attachments: input.attachments || [],

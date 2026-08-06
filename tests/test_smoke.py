@@ -219,19 +219,43 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertNotIn("api.qrserver.com", path.read_text(encoding="utf-8"))
 
-    def test_user_qr_downloads_are_png_while_production_keeps_svg(self):
+    def test_user_qr_downloads_support_png_and_jpg_while_production_keeps_svg(self):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         actions = (ROOT / "assets" / "memorial-actions.js").read_text(encoding="utf-8")
         manager = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
         worker = (ROOT / "supabase" / "functions" / "automation-worker" / "index.ts").read_text(encoding="utf-8")
+        qr_edge = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
 
-        for source in (api, admin, user, manager):
+        for source in (admin, manager):
             self.assertIn("&format=png", source)
+        self.assertIn('["png", "jpg", "svg"]', api)
+        self.assertIn('format === "jpg" ? "jpg" : "png"', user)
+        self.assertIn("data-qr-format='png'", user)
+        self.assertIn("data-qr-format='jpg'", user)
+        self.assertNotIn("data-document-type='qr'", user)
+        self.assertIn('"Content-Type": "image/jpeg"', qr_edge)
+        self.assertIn('filename="atminimas-qr.jpg"', qr_edge)
         self.assertIn('download = "atminimas-" + profile.id + "-qr.png"', actions)
-        self.assertIn("-qr.png'>Atsisiųsti QR</a>", user)
         self.assertIn("&format=svg", worker)
+
+    def test_manufacturer_svg_email_requires_admin_and_private_storage(self):
+        edge = (ROOT / "supabase" / "functions" / "production-email" / "index.ts").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260806165352_manufacturer_qr_delivery.sql").read_text(encoding="utf-8").lower()
+
+        self.assertIn('eq("role", "admin")', edge)
+        self.assertIn('if (role?.role !== "admin")', edge)
+        self.assertIn("readJson(request, 8_000)", edge)
+        self.assertIn('.storage.from("automation-documents").download', edge)
+        self.assertIn('!/<svg[\\s>]/i.test(svgText)', edge)
+        self.assertIn("bytesToBase64(svgBytes)", edge)
+        self.assertIn("manufacturer_email_sent_at", migration)
+        self.assertIn("manufacturer_email_recipient", migration)
+        self.assertIn("data-email-production", admin)
+        download = (ROOT / "supabase" / "functions" / "document-download" / "index.ts").read_text(encoding="utf-8")
+        self.assertIn('if (type === "qr" && !isAdmin)', download)
 
     def test_legal_and_delivery_pages_exist(self):
         for name in (
@@ -429,7 +453,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260801-1', user_page)
+        self.assertIn('assets/user.js?v=20260806-1', user_page)
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -591,7 +615,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260801-1', html)
+        self.assertIn('assets/admin.js?v=20260806-1', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)

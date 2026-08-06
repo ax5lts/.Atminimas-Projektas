@@ -78,6 +78,8 @@
           <label>Adresas<input name="address" maxlength="300"></label>
           <label>El. paštas<input type="email" name="email" maxlength="254"></label>
           <label>Telefonas<input name="phone" maxlength="40"></label>
+          <label>Lentelių gamintojas<input name="manufacturer_name" maxlength="200" placeholder="Įmonės pavadinimas"></label>
+          <label>Gamintojo el. paštas<input type="email" name="manufacturer_email" maxlength="254" placeholder="gamyba@imone.lt"></label>
           <label>Dokumento tipas<select name="invoice_document_type"><option value="payment_confirmation">Mokėjimo patvirtinimas</option><option value="invoice">Sąskaita faktūra</option><option value="vat_invoice">PVM sąskaita faktūra</option></select></label>
           <label>Graviruota plieno QR atminimo lentelė, EUR<input type="number" name="metal_price" min="0" step="0.01"></label>
           <label>ASA QR atminimo lentelė, EUR<input type="number" name="asa_price" min="0" step="0.01"></label>
@@ -95,7 +97,8 @@
 
     <section class="admin-panel" id="admin-production" hidden aria-labelledby="production-title">
       <div class="admin-toolbar"><div><p class="eyebrow">Gamyba</p><h2 id="production-title">Reikia pagaminti</h2></div><button class="button button--ghost" id="production-refresh" type="button">Atnaujinti</button></div>
-      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užsakymas</th><th>Būsena</th><th>Suplanuota</th><th>QR failas</th><th>Pastaba</th><th>Veiksmai</th></tr></thead><tbody id="production-rows"></tbody></table></div>
+      <p class="editor-note">Klientui pateikiami PNG ir JPG failai. Gamintojui siųskite tik SVG — prieš pirmą siuntimą nustatymuose įrašykite gamintojo el. paštą.</p>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Užsakymas</th><th>Būsena</th><th>Suplanuota</th><th>QR gamybai</th><th>Pastaba</th><th>Veiksmai</th></tr></thead><tbody id="production-rows"></tbody></table></div>
     </section>
 
     <section class="admin-panel" id="admin-automation" hidden aria-labelledby="automation-title">
@@ -237,7 +240,7 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
-<script src="assets/admin.js?v=20260801-1"></script>
+<script src="assets/admin.js?v=20260806-1"></script>
 <script src="assets/graves-admin.js?v=20260712-1"></script>
 <script src="assets/grave-photo-admin.js?v=20260719-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
