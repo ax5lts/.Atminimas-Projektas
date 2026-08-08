@@ -25,6 +25,24 @@
   var automationPanel = document.getElementById("admin-automation");
   var automationRows = document.getElementById("automation-rows");
   var automationRefresh = document.getElementById("automation-refresh");
+  var opsPanel = document.getElementById("admin-ops");
+  var opsRefresh = document.getElementById("ops-refresh");
+  var opsAlertRows = document.getElementById("ops-alert-rows");
+  var opsEmailRows = document.getElementById("ops-email-rows");
+  var opsSiteHealth = document.getElementById("ops-site-health");
+  var opsLastRun = document.getElementById("ops-last-run");
+  var opsOpenAlerts = document.getElementById("ops-open-alerts");
+  var opsCriticalAlerts = document.getElementById("ops-critical-alerts");
+  var opsOrdersToday = document.getElementById("ops-orders-today");
+  var opsPaidToday = document.getElementById("ops-paid-today");
+  var opsRevenueToday = document.getElementById("ops-revenue-today");
+  var opsEmailProblems = document.getElementById("ops-email-problems");
+  var opsEmailPending = document.getElementById("ops-email-pending");
+  var opsAssistantForm = document.getElementById("ops-assistant-form");
+  var opsQuestion = document.getElementById("ops-question");
+  var opsAsk = document.getElementById("ops-ask");
+  var opsAnswer = document.getElementById("ops-answer");
+  var opsStatus = document.getElementById("ops-status");
   var ordersPanel = document.getElementById("admin-orders");
   var orderRows = document.getElementById("order-rows");
   var orderSearch = document.getElementById("admin-order-search");
@@ -57,6 +75,9 @@
   var serviceRequestCache = [];
   var productionCache = [];
   var automationCache = [];
+  var opsAlertCache = [];
+  var opsEmailCache = [];
+  var opsSnapshot = null;
   var memoryCache = [];
   var servicePriceKeys = [
     "candle_1", "candle_2", "candle_5", "candle_other",
@@ -801,6 +822,85 @@
     updateOverview();
   }
 
+  function opsBadge(value, severity) {
+    var klass = severity === "critical" || ["failed", "bounced", "complained", "suppressed"].indexOf(value) !== -1
+      ? "admin-badge--danger"
+      : severity === "warning" || ["delayed", "accepted", "sent"].indexOf(value) !== -1
+      ? "admin-badge--warning"
+      : "admin-badge--success";
+    return "<span class='admin-badge " + klass + "'>" + html(value || "–") + "</span>";
+  }
+
+  function renderOps() {
+    var metrics = opsSnapshot && opsSnapshot.metrics ? opsSnapshot.metrics : {};
+    var health = metrics.site_health || "unknown";
+    opsSiteHealth.textContent = health === "healthy" ? "Veikia" : health === "degraded" ? "Patikrinti" : "Nėra duomenų";
+    opsSiteHealth.className = health === "healthy" ? "ops-value--success" : health === "degraded" ? "ops-value--danger" : "";
+    opsLastRun.textContent = opsSnapshot ? "Patikrinta " + formatDate(opsSnapshot.generated_at) : "Laukiama pirmos patikros";
+    opsOpenAlerts.textContent = String(opsAlertCache.length);
+    opsCriticalAlerts.textContent = opsAlertCache.filter(function (row) { return row.severity === "critical"; }).length + " kritinių";
+    opsOrdersToday.textContent = String(Number(metrics.orders_today || 0));
+    opsPaidToday.textContent = Number(metrics.paid_today || 0) + " apmokėta";
+    opsRevenueToday.textContent = cents(Number(metrics.revenue_today_cents || 0));
+    opsEmailProblems.textContent = String(Number(metrics.email_problems || 0));
+    opsEmailPending.textContent = Number(metrics.email_delivery_pending || 0) + " laukia patvirtinimo";
+
+    opsAlertRows.innerHTML = opsAlertCache.map(function (alert) {
+      return "<tr><td>" + opsBadge(alert.severity === "critical" ? "kritinis" : alert.severity === "warning" ? "įspėjimas" : "informacija", alert.severity) + "</td>" +
+        "<td><strong>" + html(alert.title) + "</strong><br><span class='muted'>" + html(alert.detail || "") + "</span></td>" +
+        "<td>" + html(formatDate(alert.last_seen_at)) + "</td></tr>";
+    }).join("") || "<tr><td colspan='3'>Atvirų įspėjimų nėra.</td></tr>";
+
+    opsEmailRows.innerHTML = opsEmailCache.map(function (message) {
+      return "<tr><td><strong>" + html(message.recipient_masked) + "</strong><br><span class='muted'>" + html(message.recipient_kind) + "</span></td>" +
+        "<td>" + html(message.category) + "</td><td>" + opsBadge(message.status) + "</td><td>" + html(formatDate(message.last_event_at || message.sent_at)) + "</td></tr>";
+    }).join("") || "<tr><td colspan='4'>Išsiųstų laiškų dar nėra.</td></tr>";
+  }
+
+  async function loadOps() {
+    opsPanel.hidden = false;
+    opsStatus.textContent = "Įkeliama veiklos suvestinė...";
+    try {
+      var results = await Promise.all([
+        supabaseJson(restUrl("ops_daily_snapshots", "select=snapshot_date,metrics,generated_at&order=snapshot_date.desc&limit=1")),
+        supabaseJson(restUrl("ops_alerts", "select=id,severity,category,title,detail,last_seen_at&status=eq.open&order=last_seen_at.desc&limit=100")),
+        supabaseJson(restUrl("email_messages", "select=id,recipient_masked,recipient_kind,category,status,sent_at,last_event_at&order=sent_at.desc&limit=40"))
+      ]);
+      opsSnapshot = results[0] && results[0][0] ? results[0][0] : null;
+      opsAlertCache = results[1] || [];
+      opsEmailCache = results[2] || [];
+      renderOps();
+      opsStatus.textContent = opsSnapshot ? "Suvestinė atnaujinta." : "Automatinė patikra dar nebuvo įvykdyta.";
+    } catch (error) {
+      opsStatus.textContent = "Veiklos suvestinės įkelti nepavyko: " + (error.message || "nežinoma klaida");
+    }
+  }
+
+  async function askOpsAssistant() {
+    opsAsk.disabled = true;
+    opsStatus.textContent = "AI analizuoja naujausią suvestinę...";
+    opsAnswer.hidden = true;
+    try {
+      var response = await fetch(functionUrl("ops-assistant"), {
+        method: "POST",
+        headers: AtminimasAuth.headers(true),
+        body: JSON.stringify({ question: opsQuestion.value.trim() })
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(data.error || "AI suvestinės gauti nepavyko.");
+      var priorities = Array.isArray(data.priorities) && data.priorities.length
+        ? "<ol>" + data.priorities.map(function (item) { return "<li>" + html(item) + "</li>"; }).join("") + "</ol>"
+        : "";
+      opsAnswer.innerHTML = "<p>" + html(data.answer || "Atsakymo nėra.") + "</p>" + priorities;
+      opsAnswer.hidden = false;
+      opsStatus.textContent = data.ai_available === false
+        ? "Rodoma saugi automatinė suvestinė; OpenAI šiuo metu nepasiekiamas."
+        : "AI atsakymas paruoštas.";
+    } finally {
+      opsAsk.disabled = false;
+    }
+  }
+
   async function loadAdmin() {
     setStatus("Tikrinamos administratoriaus teisės...");
     var me = await AtminimasAuth.user();
@@ -818,6 +918,7 @@
       businessSettingsPanel.hidden = true;
       productionPanel.hidden = true;
       automationPanel.hidden = true;
+      opsPanel.hidden = true;
       setStatus(me ? "Ši paskyra neturi administratoriaus teisių." : "Prisijunkite administratoriaus paskyra.");
       return;
     }
@@ -837,6 +938,7 @@
     await loadBusinessSettings();
     await loadProduction();
     await loadAutomation();
+    await loadOps();
     await loadShipments();
     await loadServiceRequests();
     try {
@@ -1126,6 +1228,15 @@
   automationRefresh.addEventListener("click", function () {
     loadAutomation().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti automatikos klaidų."); });
   });
+  opsRefresh.addEventListener("click", function () {
+    loadOps().catch(function (err) { opsStatus.textContent = err.message || "Nepavyko atnaujinti veiklos suvestinės."; });
+  });
+  opsAssistantForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    askOpsAssistant().catch(function (err) {
+      opsStatus.textContent = err.message || "AI suvestinės gauti nepavyko.";
+    });
+  });
   searchInput.addEventListener("input", render);
   refreshButton.addEventListener("click", function () {
     loadAdmin().catch(function (err) {
@@ -1158,6 +1269,7 @@
     businessSettingsPanel.hidden = true;
     productionPanel.hidden = true;
     automationPanel.hidden = true;
+    opsPanel.hidden = true;
     setStatus("Atsijungta.");
   });
 

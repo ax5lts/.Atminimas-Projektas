@@ -58,6 +58,15 @@ verify_jwt = false
 [functions.help-chatbot]
 verify_jwt = false
 
+[functions.resend-webhook]
+verify_jwt = false
+
+[functions.ops-monitor]
+verify_jwt = false
+
+[functions.ops-assistant]
+verify_jwt = true
+
 [api]
 enabled = true
 # Port to use for the API URL.

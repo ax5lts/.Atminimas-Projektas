@@ -102,6 +102,9 @@ Deno.serve(async (request: Request) => {
       idempotencyKey: resend
         ? `manufacturer:${orderId}:${crypto.randomUUID()}`
         : `manufacturer:${orderId}:initial`,
+      orderId,
+      recipientKind: "manufacturer",
+      category: "production.manufacturer_svg",
     });
 
     const sentAt = new Date().toISOString();
