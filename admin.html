@@ -67,6 +67,41 @@
       <article><span>Prisiminimų moderavimas</span><strong id="admin-memory-count">0</strong><small id="admin-pending-memories">0 laukia peržiūros</small></article>
     </section>
 
+    <section class="admin-panel ops-panel" id="admin-ops" hidden aria-labelledby="ops-title">
+      <div class="admin-toolbar">
+        <div><p class="eyebrow">Automatinė priežiūra</p><h2 id="ops-title">Svetainės ir užsakymų būklė</h2></div>
+        <button class="button button--ghost" id="ops-refresh" type="button">Atnaujinti</button>
+      </div>
+      <p class="editor-note">Patikra automatiškai vyksta kas 5 minutes. AI mato tik technines suvestines ir užmaskuotus gavėjus; jis negali keisti užsakymų ar klientų duomenų.</p>
+      <div class="ops-metrics" aria-label="Veiklos rodikliai">
+        <article><span>Svetainė</span><strong id="ops-site-health">–</strong><small id="ops-last-run">Laukiama patikros</small></article>
+        <article><span>Atviri įspėjimai</span><strong id="ops-open-alerts">0</strong><small id="ops-critical-alerts">0 kritinių</small></article>
+        <article><span>Užsakymai šiandien</span><strong id="ops-orders-today">0</strong><small id="ops-paid-today">0 apmokėta</small></article>
+        <article><span>Pajamos šiandien</span><strong id="ops-revenue-today">0,00 €</strong><small>Pagal apmokėtus užsakymus</small></article>
+        <article><span>Laiškų problemos</span><strong id="ops-email-problems">0</strong><small id="ops-email-pending">0 laukia patvirtinimo</small></article>
+      </div>
+
+      <div class="ops-grid">
+        <div>
+          <h3>Atviri įspėjimai</h3>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Svarba</th><th>Problema</th><th>Paskutinį kartą</th></tr></thead><tbody id="ops-alert-rows"></tbody></table></div>
+        </div>
+        <div>
+          <h3>Naujausi laiškai</h3>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Gavėjas</th><th>Tipas</th><th>Būsena</th><th>Laikas</th></tr></thead><tbody id="ops-email-rows"></tbody></table></div>
+        </div>
+      </div>
+
+      <form class="ops-assistant" id="ops-assistant-form">
+        <div><h3>Paklausti AI apie veiklą</h3><p>AI paaiškins suvestinę, bet pats neatliks jokių veiksmų.</p></div>
+        <label for="ops-question">Klausimas</label>
+        <textarea id="ops-question" maxlength="600" rows="3" placeholder="Pavyzdžiui: ką dabar svarbiausia patikrinti?"></textarea>
+        <div class="actions"><button class="button" type="submit" id="ops-ask">Klausti AI</button></div>
+        <div class="ops-answer" id="ops-answer" hidden aria-live="polite"></div>
+        <p class="form-status" id="ops-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
     <section class="admin-panel" id="admin-business-settings" hidden aria-labelledby="business-settings-title">
       <div class="admin-toolbar"><div><p class="eyebrow">Automatikos paruošimas</p><h2 id="business-settings-title">Rekvizitai ir kainos</h2></div></div>
       <form class="admin-settings-form" id="business-settings-form">
@@ -240,7 +275,7 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
-<script src="assets/admin.js?v=20260806-1"></script>
+<script src="assets/admin.js?v=20260808-2"></script>
 <script src="assets/graves-admin.js?v=20260712-1"></script>
 <script src="assets/grave-photo-admin.js?v=20260719-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>

@@ -453,7 +453,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260806-1', user_page)
+        self.assertIn('assets/user.js?v=20260808-1', user_page)
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -615,7 +615,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260806-1', html)
+        self.assertIn('assets/admin.js?v=20260808-2', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)

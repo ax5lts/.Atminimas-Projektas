@@ -98,6 +98,9 @@ async function processInvoice(event: AutomationEvent) {
     actionLabel: "Atidaryti kliento zoną",
     attachments: [{ filename: `${invoice.invoice_number}.pdf`, content: bytesToBase64(pdfBytes) }],
     idempotencyKey: event.event_key,
+    orderId: order.id,
+    recipientKind: "customer",
+    category: "invoice.document",
   });
   await client.from("invoice_documents").update({ emailed_at: new Date().toISOString() }).eq("id", invoice.id);
 }
@@ -128,6 +131,9 @@ async function processQr(event: AutomationEvent) {
       actionUrl: `${publicSiteUrl()}admin.html`,
       actionLabel: "Atidaryti gamybos eilę",
       idempotencyKey: `${event.event_key}:admin`,
+      orderId: order.id,
+      recipientKind: "admin",
+      category: "production.qr_ready",
     });
   }
 }
@@ -222,6 +228,11 @@ async function processEmailEvent(event: AutomationEvent) {
     actionUrl: adminEvent ? `${publicSiteUrl()}admin.html` : userUrl,
     actionLabel: template.action,
     idempotencyKey: event.event_key,
+    orderId: order?.id || event.order_id || undefined,
+    entityType: order ? "order" : "automation_event",
+    entityId: order?.id || String(event.id),
+    recipientKind: adminEvent ? "admin" : "customer",
+    category: event.event_type,
   });
 }
 

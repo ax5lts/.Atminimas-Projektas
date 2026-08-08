@@ -1,4 +1,5 @@
 import {
+  adminClient,
   env,
   handleOptions,
   json,
@@ -31,6 +32,29 @@ const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
 };
 const text = (value: unknown, max: number) =>
   String(value ?? "").trim().slice(0, max) || null;
+
+function weakAccessCode(value: string) {
+  return new Set(value).size === 1 ||
+    "0123456789".includes(value) ||
+    "9876543210".includes(value);
+}
+
+function validAccessCode(value: string) {
+  if (!/^\d{5,6}$/.test(value)) {
+    throw new RequestError(
+      value.length < 5
+        ? "Prieigos kodą turi sudaryti bent 5 skaitmenys."
+        : "Prieigos kodą turi sudaryti 5–6 skaitmenys.",
+      400,
+    );
+  }
+  if (weakAccessCode(value)) {
+    throw new RequestError(
+      "Šis prieigos kodas per silpnas. Pasirinkite sunkiau atspėjamą kodą.",
+      400,
+    );
+  }
+}
 
 function mediaPath(
   raw: unknown,
@@ -185,6 +209,34 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Puslapis nerastas" }, 404);
     }
 
+    if (action === "set_access_code") {
+      if (!isOwner) {
+        return json(
+          { error: "Prieigos kodą gali keisti tik puslapio savininkas" },
+          403,
+        );
+      }
+      const protectedPage = body.access_protected === true;
+      const accessCode = String(body.access_code || "").trim();
+      if (protectedPage) validAccessCode(accessCode);
+
+      const { data: accessStatus, error: accessError } = await adminClient().rpc(
+        "set_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_owner_id: user.id,
+          p_protected: protectedPage,
+          p_access_code: protectedPage ? accessCode : null,
+        },
+      );
+      if (accessError) throw accessError;
+      return json({
+        ok: true,
+        profile_id: profileId,
+        access_protected: accessStatus === "protected",
+      });
+    }
+
     if (action === "publish_prototype") {
       if (!isOwner || !await adminAccess(client, user.id)) {
         return json(
@@ -198,6 +250,17 @@ Deno.serve(async (request: Request) => {
         statusas: "apmoketa",
       }).eq("id", profileId).eq("owner_id", user.id);
       if (publishError) throw publishError;
+
+      const { error: accessError } = await adminClient().rpc(
+        "set_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_owner_id: user.id,
+          p_protected: false,
+          p_access_code: null,
+        },
+      );
+      if (accessError) throw accessError;
 
       const page = new URL("sablonas-viskas.html", publicSiteUrl());
       page.searchParams.set("slug", profileId);
@@ -255,6 +318,17 @@ Deno.serve(async (request: Request) => {
         .select("id,profilis_id,puslapio_url,qr_kodas_url,busena")
         .single();
       if (orderError) throw orderError;
+      const { error: activateError } = await client.from("profiliai").update({
+        aktyvus: true,
+      }).eq("id", profileId).eq("owner_id", user.id);
+      if (activateError) {
+        const { error: cleanupError } = await client.from("uzsakymai").delete()
+          .eq("id", order.id);
+        if (cleanupError) {
+          console.error("Failed to roll back unpublished order", cleanupError);
+        }
+        throw activateError;
+      }
       return json(order, 201);
     }
 
@@ -369,6 +443,7 @@ Deno.serve(async (request: Request) => {
           story_blocks_json: [],
           layout_json: {},
           media_json: [],
+          access_code_hash: null,
           aktyvus: false,
           deleted_at: new Date().toISOString(),
         }).eq("id", profileId);

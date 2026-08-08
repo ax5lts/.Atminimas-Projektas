@@ -2,6 +2,8 @@ import {
   adminClient,
   handleOptions,
   json,
+  readJson,
+  RequestError,
   safeProfileLayout,
   safeStoryBlocks,
 } from "../_shared/core.ts";
@@ -84,6 +86,18 @@ async function isAdmin(client: ReturnType<typeof adminClient>, userId: string) {
   return Boolean(data);
 }
 
+async function accessAttemptKey(request: Request, profileId: string) {
+  const forwarded = (request.headers.get("x-forwarded-for") || "")
+    .split(",")[0].trim();
+  const address = request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-real-ip") || forwarded || "unknown";
+  const input = new TextEncoder().encode(`${profileId}|${address}`);
+  const digest = await crypto.subtle.digest("SHA-256", input);
+  return Array.from(new Uint8Array(digest)).map((byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+}
+
 async function signedMedia(
   client: ReturnType<typeof adminClient>,
   value: unknown,
@@ -145,7 +159,7 @@ async function signedMedia(
 Deno.serve(async (request: Request) => {
   const options = handleOptions(request);
   if (options) return options;
-  if (request.method !== "GET") {
+  if (request.method !== "GET" && request.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
 
@@ -158,11 +172,16 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
+    let submittedCode = "";
+    if (request.method === "POST") {
+      const body = await readJson(request, 2_000);
+      submittedCode = cleanText(body.access_code, 20);
+    }
     const client = adminClient();
     const { data: profile, error } = await client
       .from("profiliai")
       .select(
-        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at",
+        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,access_code_protected,deleted_at",
       )
       .eq("id", profileId)
       .maybeSingle();
@@ -178,6 +197,40 @@ Deno.serve(async (request: Request) => {
     const canManage = owner || admin;
     if (!profile.aktyvus && !canManage) {
       return json({ error: "Atminimo puslapis nerastas" }, 404);
+    }
+    if (profile.aktyvus && profile.access_code_protected && !canManage) {
+      if (request.method !== "POST") {
+        return json({
+          error: "Šis atminimo puslapis yra privatus.",
+          code: "ACCESS_CODE_REQUIRED",
+          access_required: true,
+        }, 401);
+      }
+
+      const attemptKey = await accessAttemptKey(request, profileId);
+      const { data: verification, error: verificationError } = await client.rpc(
+        "verify_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_access_code: submittedCode,
+          p_attempt_key: attemptKey,
+        },
+      );
+      if (verificationError) throw verificationError;
+      if (verification === "rate_limited") {
+        return json({
+          error: "Per daug bandymų. Palaukite 15 minučių ir bandykite dar kartą.",
+          code: "ACCESS_CODE_RATE_LIMITED",
+          access_required: true,
+        }, 429);
+      }
+      if (verification !== "granted") {
+        return json({
+          error: "Neteisingas prieigos kodas.",
+          code: "INVALID_ACCESS_CODE",
+          access_required: true,
+        }, 401);
+      }
     }
 
     const media = await signedMedia(
@@ -199,10 +252,14 @@ Deno.serve(async (request: Request) => {
         story_blocks_json: safeStoryBlocks(profile.story_blocks_json),
         layout_json: safeProfileLayout(profile.layout_json),
         media_json: media,
+        access_code_protected: Boolean(profile.access_code_protected),
       },
       can_manage: canManage,
     });
   } catch (error) {
+    if (error instanceof RequestError) {
+      return json({ error: error.message }, error.status);
+    }
     console.error("profile-content failed", error);
     return json({ error: "Atminimo puslapio įkelti nepavyko" }, 500);
   }

@@ -567,6 +567,69 @@
     if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas, { demo: !!atminimas.demo });
   }
 
+  function showAccessGate(identifier) {
+    var gate = document.getElementById("memorial-access-gate");
+    var form = document.getElementById("memorial-access-form");
+    var input = document.getElementById("memorial-access-code");
+    var status = document.getElementById("memorial-access-status");
+    var forgot = document.getElementById("memorial-forgot-access");
+    var submit = form.querySelector("button[type='submit']");
+    document.getElementById("kraunama").hidden = true;
+    gate.hidden = false;
+    forgot.href = "prisijungti.html?next=" + encodeURIComponent(
+      "vartotojas.html?reset_access=" + encodeURIComponent(identifier)
+    );
+
+    gate.querySelectorAll("[data-access-code-toggle]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var field = document.getElementById(button.getAttribute("aria-controls"));
+        var show = field && field.type === "password";
+        if (!field) return;
+        field.type = show ? "text" : "password";
+        button.setAttribute("aria-pressed", String(show));
+        button.setAttribute("aria-label", show ? "Slėpti prieigos kodą" : "Rodyti prieigos kodą");
+      });
+    });
+    input.addEventListener("input", function () {
+      input.value = input.value.replace(/\D/g, "").slice(0, 6);
+      status.textContent = "";
+      status.removeAttribute("data-state");
+    });
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var code = String(input.value || "").trim();
+      if (code.length < 5) {
+        status.textContent = "Prieigos kodą turi sudaryti bent 5 skaitmenys.";
+        status.dataset.state = "error";
+        input.focus();
+        return;
+      }
+      if (!/^\d{5,6}$/.test(code)) {
+        status.textContent = "Prieigos kodą turi sudaryti 5–6 skaitmenys.";
+        status.dataset.state = "error";
+        input.focus();
+        return;
+      }
+      submit.disabled = true;
+      status.textContent = "Tikrinamas prieigos kodas…";
+      status.dataset.state = "loading";
+      try {
+        var payload = await AtminimasApi.unlockAtminimasBySlug(identifier, code);
+        input.value = "";
+        gate.hidden = true;
+        renderPage(payload, "");
+      } catch (error) {
+        status.textContent = error.message || "Atminimo puslapio atidaryti nepavyko.";
+        status.dataset.state = "error";
+        input.select();
+        input.focus();
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    window.requestAnimationFrame(function () { input.focus(); });
+  }
+
   function fillGallery(images) {
     var inner = document.getElementById("gallery-inner");
     inner.innerHTML = "";
@@ -715,6 +778,10 @@
 
     try {
       var payload = await AtminimasApi.loadAtminimasBySlug(identifier);
+      if (payload.access_required) {
+        showAccessGate(identifier);
+        return;
+      }
       renderPage(payload, "");
     } catch {
       document.getElementById("kraunama").hidden = true;

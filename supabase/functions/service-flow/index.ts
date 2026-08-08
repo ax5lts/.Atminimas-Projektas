@@ -666,6 +666,10 @@ async function sendQuoteAction(
       }&claim=1#paslaugos`,
       actionLabel: "Priimti pasiūlymą ir apmokėti",
       idempotencyKey: `service:${quote.id}:quote:${quote.quote_revision}`,
+      entityType: "service_request",
+      entityId: String(quote.id),
+      recipientKind: "customer",
+      category: "service.quote",
     });
     emailSent = true;
     const { error: emailUpdateError } = await client.from("paslaugu_uzklausos")

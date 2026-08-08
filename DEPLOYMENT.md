@@ -12,3 +12,12 @@
 10. Saugumo pakeitimus diekite `SECURITY.md` nurodyta tvarka: nustatykite tikslų Edge Functions `PUBLIC_SITE_URL`, komanda `supabase functions deploy` įdiekite visas funkcijas, tada frontend, atsarginę kopiją ir duomenų bazės migraciją. Po diegimo paleiskite „Supabase Security Advisor“ ir patikrinkite visus viešo, privataus, savininko bei administratoriaus srautus.
 11. Panaikinkite visus anksčiau paviešintus slaptus raktus. Produkcijos paslaptys turi būti tik hostingo ar „Supabase Edge Functions Secrets“ saugykloje.
 12. „GitHub Pages“ diegimas dabar yra rankinis. Workflow lange `backend_ready` pažymėkite tik įdiegę reikiamas Edge Functions; tai apsaugo gyvą svetainę nuo nesuderinto frontend paleidimo.
+
+## Prieš viešinant: AI ir automatinė priežiūra
+
+1. Supabase Edge Function Secrets turi būti nustatyti `OPENAI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM` ir `ADMIN_EMAIL`. Tikrų reikšmių nerašykite į `.env`, frontend ar GitHub.
+2. OpenAI paskyroje turi būti aktyvus API atsiskaitymas. Prisijungę prie administravimo puslapio paklauskite „Ką dabar svarbiausia patikrinti?“ ir įsitikinkite, kad rodoma „AI atsakymas paruoštas“, o ne saugi atsarginė suvestinė.
+3. Įrašius `RESEND_API_KEY`, `ops-monitor` pats užregistruoja pasirašytą Resend webhook ir pasirašymo paslaptį saugo Supabase Vault. Administravimo skiltyje „Svetainės ir užsakymų būklė“ neturi likti kritinio webhook konfigūracijos įspėjimo.
+4. Patikrinkite, kad `public_website` ir `qr_generator` būsenos yra `healthy`, o naujausias `ops_monitor_runs` įrašas yra `completed`. Patikra suplanuota kas 5 minutes.
+5. Išsiųskite po vieną bandomą laišką klientui ir gamintojui. Administravimo lentelėje gavėjai turi būti užmaskuoti, o po Resend webhook įvykio būsena turi tapti `delivered` arba turi atsirasti aiškus pristatymo įspėjimas.
+6. AI operacijų asistentas yra tik skaitantis: jis negali keisti užsakymų, klientų duomenų, mokėjimų ar prieigos kodų. Produkcijoje šios teisės neplėskite.

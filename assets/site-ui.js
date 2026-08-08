@@ -189,12 +189,38 @@
     }, 2600);
   }
 
+  function loadHelpChatbot() {
+    if (page === "admin.html" || document.querySelector("script[data-help-chatbot-loader]")) return;
+
+    function loadWidget() {
+      if (document.querySelector("script[data-help-chatbot-loader]")) return;
+      var script = document.createElement("script");
+      script.src = "assets/help-chatbot.js?v=20260808-1";
+      script.defer = true;
+      script.dataset.helpChatbotLoader = "";
+      document.body.appendChild(script);
+    }
+
+    if (window.ATMINIMAS_CONFIG && window.ATMINIMAS_CONFIG.SUPABASE_URL) {
+      loadWidget();
+      return;
+    }
+
+    var configScript = document.createElement("script");
+    configScript.src = "assets/supabase-config.js?v=20260808-1";
+    configScript.dataset.helpChatbotConfig = "";
+    configScript.addEventListener("load", loadWidget);
+    configScript.addEventListener("error", loadWidget);
+    document.body.appendChild(configScript);
+  }
+
   setCurrentLinks(document);
   setupHeaderMenu();
   setupSkipLink();
   setupBackLinks();
   setupMobileDock();
   setupRevealAnimations();
+  loadHelpChatbot();
 
   window.AtminimasUi = {
     copyText: copyText,

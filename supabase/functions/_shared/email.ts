@@ -1,4 +1,9 @@
-import { BlockedAutomationError, env, escapeHtml } from "./core.ts";
+import {
+  adminClient,
+  BlockedAutomationError,
+  env,
+  escapeHtml,
+} from "./core.ts";
 
 type Attachment = { filename: string; content: string };
 
@@ -12,6 +17,11 @@ export async function sendEmail(input: {
   actionLabel?: string;
   attachments?: Attachment[];
   idempotencyKey: string;
+  orderId?: string;
+  entityType?: string;
+  entityId?: string;
+  recipientKind?: "customer" | "admin" | "manufacturer" | "partner" | "support";
+  category?: string;
 }) {
   const apiKey = env("RESEND_API_KEY", false);
   const from = env("EMAIL_FROM", false);
@@ -23,6 +33,34 @@ export async function sendEmail(input: {
   if (!input.to || !input.to.includes("@")) {
     throw new BlockedAutomationError("Trūksta gavėjo el. pašto");
   }
+
+  const normalizedRecipient = input.to.trim().toLowerCase();
+  const recipientHash = await sha256Hex(normalizedRecipient);
+  const recipientMasked = maskEmail(normalizedRecipient);
+  const client = adminClient();
+  const idempotencyKey = input.idempotencyKey.slice(0, 256);
+  const { data: existing, error: existingError } = await client
+    .from("email_messages")
+    .select("provider_email_id")
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing?.provider_email_id) return { id: existing.provider_email_id };
+
+  const { error: insertError } = await client.from("email_messages").upsert({
+    idempotency_key: idempotencyKey,
+    order_id: input.orderId || null,
+    entity_type: input.entityType || (input.orderId ? "order" : null),
+    entity_id: input.entityId || input.orderId || null,
+    recipient_kind: input.recipientKind || "customer",
+    recipient_masked: recipientMasked,
+    recipient_hash: recipientHash,
+    category: (input.category || "transactional").slice(0, 100),
+    status: "accepted",
+    sent_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "idempotency_key", ignoreDuplicates: true });
+  if (insertError) throw insertError;
 
   const body = input.paragraphs.map((paragraph) =>
     `<p style="margin:0 0 16px;line-height:1.6;color:#34312d">${
@@ -46,7 +84,7 @@ export async function sendEmail(input: {
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "Idempotency-Key": input.idempotencyKey.slice(0, 256),
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify({
       from,
@@ -57,11 +95,53 @@ export async function sendEmail(input: {
       attachments: input.attachments || [],
     }),
   });
-  const result = await response.json().catch(() => ({}));
+  const result = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
+    await client.from("email_messages").update({
+      status: "failed",
+      failed_at: new Date().toISOString(),
+      last_error: `resend_http_${response.status}`,
+      updated_at: new Date().toISOString(),
+    }).eq("idempotency_key", idempotencyKey);
     throw new Error(`El. pašto paslauga grąžino klaidą (${response.status})`);
   }
+  const providerId = typeof result.id === "string" ? result.id : null;
+  if (!providerId) {
+    await client.from("email_messages").update({
+      status: "failed",
+      failed_at: new Date().toISOString(),
+      last_error: "resend_missing_provider_id",
+      updated_at: new Date().toISOString(),
+    }).eq("idempotency_key", idempotencyKey);
+    throw new Error("El. pašto paslauga negrąžino laiško numerio");
+  }
+  const { error: logError } = await client.from("email_messages").update({
+    provider_email_id: providerId,
+    status: "accepted",
+    last_error: null,
+    updated_at: new Date().toISOString(),
+  }).eq("idempotency_key", idempotencyKey);
+  if (logError) throw logError;
   return result;
+}
+
+export function maskEmail(value: string) {
+  const [local = "", domain = ""] = value.trim().toLowerCase().split("@");
+  const [host = "", ...suffixParts] = domain.split(".");
+  const localMask = local ? `${local[0]}***` : "***";
+  const hostMask = host ? `${host[0]}***` : "***";
+  const suffix = suffixParts.length ? `.${suffixParts.join(".")}` : "";
+  return `${localMask}@${hostMask}${suffix}`.slice(0, 320);
+}
+
+export async function sha256Hex(value: string) {
+  const bytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(bytes))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function bytesToBase64(bytes: Uint8Array) {

@@ -50,7 +50,7 @@
   }
 
   async function postJson(table, payload) {
-    var res = await apiFetch(restUrl(table, "select=*"), {
+    var res = await apiFetch(restUrl(table, "select=id"), {
       method: "POST",
       headers: Object.assign({}, headers(), {
         "Content-Type": "application/json",
@@ -271,11 +271,38 @@
       { headers: headers(), cache: "no-store" }
     );
     var data = await res.json().catch(function () { return {}; });
+    if (data.access_required) {
+      return {
+        access_required: true,
+        error: data.error || "Šis atminimo puslapis yra privatus.",
+        code: data.code || "ACCESS_CODE_REQUIRED"
+      };
+    }
     if (res.status === 404) {
       throw new Error("Atminimo puslapis nerastas.");
     }
     if (!res.ok || !data.atminimas) {
       throw new Error("Atminimo puslapio įkelti nepavyko.");
+    }
+    return { atminimas: data.atminimas, can_manage: !!data.can_manage };
+  }
+
+  async function unlockAtminimasBySlug(identifier, accessCode) {
+    var res = await apiFetch(
+      functionUrl("profile-content") + "?profile_id=" + encodeURIComponent(identifier),
+      {
+        method: "POST",
+        headers: Object.assign({}, headers(), { "Content-Type": "application/json" }),
+        body: JSON.stringify({ access_code: String(accessCode || "").trim() }),
+        cache: "no-store"
+      }
+    );
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok || !data.atminimas) {
+      var error = new Error(data.error || "Atminimo puslapio atidaryti nepavyko.");
+      error.code = data.code || "";
+      error.status = res.status;
+      throw error;
     }
     return { atminimas: data.atminimas, can_manage: !!data.can_manage };
   }
@@ -321,6 +348,16 @@
       apmoketa: !!input.apmoketa,
       aktyvus: false
     });
+    try {
+      await setAccessCode(
+        identifier,
+        input.access_protected === "yes",
+        input.access_code || ""
+      );
+    } catch (error) {
+      await manageProfile({ action: "delete", profile_id: identifier }).catch(function () {});
+      throw error;
+    }
     return { identifier: identifier, table: "profiliai" };
   }
 
@@ -359,6 +396,15 @@
     var data = await res.json().catch(function () { return {}; });
     if (!res.ok) throw new Error(data.error || "Nepavyko pakeisti puslapio.");
     return data;
+  }
+
+  async function setAccessCode(identifier, protectedPage, accessCode) {
+    return manageProfile({
+      action: "set_access_code",
+      profile_id: identifier,
+      access_protected: protectedPage === true,
+      access_code: protectedPage ? String(accessCode || "").trim() : ""
+    });
   }
 
   async function updateAtminimas(identifier, input, options) {
@@ -402,6 +448,11 @@
       layout: options && options.layout ? options.layout : {},
       media: media
     });
+    if (input.access_protected === "no") {
+      await setAccessCode(identifier, false, "");
+    } else if (input.access_protected === "yes" && input.access_code) {
+      await setAccessCode(identifier, true, input.access_code);
+    }
     return { identifier: identifier, table: "profiliai", media: media };
   }
 
@@ -412,11 +463,13 @@
   global.AtminimasApi = {
     getPageSlug: getPageSlug,
     loadAtminimasBySlug: loadAtminimasBySlug,
+    unlockAtminimasBySlug: unlockAtminimasBySlug,
     createAtminimas: createAtminimas,
     updateAtminimas: updateAtminimas,
     deleteAtminimas: deleteAtminimas,
     createUzsakymas: createUzsakymas,
     publishAdminPrototype: publishAdminPrototype,
+    setAccessCode: setAccessCode,
     uploadBuilderMedia: uploadBuilderMedia,
     qrImageUrl: qrImageUrl
   };
