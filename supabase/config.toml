@@ -55,6 +55,9 @@ verify_jwt = false
 [functions.service-flow]
 verify_jwt = false
 
+[functions.help-chatbot]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

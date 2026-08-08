@@ -51,6 +51,11 @@
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
   var colorCurrent = document.getElementById("editor-color-current");
+  var accessSettingsEl = document.getElementById("editor-access-settings");
+  var accessCodeFieldsEl = document.getElementById("editor-access-code-fields");
+  var accessCodeInput = document.getElementById("editor-access-code");
+  var accessCodeConfirmInput = document.getElementById("editor-access-code-confirm");
+  var accessCodeErrorEl = document.getElementById("editor-access-error");
   var photoFileList = document.getElementById("editor-photo-file-list");
   var datePickers = Array.from(document.querySelectorAll("[data-date-picker]"));
   var MAX_PHOTOS = 8;
@@ -113,6 +118,7 @@
   var resumeOrder = editorParams.get("resume") === "order";
   var prototypeRequested = editorParams.get("prototype") === "1";
   var isAdminPrototype = false;
+  var existingAccessProtected = false;
   var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
   var isDemoMode = demoId === "maironis" || demoId === "jonas";
   var DRAFT_KEY = editId
@@ -1868,6 +1874,93 @@
     return Object.fromEntries(new FormData(form).entries());
   }
 
+  function accessProtectionSelected() {
+    var selected = form.querySelector("[name='access_protected']:checked");
+    return !!(selected && selected.value === "yes");
+  }
+
+  function weakAccessCode(value) {
+    return new Set(value.split("")).size === 1 ||
+      "0123456789".indexOf(value) >= 0 ||
+      "9876543210".indexOf(value) >= 0;
+  }
+
+  function setAccessCodeError(message, field) {
+    accessCodeInput.setCustomValidity("");
+    accessCodeConfirmInput.setCustomValidity("");
+    if (message && field) field.setCustomValidity(message);
+    if (accessCodeErrorEl) accessCodeErrorEl.textContent = message || "";
+  }
+
+  function syncAccessCodeFields() {
+    if (!accessCodeFieldsEl) return;
+    var protectedPage = accessProtectionSelected();
+    var preserveExisting = !!(editId && existingAccessProtected);
+    accessCodeFieldsEl.hidden = !protectedPage;
+    accessCodeInput.required = protectedPage && !preserveExisting;
+    accessCodeConfirmInput.required = protectedPage && !preserveExisting;
+    if (!protectedPage) setAccessCodeError("", null);
+  }
+
+  function validateAccessSettings(focusInvalid) {
+    if (!accessSettingsEl || accessSettingsEl.hidden || !accessProtectionSelected()) {
+      setAccessCodeError("", null);
+      return true;
+    }
+    var code = String(accessCodeInput.value || "").trim();
+    var confirmation = String(accessCodeConfirmInput.value || "").trim();
+    if (editId && existingAccessProtected && !code && !confirmation) {
+      setAccessCodeError("", null);
+      return true;
+    }
+    var message = "";
+    var field = accessCodeInput;
+    if (code.length < 5) {
+      message = "Prieigos kodą turi sudaryti bent 5 skaitmenys.";
+    } else if (!/^\d{5,6}$/.test(code)) {
+      message = "Prieigos kodą turi sudaryti 5–6 skaitmenys.";
+    } else if (weakAccessCode(code)) {
+      message = "Šis prieigos kodas per silpnas. Pasirinkite sunkiau atspėjamą kodą.";
+    } else if (code !== confirmation) {
+      message = "Prieigos kodai nesutampa.";
+      field = accessCodeConfirmInput;
+    }
+    setAccessCodeError(message, field);
+    if (message && focusInvalid) {
+      activateEditorStep("preview", true);
+      field.reportValidity();
+      field.focus();
+    }
+    return !message;
+  }
+
+  function setupAccessCodeControls() {
+    if (!accessSettingsEl) return;
+    form.querySelectorAll("[name='access_protected']").forEach(function (field) {
+      field.addEventListener("change", function () {
+        syncAccessCodeFields();
+        scheduleDraftSave();
+      });
+    });
+    [accessCodeInput, accessCodeConfirmInput].forEach(function (field) {
+      field.addEventListener("input", function () {
+        field.value = field.value.replace(/\D/g, "").slice(0, 6);
+        validateAccessSettings(false);
+      });
+    });
+    accessSettingsEl.querySelectorAll("[data-access-code-toggle]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var field = document.getElementById(button.getAttribute("aria-controls"));
+        if (!field) return;
+        var show = field.type === "password";
+        field.type = show ? "text" : "password";
+        button.setAttribute("aria-pressed", String(show));
+        button.setAttribute("aria-label", show ? "Slėpti prieigos kodą" : "Rodyti prieigos kodą");
+      });
+    });
+    syncAccessCodeFields();
+  }
+
   function openDraftDb() {
     return new Promise(function (resolve, reject) {
       if (!window.indexedDB) return resolve(null);
@@ -2076,7 +2169,8 @@
       mirties_data: form.elements.mirties_data.value || "",
       epitafija: form.elements.epitafija.value || "",
       tekstas_200: form.elements.tekstas_200.value || "",
-      fono_spalva: form.elements.fono_spalva.value || "#ffffff"
+      fono_spalva: form.elements.fono_spalva.value || "#ffffff",
+      access_protected: accessProtectionSelected() ? "yes" : "no"
     };
     for (var i = 1; i <= MAX_PHOTOS; i++) {
       state["photo_caption_" + i] = form.elements["photo_caption_" + i].value || "";
@@ -2640,6 +2734,12 @@
       if (form.elements[name]) form.elements[name].value = profile[name] || "";
     });
     showExistingMedia(profile.media_json);
+    existingAccessProtected = profile.access_code_protected === true;
+    var accessChoice = form.querySelector(
+      "[name='access_protected'][value='" + (existingAccessProtected ? "yes" : "no") + "']"
+    );
+    if (accessChoice) accessChoice.checked = true;
+    syncAccessCodeFields();
     setStoryBlocks(profile.story_blocks_json);
     applyLayout(profile.layout_json || {});
     var heading = document.getElementById("editor-panel-title");
@@ -3618,6 +3718,7 @@
       }, 0);
       return;
     }
+    if (!validateAccessSettings(true)) return;
     var signedIn = isSignedIn();
     var invalid = Array.from(form.querySelectorAll("input, textarea, select")).find(function (field) {
       if (!signedIn && field.type === "checkbox") return false;
@@ -3764,7 +3865,9 @@
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
       await discardCurrentDraft();
-      statusEl.textContent = "Puslapis sukurtas ir išsaugotas kaip privatus. Paskelbti galėsite kliento zonoje.";
+      statusEl.textContent = data.access_protected === "yes"
+        ? "Privatus puslapis paskelbtas su prieigos kodo apsauga."
+        : "Viešas atminimo puslapis paskelbtas.";
       previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
       checkoutLink.href = "apmokejimas.html?order=" + encodeURIComponent(order.id || "");
@@ -3772,6 +3875,10 @@
       clientLink.textContent = "Kliento zona";
       qrLink.href = order.qr_kodas_url;
       orderCode.textContent = order.id ? "Užsakymo numeris: " + String(order.id).slice(0, 8) : "Užsakymas sukurtas";
+      var createdHeading = resultBox.querySelector("h3");
+      if (createdHeading) createdHeading.textContent = data.access_protected === "yes"
+        ? "Privatus puslapis sukurtas"
+        : "Viešas puslapis sukurtas";
       resultBox.hidden = false;
       showSaveProgress(100, "Puslapis ir užsakymas sukurti.");
       setDraftState("Puslapis išsaugotas", "saved");
@@ -3812,6 +3919,7 @@
       }
       submitButton.disabled = false;
       document.body.classList.add("editor-prototype-mode");
+      if (accessSettingsEl) accessSettingsEl.hidden = true;
     }
     if (!isDemoMode && editId && !isSignedIn()) {
       statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite redaguoti puslapio.";
@@ -3823,6 +3931,7 @@
       return;
     }
     if (isDemoMode) {
+      if (accessSettingsEl) accessSettingsEl.hidden = true;
       if (accountNoteEl) accountNoteEl.hidden = true;
       submitButton.textContent = "Atidaryti galutinį pavyzdį";
     } else if (isAdminPrototype) {
@@ -3838,10 +3947,12 @@
     }
     initializeResponsiveStage();
     setupDatePickers();
+    setupAccessCodeControls();
     if (isDemoMode) loadDemoProfile();
     else await loadProfileForEditing();
     syncDatePickersFromHidden();
     var restoredDraft = await restoreDraft();
+    syncAccessCodeFields();
     syncDatePickersFromHidden();
     if (!isDemoMode && !editId && resumeOrder && isSignedIn()) {
       currentEditorStep = "preview";

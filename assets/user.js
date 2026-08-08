@@ -9,6 +9,8 @@
   var guestActions = document.getElementById("user-guest-actions");
   var pageParams = new URLSearchParams(window.location.search);
   var requestedServiceId = (pageParams.get("service") || "").trim();
+  var requestedResetProfileId = (pageParams.get("reset_access") || "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(requestedResetProfileId)) requestedResetProfileId = "";
   var claimRequested = pageParams.get("claim") === "1";
   var claimAttempted = false;
   var productKey = "atminimas.selected-product.v1";
@@ -34,9 +36,11 @@
   var chosenProduct = selectedProduct();
   if (createButton) createButton.href = "parduotuve.html";
   if (guestActions) {
-    var next = requestedServiceId
-      ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
-      : "vartotojas.html?product=" + encodeURIComponent(chosenProduct);
+    var next = requestedResetProfileId
+      ? "vartotojas.html?reset_access=" + encodeURIComponent(requestedResetProfileId)
+      : (requestedServiceId
+        ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
+        : "vartotojas.html?product=" + encodeURIComponent(chosenProduct));
     var loginLink = guestActions.querySelector("a[href='prisijungti.html']");
     var registerLink = guestActions.querySelector("a[href='registruotis.html']");
     if (loginLink) loginLink.href = "prisijungti.html?next=" + encodeURIComponent(next);
@@ -302,6 +306,20 @@
     URL.revokeObjectURL(objectUrl);
   }
 
+  function scrollToRequestedReset() {
+    if (!requestedResetProfileId) return;
+    window.requestAnimationFrame(function () {
+      var form = listEl.querySelector(
+        "form[data-access-code-form='" + requestedResetProfileId + "']"
+      );
+      if (form) {
+        form.scrollIntoView({ behavior: "smooth", block: "center" });
+        var first = form.querySelector("input");
+        if (first) first.focus({ preventScroll: true });
+      }
+    });
+  }
+
   async function downloadQr(profileId, format) {
     var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(profileId);
     var outputFormat = format === "jpg" ? "jpg" : "png";
@@ -325,6 +343,53 @@
       body: JSON.stringify({ profile_id: profileId, is_active: active })
     });
     if (!res.ok) throw new Error("Nepavyko pakeisti puslapio viešumo.");
+  }
+
+  function weakAccessCode(value) {
+    return new Set(value.split("")).size === 1 ||
+      "0123456789".indexOf(value) >= 0 ||
+      "9876543210".indexOf(value) >= 0;
+  }
+
+  function validateNewAccessCode(code, confirmation) {
+    if (code.length < 5) return "Prieigos kodą turi sudaryti bent 5 skaitmenys.";
+    if (!/^\d{5,6}$/.test(code)) return "Prieigos kodą turi sudaryti 5–6 skaitmenys.";
+    if (weakAccessCode(code)) return "Šis prieigos kodas per silpnas. Pasirinkite sunkiau atspėjamą kodą.";
+    if (code !== confirmation) return "Prieigos kodai nesutampa.";
+    return "";
+  }
+
+  async function replaceAccessCode(profileId, accountPassword, code) {
+    var me = await AtminimasAuth.user();
+    if (!me || !me.email) throw new Error("Prisijungimo sesija baigėsi. Prisijunkite iš naujo.");
+    await AtminimasAuth.signIn(me.email, accountPassword);
+    var res = await apiFetch(functionUrl("profile-manage"), {
+      method: "POST",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        action: "set_access_code",
+        profile_id: profileId,
+        access_protected: true,
+        access_code: code
+      })
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.error || "Prieigos kodo pakeisti nepavyko.");
+  }
+
+  function accessCodeManager(row) {
+    var open = requestedResetProfileId === row.id ? " open" : "";
+    return "<details class='user-access-reset'" + open + ">" +
+      "<summary>" + (row.access_code_protected ? "Pakeisti prieigos kodą" : "Apsaugoti puslapį kodu") + "</summary>" +
+      "<form data-access-code-form='" + html(row.id) + "'>" +
+        "<p>Seno prieigos kodo parodyti negalime. Patvirtinkite tapatybę paskyros slaptažodžiu ir susikurkite naują prieigos kodą.</p>" +
+        "<label>Paskyros slaptažodis<span class='access-code-control'><input type='password' name='account_password' autocomplete='current-password' required><button type='button' class='access-code-toggle' data-user-secret-toggle aria-label='Rodyti paskyros slaptažodį' aria-pressed='false'><span aria-hidden='true'>◉</span></button></span></label>" +
+        "<label>Naujas prieigos kodas<span class='access-code-control'><input type='password' name='access_code' inputmode='numeric' autocomplete='new-password' pattern='[0-9]{5,6}' minlength='5' maxlength='6' required><button type='button' class='access-code-toggle' data-user-secret-toggle aria-label='Rodyti prieigos kodą' aria-pressed='false'><span aria-hidden='true'>◉</span></button></span></label>" +
+        "<label>Pakartokite prieigos kodą<span class='access-code-control'><input type='password' name='access_code_confirm' inputmode='numeric' autocomplete='new-password' pattern='[0-9]{5,6}' minlength='5' maxlength='6' required><button type='button' class='access-code-toggle' data-user-secret-toggle aria-label='Rodyti prieigos kodą' aria-pressed='false'><span aria-hidden='true'>◉</span></button></span></label>" +
+        "<button class='button' type='submit'>Išsaugoti naują prieigos kodą</button>" +
+        "<p class='form-status' data-access-code-status role='status' aria-live='polite'></p>" +
+      "</form>" +
+    "</details>";
   }
 
   async function deleteProfile(profileId) {
@@ -377,7 +442,7 @@
 
     var res = await apiFetch(restUrl(
       "profiliai",
-      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,access_code_protected,apmoketa,statusas,created_at&order=created_at.desc"
     ), {
       headers: AtminimasAuth.headers(false)
     });
@@ -413,6 +478,9 @@
       var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
       var order = orderByProfile[row.id];
       var invoice = order ? invoiceByOrder[order.id] : null;
+      var activeLabel = row.aktyvus
+        ? (row.access_code_protected ? "Privatus (su kodu)" : "Viešas")
+        : "Neviešas";
       var shipment = order
         ? "<div class='user-card-status'><span>Užsakymas</span><strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><span>Pristatymas</span><strong>" + html(shippingName(order.shipping_status)) + "</strong></div>"
         : "";
@@ -422,24 +490,36 @@
         "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>QR PNG</button>" +
         "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='jpg'>QR JPG</button>" +
         (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
-        "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Rodyti viešai") + "</button>" +
+        "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "' data-access-protected='" + (!!row.access_code_protected) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Paskelbti") + "</button>" +
         "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti puslapį</button>";
       return (
-        "<article class='info-box user-page-card' data-profile-card>" +
-          "<div class='user-card-heading'><p class='eyebrow'>" + (row.aktyvus ? "Viešas puslapis" : "Privatus puslapis") + "</p><span class='user-card-visibility " + (row.aktyvus ? "is-public" : "") + "'>" + (row.aktyvus ? "Viešas" : "Privatus") + "</span></div>" +
+        "<article class='info-box user-page-card" + (requestedResetProfileId === row.id ? " is-highlighted" : "") + "' data-profile-card>" +
+          "<div class='user-card-heading'><p class='eyebrow'>Atminimo puslapis</p><span class='user-card-visibility " + (row.aktyvus && !row.access_code_protected ? "is-public" : "") + "'>" + html(activeLabel) + "</span></div>" +
           "<h2>" + html(name) + "</h2>" +
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
           "<p class='user-card-product'>" + (order ? html(productName(order.product_type)) : "Atminimo puslapio juodraštis") + "</p>" +
           shipment +
           primaryAction(row, order) +
+          accessCodeManager(row) +
           "<details class='user-card-more'><summary>Daugiau veiksmų</summary><div class='actions'>" + moreActions + "</div></details>" +
         "</article>"
       );
     }).join("");
+    scrollToRequestedReset();
     scrollToRequestedService();
   }
 
   listEl.addEventListener("click", async function (event) {
+    var secretToggle = event.target.closest("[data-user-secret-toggle]");
+    if (secretToggle) {
+      var secretField = secretToggle.parentElement.querySelector("input");
+      var showSecret = secretField && secretField.type === "password";
+      if (!secretField) return;
+      secretField.type = showSecret ? "text" : "password";
+      secretToggle.setAttribute("aria-pressed", String(showSecret));
+      secretToggle.setAttribute("aria-label", showSecret ? "Slėpti įvestą reikšmę" : "Rodyti įvestą reikšmę");
+      return;
+    }
     var qrButton = event.target.closest("button[data-qr-profile]");
     if (qrButton) {
       qrButton.disabled = true;
@@ -500,16 +580,59 @@
     var button = event.target.closest("button[data-profile-id]");
     if (!button) return;
     var nextActive = button.dataset.nextActive === "true";
-    if (nextActive && !window.confirm("Paskelbus puslapį, jo turinį galės matyti visi, turintys nuorodą arba QR kodą. Paskelbti?")) return;
+    var protectedPage = button.dataset.accessProtected === "true";
+    var publishQuestion = protectedPage
+      ? "Paskelbus puslapį, jį galės atidaryti tik prieigos kodą turintys lankytojai. Paskelbti?"
+      : "Paskelbus puslapį, jo turinį galės matyti visi, turintys nuorodą arba QR kodą. Paskelbti?";
+    if (nextActive && !window.confirm(publishQuestion)) return;
     button.disabled = true;
     statusEl.textContent = nextActive ? "Puslapis skelbiamas..." : "Puslapis slepiamas...";
     try {
       await setVisibility(button.dataset.profileId, nextActive);
       await fetchMyPages();
-      statusEl.textContent = nextActive ? "Puslapis paskelbtas viešai." : "Puslapis nebėra viešas.";
+      statusEl.textContent = nextActive
+        ? (protectedPage ? "Privatus puslapis paskelbtas su prieigos kodo apsauga." : "Puslapis paskelbtas viešai.")
+        : "Puslapis paslėptas nuo lankytojų.";
     } catch (error) {
       statusEl.textContent = error.message || "Nepavyko pakeisti puslapio viešumo.";
       button.disabled = false;
+    }
+  });
+
+  listEl.addEventListener("submit", async function (event) {
+    var resetForm = event.target.closest("form[data-access-code-form]");
+    if (!resetForm) return;
+    event.preventDefault();
+    var resetStatus = resetForm.querySelector("[data-access-code-status]");
+    var accountPassword = resetForm.elements.account_password.value;
+    var code = String(resetForm.elements.access_code.value || "").replace(/\D/g, "").slice(0, 6);
+    var confirmation = String(resetForm.elements.access_code_confirm.value || "").replace(/\D/g, "").slice(0, 6);
+    resetForm.elements.access_code.value = code;
+    resetForm.elements.access_code_confirm.value = confirmation;
+    var validationMessage = validateNewAccessCode(code, confirmation);
+    if (validationMessage) {
+      resetStatus.textContent = validationMessage;
+      resetStatus.dataset.state = "error";
+      return;
+    }
+    var saveButton = resetForm.querySelector("button[type='submit']");
+    saveButton.disabled = true;
+    resetStatus.textContent = "Tapatybė tikrinama ir naujas kodas saugomas…";
+    resetStatus.dataset.state = "loading";
+    try {
+      await replaceAccessCode(resetForm.dataset.accessCodeForm, accountPassword, code);
+      resetForm.reset();
+      requestedResetProfileId = "";
+      if (window.history && window.history.replaceState) {
+        var cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete("reset_access");
+        window.history.replaceState(null, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+      }
+      await fetchMyPages("Naujas prieigos kodas išsaugotas. Senojo kodo naudoti nebegalima.");
+    } catch (error) {
+      resetStatus.textContent = error.message || "Prieigos kodo pakeisti nepavyko.";
+      resetStatus.dataset.state = "error";
+      saveButton.disabled = false;
     }
   });
 

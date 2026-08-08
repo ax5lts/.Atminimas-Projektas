@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260803-3">
+<link rel="stylesheet" href="css/styles.css?v=20260808-2">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -276,6 +276,25 @@
             <p class="editor-note">Peržiūroje pasirinkite teksto ar nuotraukos bloką. Tuomet galėsite pakeisti jo dydį arba padėtį. Kad tekstas aptekėtų nuotrauką, pasirinkite jos vietą kairėje arba dešinėje. Pajudinus vieną bloką, kiti lieka savo vietoje. Puslapio apačia prisitaiko automatiškai. Šie nustatymai skirti tik smulkiam pataisymui.</p>
             <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Atidaryti koregavimo peržiūrą</button>
           </div>
+          <fieldset class="editor-access-settings" id="editor-access-settings" aria-describedby="editor-access-help editor-access-error">
+            <legend>Ar norite apsaugoti atminimo puslapį prieigos kodu?</legend>
+            <label class="editor-access-option"><input type="radio" name="access_protected" value="no" checked> <span><strong>Ne</strong><small>Puslapis bus viešas</small></span></label>
+            <label class="editor-access-option"><input type="radio" name="access_protected" value="yes"> <span><strong>Taip</strong><small>Puslapis bus apsaugotas prieigos kodu</small></span></label>
+            <div class="editor-access-code-fields" id="editor-access-code-fields" hidden>
+              <label for="editor-access-code">Sukurkite prieigos kodą</label>
+              <span class="access-code-control">
+                <input id="editor-access-code" type="password" name="access_code" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{5,6}" minlength="5" maxlength="6" aria-describedby="editor-access-help editor-access-error">
+                <button type="button" class="access-code-toggle" data-access-code-toggle aria-controls="editor-access-code" aria-pressed="false" aria-label="Rodyti prieigos kodą"><span aria-hidden="true">◉</span></button>
+              </span>
+              <label for="editor-access-code-confirm">Pakartokite prieigos kodą</label>
+              <span class="access-code-control">
+                <input id="editor-access-code-confirm" type="password" name="access_code_confirm" inputmode="numeric" autocomplete="new-password" pattern="[0-9]{5,6}" minlength="5" maxlength="6" aria-describedby="editor-access-help editor-access-error">
+                <button type="button" class="access-code-toggle" data-access-code-toggle aria-controls="editor-access-code-confirm" aria-pressed="false" aria-label="Rodyti prieigos kodą"><span aria-hidden="true">◉</span></button>
+              </span>
+            </div>
+            <p class="editor-field-help" id="editor-access-help">Šio kodo reikės norint peržiūrėti privatų atminimo puslapį. Pasirinkite kodą, kurį lengvai prisiminsite, tačiau kurį būtų sunku atspėti kitiems.</p>
+            <p class="form-status" id="editor-access-error" role="alert" aria-live="polite"></p>
+          </fieldset>
           <fieldset class="legal-confirmations">
             <legend>Privalomi patvirtinimai</legend>
             <label><input type="checkbox" name="rights_confirm" value="yes" required> Patvirtinu, kad turiu teisę skelbti pateiktus tekstus, nuotraukas ir vaizdo įrašus, įskaitant mirusio asmens atvaizdą.</label>
@@ -415,10 +434,10 @@
         <dt>Išdėstymas</dt>
         <dd>Išsaugomos jūsų pasirinktos tekstų, nuotraukų ir vaizdo įrašo vietos.</dd>
         <dt>Viešumas</dt>
-        <dd>Naujas puslapis išsaugomas neviešas. Jį atskirai paskelbsite kliento zonoje.</dd>
+        <dd>Pasirinksite viešą puslapį arba prieigos kodu apsaugotą privatų puslapį. QR kode visada bus tik puslapio nuoroda.</dd>
       </dl>
       <div class="editor-result" id="editor-result" hidden>
-        <h3>Sukurta kaip privatus puslapis</h3>
+        <h3>Atminimo puslapis sukurtas</h3>
         <a id="editor-open-link" class="button" href="#">Peržiūrėti prisijungus</a>
         <a id="editor-checkout-link" class="button" href="#">Tęsti į pristatymą ir apmokėjimą</a>
         <a id="editor-client-link" class="button button--ghost" href="#">Kliento nuoroda</a>
@@ -433,10 +452,10 @@
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260806-1"></script>
-<script src="assets/redaktorius.js?v=20260803-3"></script>
+<script src="assets/atminimas-duomenys.js?v=20260808-1"></script>
+<script src="assets/redaktorius.js?v=20260808-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
-<script src="assets/site-ui.js?v=20260716-1"></script>
+<script src="assets/site-ui.js?v=20260808-1"></script>
 </body>
 </html>
 

@@ -9,7 +9,7 @@
 <meta name="description" content="Artimo žmogaus atminimo puslapis su gyvenimo istorija, nuotraukomis ir vaizdo įrašu.">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapis</title>
-<link rel="stylesheet" href="css/styles.css?v=20260731-1">
+<link rel="stylesheet" href="css/styles.css?v=20260808-2">
 </head>
 <body class="memorial-page" data-loading>
 <header class="memorial-site-header">
@@ -30,6 +30,22 @@
   <p class="kraunama" id="kraunama">Kraunamas atminimo puslapis...</p>
   <p class="duomenu-busena" id="duomenu-busena" hidden></p>
   <p class="klaida" id="klaida" hidden></p>
+
+  <section class="memorial-access-gate" id="memorial-access-gate" hidden aria-labelledby="memorial-access-title">
+    <div class="memorial-access-gate__icon" aria-hidden="true">⌾</div>
+    <h1 id="memorial-access-title">Šis atminimo puslapis yra privatus.</h1>
+    <p>Įveskite prieigos kodą.</p>
+    <form id="memorial-access-form">
+      <label for="memorial-access-code">Prieigos kodas</label>
+      <span class="access-code-control">
+        <input id="memorial-access-code" type="password" name="access_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{5,6}" minlength="5" maxlength="6" required>
+        <button type="button" class="access-code-toggle" data-access-code-toggle aria-controls="memorial-access-code" aria-pressed="false" aria-label="Rodyti prieigos kodą"><span aria-hidden="true">◉</span></button>
+      </span>
+      <button class="button" type="submit">Atidaryti</button>
+      <p class="form-status" id="memorial-access-status" role="status" aria-live="polite"></p>
+    </form>
+    <a id="memorial-forgot-access" href="prisijungti.html">Pamiršote prieigos kodą?</a>
+  </section>
 
   <main id="turinys" hidden>
     <section class="antmastis" id="antmastis" aria-label="Atminimo informacija">
@@ -99,11 +115,11 @@
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
-<script src="assets/atminimas-duomenys.js?v=20260806-1"></script>
+<script src="assets/atminimas-duomenys.js?v=20260808-1"></script>
 <script src="assets/memorial-actions.js?v=20260801-1"></script>
-<script src="assets/memorial-page.js?v=20260801-1"></script>
+<script src="assets/memorial-page.js?v=20260808-1"></script>
 <script src="assets/loading.js?v=20260707-1"></script>
-<script src="assets/site-ui.js?v=20260716-1"></script>
+<script src="assets/site-ui.js?v=20260808-1"></script>
 </body>
 </html>
 
