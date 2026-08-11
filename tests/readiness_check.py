@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "assets" / "business-config.js"
 APP_CONFIG = ROOT / "assets" / "supabase-config.js"
+ANALYTICS_CONFIG = ROOT / "assets" / "analytics-config.js"
 REQUIRED = {
     "legalName": "veiklos vykdytojo vardas arba įmonės pavadinimas",
     "activityForm": "veiklos forma",
@@ -40,6 +41,12 @@ app_text = APP_CONFIG.read_text(encoding="utf-8")
 app_values = dict(re.findall(r'^\s*([A-Z][A-Z0-9_]*):\s*"([^"]*)"', app_text, re.M))
 if not app_values.get("PUBLIC_SITE_URL", "").strip():
     missing.append("viešas produkcinės svetainės adresas (domenas)")
+
+analytics_text = ANALYTICS_CONFIG.read_text(encoding="utf-8")
+analytics_match = re.search(r'GA_MEASUREMENT_ID:\s*"([^"]*)"', analytics_text)
+analytics_id = analytics_match.group(1).strip() if analytics_match else ""
+if not re.fullmatch(r"G-[A-Z0-9]+", analytics_id, re.I):
+    missing.append("Google Analytics 4 matavimo ID (G-...)")
 
 if missing:
     print("SVETAINĖ DAR NEPARUOŠTA REALIAI PREKYBAI. Trūksta:")

@@ -1,20 +1,22 @@
 import argparse
 import socket
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 
 PUBLIC_DIRECTORIES = {"assets", "css"}
-PUBLIC_ROOT_SUFFIXES = {".html", ".ico", ".jpg", ".jpeg", ".png", ".webp", ".mp4"}
+PUBLIC_ROOT_SUFFIXES = {".html", ".ico", ".jpg", ".jpeg", ".png", ".webp", ".mp4", ".txt", ".xml"}
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-        "form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https://*.supabase.co; "
+        "form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; "
+        "script-src-attr 'none'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; "
         "media-src 'self' blob: https://*.supabase.co; "
-        "connect-src 'self' https://*.supabase.co; "
+        "connect-src 'self' https://*.supabase.co https://www.google-analytics.com "
+        "https://analytics.google.com https://region1.google-analytics.com; "
         "frame-src https://www.openstreetmap.org"
     ),
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
@@ -53,6 +55,25 @@ def is_public_path(raw_path):
 
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
+    def send_error(self, code, message=None, explain=None):
+        if code == 404:
+            error_page = Path(self.directory or ".") / "404.html"
+            try:
+                body = error_page.read_bytes()
+            except OSError:
+                return super().send_error(code, message, explain)
+            self.send_response(404)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command != "HEAD":
+                try:
+                    self.wfile.write(body)
+                except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+                    pass
+            return
+        return super().send_error(code, message, explain)
+
     def do_GET(self):
         if not is_public_path(self.path):
             self.send_error(404)

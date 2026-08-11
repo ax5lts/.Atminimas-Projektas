@@ -2,13 +2,13 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; frame-src https://www.openstreetmap.org">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapavietės priežiūros paslaugos.">
 <title>Atminimas - skaitmeniniai atminimo puslapiai</title>
-<link rel="stylesheet" href="css/styles.css?v=20260731-3">
+<link rel="stylesheet" href="css/styles.css?v=20260811-2">
 </head>
 <body class="home-page" data-loading>
 <div class="site-shell">
@@ -79,8 +79,8 @@
         <input id="home-grave-query" name="q" type="search" minlength="2" maxlength="220" autocomplete="off" placeholder="Vardas ir pavardė" required>
         <button class="button" type="submit">Ieškoti</button>
       </form>
-      <p class="form-status" data-grave-status role="status" aria-live="polite"></p>
-      <div class="grave-result-grid grave-result-grid--compact" data-grave-results></div>
+      <p class="form-status" data-grave-status data-state="info" role="status" aria-live="polite"></p>
+      <div class="grave-result-grid grave-result-grid--compact" data-grave-results aria-busy="false" aria-label="Kapaviečių paieškos rezultatai"></div>
       <a class="text-link" href="kapu-ieskojimas.html">Atidaryti išsamią kapų paiešką →</a>
       <p class="muted grave-source">Kapinių registro duomenų šaltinis: <a href="https://data.gov.lt/datasets/2779/?resource_version=1619" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, Valstybės duomenų agentūra. Licencija <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a>.</p>
     </section>
@@ -159,6 +159,11 @@
         <h2 id="services-title">Kitos paslaugos</h2>
         <p>Pasirinkite paslaugas ir kapavietę. Jei vieta turi tikslias koordinates, parodysime preliminarų paslaugų bei kelionės įvertį nuo Panevėžio, o galutinę kainą gausite atskiru pasiūlymu.</p>
       </header>
+
+      <aside class="response-promise" aria-label="Atsakymo terminas">
+        <span aria-hidden="true">↗</span>
+        <div><strong>Atsakome <span data-business="responseTime">per 1 darbo dieną</span></strong><p>Gavę užklausą patikrinsime vietą, darbų apimtį ir el. paštu atsiųsime galutinį pasiūlymą.</p></div>
+      </aside>
 
       <form class="service-request" id="service-request-form">
         <nav class="service-stepper" aria-label="Paslaugos užklausos žingsniai">
@@ -316,6 +321,36 @@
         </div>
       </form>
     </section>
+
+    <section class="home-section home-faq" id="duk" aria-labelledby="faq-title">
+      <header class="home-section__header">
+        <p class="eyebrow">Dažniausiai užduodami klausimai</p>
+        <h2 id="faq-title">Trumpi atsakymai prieš pradedant</h2>
+        <p>Jei atsakymo čia nėra, parašykite mums – atsakome <span data-business="responseTime">per 1 darbo dieną</span>.</p>
+      </header>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Kaip veikia QR atminimo lentelė?</summary>
+          <p>Nuskenavus ant lentelės išgraviruotą QR kodą telefonu atidaromas konkretus atminimo puslapis su jūsų parinktu tekstu, nuotraukomis ir kitais prisiminimais.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Ar puslapį galima sukurti prieš mokant?</summary>
+          <p>Taip. Pirmiausia sukuriate privatų juodraštį ir jį peržiūrite. Prisijungti bei tęsti užsakymą reikia tik prieš apmokėjimą.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Ar informaciją galėsiu pakeisti vėliau?</summary>
+          <p>Taip. Puslapio savininkas kliento zonoje gali redaguoti tekstus, nuotraukas ir puslapio matomumą.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kur rasti kainą ir pristatymo informaciją?</summary>
+          <p>Aktuali produkto kaina rodoma parduotuvėje. Pristatymo būdą, paštomatą ir galutinę sumą matysite prieš mokėjimą.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kaip užsakyti kapavietės priežiūrą?</summary>
+          <p>Pasirinkite darbus, nurodykite kapavietę ir kontaktinį el. paštą. Įprastai atsakome <span data-business="responseTime">per 1 darbo dieną</span> ir atsiunčiame atskirą galutinį pasiūlymą; pati užklausa dar nėra apmokamas užsakymas.</p>
+        </details>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -326,12 +361,14 @@
     </div>
   </footer>
 </div>
+<script src="assets/business-config.js?v=20260811-1"></script>
+<script src="assets/business-details.js?v=20260811-1"></script>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
+<script src="assets/loading.js?v=20260811-2"></script>
 <script src="assets/service-prices.js?v=20260707-1"></script>
 <script src="assets/home.js?v=20260719-5"></script>
-<script src="assets/official-grave-search.js?v=20260724-1"></script>
-<script src="assets/loading.js?v=20260707-1"></script>
-<script src="assets/site-ui.js?v=20260724-1"></script>
+<script src="assets/official-grave-search.js?v=20260811-2"></script>
+<script src="assets/site-ui.js?v=20260811-2"></script>
 </body>
 </html>

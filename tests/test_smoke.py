@@ -65,6 +65,14 @@ class AtminimasSmokeTests(unittest.TestCase):
                     self.assertIn("text/html", response.headers.get("Content-Type", ""))
                     response.read()
 
+    def test_unknown_page_returns_branded_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.local_request("/puslapio-tikrai-nera.html")
+        self.assertEqual(error.exception.code, 404)
+        body = error.exception.read().decode("utf-8")
+        self.assertIn("Šio puslapio čia nėra", body)
+        self.assertIn("Grįžti į pradžią", body)
+
     def test_local_references_exist(self):
         pattern = re.compile(r'(?:href|src)\s*=\s*["\']([^"\'#?]+)', re.I)
         for page in ROOT.glob("*.html"):
@@ -453,7 +461,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260806-1', user_page)
+        self.assertRegex(user_page, r'assets/user\.js\?v=\d{8}-\d+')
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -848,7 +856,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             html = (ROOT / name).read_text(encoding="utf-8")
             with self.subTest(page=name):
                 self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
-                self.assertIn('src="assets/loading.js?v=20260707-1"', html)
+                self.assertRegex(html, r'src="assets/loading\.js\?v=\d{8}-\d+"')
         for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-plienas.webp", "qr-plienas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
             with self.subTest(image=image):
                 self.assertTrue((ROOT / "assets" / image).is_file())

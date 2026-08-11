@@ -63,7 +63,7 @@ class CheckoutUxTests(unittest.TestCase):
         self.assertIn("order_id: orderId", self.script)
 
     def test_checkout_specific_styles_are_connected_and_accessible(self):
-        self.assertIn('href="css/checkout-ux.css?v=20260724-1"', self.page)
+        self.assertRegex(self.page, r'href="css/checkout-ux\.css\?v=\d{8}-\d+"')
         self.assertIn(".checkout-success:focus", self.styles)
         self.assertIn(".checkout-form select:focus-visible", self.styles)
         self.assertIn('.checkout-inline-state[data-state="error"]', self.styles)

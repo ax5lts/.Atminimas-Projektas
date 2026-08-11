@@ -33,7 +33,7 @@
   }
 
   function setupHeaderMenu() {
-    if (!header || !nav || header.querySelector("[data-site-menu-toggle]")) return;
+    if (!header || !nav || document.body.classList.contains("has-mobile-dock") || header.querySelector("[data-site-menu-toggle]")) return;
     var button = document.createElement("button");
     button.className = "site-menu-toggle";
     button.type = "button";
@@ -73,6 +73,38 @@
     link.href = "#" + main.id;
     link.textContent = "Pereiti prie turinio";
     document.body.prepend(link);
+  }
+
+  function setupBreadcrumbs() {
+    var excluded = ["index.html", "admin.html", "redaktorius.html", "sablonas-viskas.html"];
+    if (excluded.indexOf(page) !== -1 || document.querySelector(".breadcrumbs")) return;
+    var labels = {
+      "404.html": "Puslapis nerastas",
+      "aciu.html": "Ačiū",
+      "apmokejimas.html": "Pristatymas ir apmokėjimas",
+      "grazinimas.html": "Atsisakyti sutarties",
+      "kapu-ieskojimas.html": "Kapų paieška",
+      "klientai.html": "Klientams",
+      "parduotuve.html": "Parduotuvė",
+      "pranesti.html": "Pranešti apie turinį",
+      "prieinamumas.html": "Prieinamumas",
+      "prisijungti.html": "Prisijungti",
+      "privatumas.html": "Privatumas",
+      "registruotis.html": "Registruotis",
+      "rekvizitai.html": "Rekvizitai ir kontaktai",
+      "slaptazodis.html": "Atkurti slaptažodį",
+      "taisykles.html": "Taisyklės",
+      "vartotojas.html": "Kliento zona"
+    };
+    var label = labels[page];
+    var main = document.querySelector("main");
+    if (!label || !main) return;
+    var breadcrumbs = document.createElement("nav");
+    breadcrumbs.className = "breadcrumbs breadcrumbs--generated";
+    breadcrumbs.setAttribute("aria-label", "Kelias");
+    breadcrumbs.innerHTML = '<a href="index.html">Pradžia</a><span aria-current="page"></span>';
+    breadcrumbs.querySelector("span").textContent = label;
+    main.prepend(breadcrumbs);
   }
 
   function setupBackLinks() {
@@ -160,6 +192,32 @@
     }
   }
 
+  function loadScriptOnce(src, marker) {
+    if (document.querySelector("script[data-site-module='" + marker + "']")) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.dataset.siteModule = marker;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  function setupSeoAndAnalytics() {
+    var privatePages = ["admin.html", "apmokejimas.html", "redaktorius.html", "slaptazodis.html", "vartotojas.html"];
+    if (privatePages.indexOf(page) !== -1) return;
+    var businessReady = window.ATMINIMAS_BUSINESS
+      ? Promise.resolve()
+      : loadScriptOnce("assets/business-config.js", "business-config");
+    businessReady.then(function () {
+      return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
+    }).catch(function () {});
+    loadScriptOnce("assets/analytics-config.js?v=20260811-1", "analytics-config").then(function () {
+      return loadScriptOnce("assets/analytics.js?v=20260811-1", "analytics");
+    }).catch(function () {});
+  }
+
   function copyText(value) {
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(value);
     var field = document.createElement("textarea");
@@ -190,11 +248,13 @@
   }
 
   setCurrentLinks(document);
-  setupHeaderMenu();
   setupSkipLink();
+  setupBreadcrumbs();
   setupBackLinks();
   setupMobileDock();
+  setupHeaderMenu();
   setupRevealAnimations();
+  setupSeoAndAnalytics();
 
   window.AtminimasUi = {
     copyText: copyText,

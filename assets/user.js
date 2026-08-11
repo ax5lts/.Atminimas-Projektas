@@ -18,6 +18,21 @@
     asa: "ASA 3D spausdinta QR atminimo lentelė"
   };
 
+  function setStatus(message, state) {
+    if (!statusEl) return;
+    statusEl.textContent = message || "";
+    if (state) statusEl.dataset.state = state;
+    else delete statusEl.dataset.state;
+  }
+
+  function showPageSkeleton() {
+    if (window.AtminimasLoading) AtminimasLoading.show(listEl, 2);
+  }
+
+  function finishPageSkeleton() {
+    if (window.AtminimasLoading) AtminimasLoading.finish(listEl);
+  }
+
   function selectedProduct() {
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
     var stored = sessionStorage.getItem(productKey);
@@ -218,8 +233,13 @@
       } else if (expired && row.payment_status !== "paid") {
         actions = "<p class='editor-note'>Pasiūlymo galiojimas baigėsi. Susisiekite su mumis arba palaukite naujo pasiūlymo.</p>";
       }
+      var badgeClass = row.payment_status === "paid"
+        ? " is-success"
+        : (expired || ["failed", "cancelled"].indexOf(row.payment_status) !== -1
+          ? " is-danger"
+          : (["sent", "accepted"].indexOf(row.quote_status) !== -1 ? " is-warning" : " is-info"));
       return "<article class='info-box user-page-card" + (requestedId === row.id ? " is-highlighted" : "") + "' id='service-" + html(row.id) + "'>" +
-        "<div class='user-card-heading'><p class='eyebrow'>Paslaugos užklausa #" + html(String(row.id).slice(0, 8).toUpperCase()) + "</p><span class='user-card-visibility " + (row.payment_status === "paid" ? "is-public" : "") + "'>" + html(row.payment_status === "paid" ? "Apmokėta" : serviceQuoteStatus(expired ? "expired" : row.quote_status)) + "</span></div>" +
+        "<div class='user-card-heading'><p class='eyebrow'>Paslaugos užklausa #" + html(String(row.id).slice(0, 8).toUpperCase()) + "</p><span class='user-card-visibility" + badgeClass + "'>" + html(row.payment_status === "paid" ? "Apmokėta" : serviceQuoteStatus(expired ? "expired" : row.quote_status)) + "</span></div>" +
         "<h2>" + html(row.mirusiojo_vardas) + "</h2><p>" + html([row.kapiniu_pavadinimas, row.savivaldybe].filter(Boolean).join(", ")) + "</p>" +
         "<p class='user-card-product'>" + html(services) + "</p>" +
         "<div class='user-card-status'><span>Preliminarus įvertis</span><strong>" + html(estimateRange(row)) + "</strong><span>Kelionė</span><strong>" + html(distance) + "</strong><span>Mokėjimas</span><strong>" + html(expired && row.payment_status !== "paid" ? "pasiūlymas nebegalioja" : servicePaymentStatus(row.payment_status)) + "</strong></div>" +
@@ -340,17 +360,20 @@
   }
 
   async function fetchMyPages(successMessage) {
+    showPageSkeleton();
+    setStatus("Kraunama jūsų kliento zona…", "loading");
     var me = await AtminimasAuth.user();
     if (!me) {
+      finishPageSkeleton();
       listEl.innerHTML = "";
       if (serviceListEl) serviceListEl.innerHTML = "";
       if (serviceSectionEl) serviceSectionEl.hidden = true;
       logoutButton.hidden = true;
       if (createButton) createButton.hidden = true;
       if (guestActions) guestActions.hidden = false;
-      statusEl.textContent = requestedServiceId && claimRequested
+      setStatus(requestedServiceId && claimRequested
         ? "Galutinį pasiūlymą gavote el. paštu. Prisijunkite tuo pačiu el. paštu tik tada, kai norėsite jį priimti ir apmokėti."
-        : "Prisijunkite, kad atidarytumėte savo kliento zoną.";
+        : "Prisijunkite, kad atidarytumėte savo kliento zoną.", "info");
       return;
     }
 
@@ -364,15 +387,15 @@
     } catch (claimError) {
       claimErrorMessage = claimError.message || "Pasiūlymo nepavyko priskirti šiai paskyrai.";
     }
-    statusEl.textContent = successMessage || claimErrorMessage || (claimedNow
+    setStatus(successMessage || claimErrorMessage || (claimedNow
       ? "Pasiūlymas priskirtas jūsų paskyrai. Dabar galite jį priimti ir apmokėti."
-      : "Prisijungta: " + me.email);
+      : "Prisijungta: " + me.email), claimErrorMessage ? "error" : (successMessage || claimedNow ? "success" : "info"));
 
     await loadMyServiceRequests(me.id);
     if (new URLSearchParams(window.location.search).get("payment") === "success") {
-      statusEl.textContent = "Mokėjimas priimtas. Laukiame saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.";
+      setStatus("Mokėjimas priimtas. Laukiame saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.", "success");
     } else if (new URLSearchParams(window.location.search).get("payment") === "cancelled") {
-      statusEl.textContent = "Mokėjimas atšauktas. Pasiūlymas išsaugotas, galėsite bandyti dar kartą.";
+      setStatus("Mokėjimas atšauktas. Pasiūlymas išsaugotas, galėsite bandyti dar kartą.", "warning");
     }
 
     var res = await apiFetch(restUrl(
@@ -383,6 +406,8 @@
     });
 
     if (!res.ok) {
+      finishPageSkeleton();
+      setStatus("Puslapių įkelti nepavyko.", "error");
       listEl.innerHTML = "<div class='info-box'><h2>Nepavyko įkelti puslapių</h2><p>Pabandykite atnaujinti puslapį. Jei problema kartojasi, susisiekite su mumis.</p></div>";
       scrollToRequestedService();
       return;
@@ -390,6 +415,7 @@
 
     var rows = await res.json();
     if (!rows.length) {
+      finishPageSkeleton();
       listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo QR atminimo lentelės pasirinkimo.</p><a class='button' href='parduotuve.html'>Rinktis lentelę</a></div>";
       scrollToRequestedService();
       return;
@@ -408,6 +434,7 @@
       if (!orderByProfile[order.profilis_id]) orderByProfile[order.profilis_id] = order;
     });
 
+    finishPageSkeleton();
     listEl.innerHTML = rows.map(function (row) {
       var name = [row.vardas, row.pavarde].filter(Boolean).join(" ") || row.id;
       var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
@@ -459,13 +486,13 @@
       var profileName = deleteButton.dataset.profileName || "šį puslapį";
       if (!window.confirm("Ar tikrai norite ištrinti „" + profileName + "“? Atminimo puslapis ir jo nuotraukos bus pašalinti. Šio veiksmo atšaukti negalima.")) return;
       deleteButton.disabled = true;
-      statusEl.textContent = "Puslapis trinamas...";
+      setStatus("Puslapis trinamas…", "loading");
       try {
         await deleteProfile(deleteButton.dataset.deleteProfile);
         await fetchMyPages();
-        statusEl.textContent = "Puslapis ištrintas.";
+        setStatus("Puslapis ištrintas.", "success");
       } catch (error) {
-        statusEl.textContent = error.message || "Nepavyko ištrinti puslapio.";
+        setStatus(error.message || "Nepavyko ištrinti puslapio.", "error");
         deleteButton.disabled = false;
       }
       return;
@@ -474,13 +501,13 @@
     if (approvalButton) {
       if (!window.confirm("Patvirtinate, kad atminimo puslapio informacija ir QR nuoroda teisingi ir lentelę galima gaminti?")) return;
       approvalButton.disabled = true;
-      statusEl.textContent = "Patvirtinimas saugomas...";
+      setStatus("Patvirtinimas saugomas…", "loading");
       try {
         await approveProduction(approvalButton.dataset.approveOrder);
         await fetchMyPages();
-        statusEl.textContent = "Patvirtinta. Užsakymas perduotas į gamybos eilę.";
+        setStatus("Patvirtinta. Užsakymas perduotas į gamybos eilę.", "success");
       } catch (error) {
-        statusEl.textContent = error.message || "Nepavyko patvirtinti gamybos.";
+        setStatus(error.message || "Nepavyko patvirtinti gamybos.", "error");
         approvalButton.disabled = false;
       }
       return;
@@ -491,7 +518,7 @@
       try {
         await downloadDocument(documentButton.dataset.documentOrder, documentButton.dataset.documentType);
       } catch (error) {
-        statusEl.textContent = error.message || "Nepavyko atsisiųsti dokumento.";
+        setStatus(error.message || "Nepavyko atsisiųsti dokumento.", "error");
       } finally {
         documentButton.disabled = false;
       }
@@ -502,13 +529,13 @@
     var nextActive = button.dataset.nextActive === "true";
     if (nextActive && !window.confirm("Paskelbus puslapį, jo turinį galės matyti visi, turintys nuorodą arba QR kodą. Paskelbti?")) return;
     button.disabled = true;
-    statusEl.textContent = nextActive ? "Puslapis skelbiamas..." : "Puslapis slepiamas...";
+    setStatus(nextActive ? "Puslapis skelbiamas…" : "Puslapis slepiamas…", "loading");
     try {
       await setVisibility(button.dataset.profileId, nextActive);
       await fetchMyPages();
-      statusEl.textContent = nextActive ? "Puslapis paskelbtas viešai." : "Puslapis nebėra viešas.";
+      setStatus(nextActive ? "Puslapis paskelbtas viešai." : "Puslapis nebėra viešas.", "success");
     } catch (error) {
-      statusEl.textContent = error.message || "Nepavyko pakeisti puslapio viešumo.";
+      setStatus(error.message || "Nepavyko pakeisti puslapio viešumo.", "error");
       button.disabled = false;
     }
   });
@@ -517,17 +544,17 @@
     var retry = event.target.closest("button[data-service-retry]");
     if (retry) {
       retry.disabled = true;
-      statusEl.textContent = "Paslaugų užklausos įkeliamos iš naujo...";
+      setStatus("Paslaugų užklausos įkeliamos iš naujo…", "loading");
       try {
         var me = await AtminimasAuth.user();
         if (!me) throw new Error("Prisijungimo sesija baigėsi. Prisijunkite iš naujo.");
         var loaded = await loadMyServiceRequests(me.id);
-        statusEl.textContent = loaded
+        setStatus(loaded
           ? "Paslaugų užklausos atnaujintos."
-          : "Paslaugų užklausų vis dar nepavyko įkelti. Pabandykite vėliau.";
+          : "Paslaugų užklausų vis dar nepavyko įkelti. Pabandykite vėliau.", loaded ? "success" : "warning");
         scrollToRequestedService();
       } catch (error) {
-        statusEl.textContent = error.message || "Paslaugų užklausų įkelti nepavyko.";
+        setStatus(error.message || "Paslaugų užklausų įkelti nepavyko.", "error");
         retry.disabled = false;
       }
       return;
@@ -549,18 +576,18 @@
         if (declined !== "declined") throw new Error("Pasiūlymas pasikeitė. Atnaujinkite puslapį.");
         await fetchMyPages("Pasiūlymas atmestas.");
       } else {
-        statusEl.textContent = "Ruošiamas saugus apmokėjimas...";
+        setStatus("Ruošiamas saugus apmokėjimas…", "loading");
         await startServicePayment(payment.dataset.servicePayment);
       }
     } catch (error) {
-      statusEl.textContent = error.message || "Veiksmo atlikti nepavyko.";
+      setStatus(error.message || "Veiksmo atlikti nepavyko.", "error");
       button.disabled = false;
     }
   });
 
   logoutButton.addEventListener("click", function () {
     AtminimasAuth.signOut();
-    statusEl.textContent = "Atsijungta.";
+    setStatus("Atsijungta.", "info");
     listEl.innerHTML = "";
     if (serviceListEl) serviceListEl.innerHTML = "";
     if (serviceSectionEl) serviceSectionEl.hidden = true;
@@ -570,7 +597,8 @@
   });
 
   fetchMyPages().catch(function (err) {
-    statusEl.textContent = err.message || "Nepavyko patikrinti sesijos.";
+    finishPageSkeleton();
+    setStatus(err.message || "Nepavyko patikrinti sesijos.", "error");
   });
 })();
 

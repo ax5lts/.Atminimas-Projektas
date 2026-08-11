@@ -19,6 +19,7 @@ window.ATMINIMAS_BUSINESS = Object.freeze({
   emailProvider: "",
   hostingProvider: "",
   hostingPeriod: "",
+  responseTime: "per 1 darbo dieną",
   manufacturer: "",
   productIdentifier: "",
   material: "",

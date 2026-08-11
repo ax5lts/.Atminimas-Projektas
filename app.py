@@ -30,6 +30,11 @@ def index():
     return send_from_directory(".", "index.html")
 
 
+@app.errorhandler(404)
+def not_found(_error):
+    return send_from_directory(".", "404.html"), 404
+
+
 @app.after_request
 def add_security_headers(response):
     for name, value in SECURITY_HEADERS.items():

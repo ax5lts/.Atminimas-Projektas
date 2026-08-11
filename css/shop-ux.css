@@ -46,12 +46,12 @@
 }
 
 .shop-journey .is-current {
-  border-color: #174f4a;
-  background: #f2f8f5;
+  border-color: var(--status-info-border);
+  background: var(--status-info-soft);
 }
 
 .shop-journey .is-current > span {
-  background: #174f4a;
+  background: var(--status-info);
   color: #fff;
 }
 
@@ -62,9 +62,10 @@
   gap: 16px;
   margin: -10px 0 28px;
   padding: 14px 16px;
-  border: 1px solid #c98f35;
+  border: 1px solid var(--status-warning-border);
   border-radius: 14px;
-  background: #fff8e9;
+  color: var(--status-warning);
+  background: var(--status-warning-soft);
 }
 
 .shop-catalog-status[hidden] {
