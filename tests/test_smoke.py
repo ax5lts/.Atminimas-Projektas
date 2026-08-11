@@ -65,6 +65,14 @@ class AtminimasSmokeTests(unittest.TestCase):
                     self.assertIn("text/html", response.headers.get("Content-Type", ""))
                     response.read()
 
+    def test_unknown_page_returns_branded_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.local_request("/puslapio-tikrai-nera.html")
+        self.assertEqual(error.exception.code, 404)
+        body = error.exception.read().decode("utf-8")
+        self.assertIn("Šio puslapio čia nėra", body)
+        self.assertIn("Grįžti į pradžią", body)
+
     def test_local_references_exist(self):
         pattern = re.compile(r'(?:href|src)\s*=\s*["\']([^"\'#?]+)', re.I)
         for page in ROOT.glob("*.html"):
@@ -342,7 +350,7 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_homepage_has_qr_and_multi_service_flows(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('href="parduotuve.html">Rinktis lentelę</a>', html)
+        self.assertIn('href="isankstinis-uzsakymas.html?product=metal">Rezervuoti be apmokėjimo</a>', html)
         self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
         self.assertIn('class="landing-proof"', html)
         self.assertIn("Pradėkite nemokėdami", html)
@@ -453,7 +461,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('data-service-accept', user)
         self.assertIn('data-service-decline', user)
         self.assertIn('data-service-payment', user)
-        self.assertIn('assets/user.js?v=20260806-1', user_page)
+        self.assertRegex(user_page, r'assets/user\.js\?v=\d{8}-\d+')
         self.assertIn('data-service-retry', user)
         self.assertIn('scrollToRequestedService', user)
         self.assertIn('accept_my_service_quote', user)
@@ -515,19 +523,19 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("[functions.service-flow]", config)
         self.assertIn("verify_jwt = false", config.split("[functions.service-flow]", 1)[1].split("[", 1)[0])
 
-    def test_shop_has_one_orderable_steel_plaque_and_unavailable_asa(self):
+    def test_shop_offers_both_plaque_variants_as_preorders(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('value="metal"', html)
         self.assertNotIn('value="steel"', html)
-        self.assertIn('value="asa" disabled', html)
-        self.assertIn('aria-disabled="true"', html)
+        self.assertIn('value="asa"', html)
+        self.assertNotIn('value="asa" disabled', html)
         self.assertIn('src="assets/qr-plienas-480.webp"', html)
         self.assertIn('src="assets/qr-asa-480.webp"', html)
         self.assertIn("Graviruota plieno QR atminimo lentelė", html)
         self.assertIn("ASA 3D spausdinta QR atminimo lentelė", html)
-        self.assertIn("Šiuo metu neturime", html)
-        self.assertIn("Kol kas neparduodama", html)
-        self.assertIn('src="assets/product-catalog.js?v=20260724-2"', html)
+        self.assertIn("Išankstinis užsakymas", html)
+        self.assertIn("Kaina tikslinama", html)
+        self.assertIn('src="assets/product-catalog.js?v=20260811-3"', html)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele.webp").stat().st_size, 100_000)
         self.assertLess((ROOT / "assets" / "qr-plienas-480.webp").stat().st_size, 30_000)
@@ -546,9 +554,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
-        self.assertIn('<a class="button" href="parduotuve.html">Užsakyti</a>', home)
+        self.assertIn('<a class="button" href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', home)
         self.assertIn('{ href: "parduotuve.html", label: "Kurti"', site_ui)
-        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Kurti atminimo puslapį</a>', shop)
+        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Rezervuoti be apmokėjimo</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -592,7 +600,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("enable trigger automation_refresh_product_orders", availability_sql)
         self.assertIn("productAvailabilityReady", editor)
         self.assertIn("Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.", editor)
-        self.assertIn("headingCopy.textContent", shop)
+        self.assertIn('createLink.href = "isankstinis-uzsakymas.html?product="', shop)
 
     def test_admin_has_separate_all_orders_dashboard(self):
         html = (ROOT / "admin.html").read_text(encoding="utf-8")
@@ -615,7 +623,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260806-1', html)
+        self.assertIn('assets/admin.js?v=20260811-3', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)
@@ -848,7 +856,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             html = (ROOT / name).read_text(encoding="utf-8")
             with self.subTest(page=name):
                 self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
-                self.assertIn('src="assets/loading.js?v=20260707-1"', html)
+                self.assertRegex(html, r'src="assets/loading\.js\?v=\d{8}-\d+"')
         for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-plienas.webp", "qr-plienas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
             with self.subTest(image=image):
                 self.assertTrue((ROOT / "assets" / image).is_file())

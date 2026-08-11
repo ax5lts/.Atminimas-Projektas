@@ -5,15 +5,15 @@
   align-items: start;
   margin: 0 0 24px;
   padding: 24px;
-  border: 1px solid #a9c9b9;
+  border: 1px solid var(--status-success-border);
   border-radius: 18px;
-  background: #f1f8f3;
+  background: var(--status-success-soft);
   box-shadow: var(--shadow);
   scroll-margin-top: 92px;
 }
 
 .checkout-success:focus {
-  outline: 3px solid #315f49;
+  outline: 3px solid var(--status-success);
   outline-offset: 3px;
 }
 
@@ -23,7 +23,7 @@
   height: 44px;
   place-items: center;
   border-radius: 50%;
-  background: #24533c;
+  background: var(--status-success);
   color: #fff;
   font-size: 1.45rem;
   font-weight: 900;
@@ -31,7 +31,7 @@
 
 .checkout-success .eyebrow {
   margin: 0 0 4px;
-  color: #315f49;
+  color: var(--status-success);
 }
 
 .checkout-success h2 {
@@ -41,7 +41,7 @@
 .checkout-success p:not(.eyebrow) {
   max-width: 68ch;
   margin: 0 0 16px;
-  color: #33443b;
+  color: var(--status-success);
   line-height: 1.55;
 }
 
@@ -63,26 +63,26 @@
 }
 
 .checkout-inline-state[data-state="loading"] {
-  border-color: #d9cfb9;
-  background: #fffbef;
+  border-color: var(--status-info-border);
+  background: var(--status-info-soft);
 }
 
 .checkout-inline-state[data-state="ready"] {
-  border-color: #b9d0c4;
-  background: #f5faf7;
+  border-color: var(--status-success-border);
+  background: var(--status-success-soft);
 }
 
 .checkout-inline-state[data-state="ready"] p {
-  color: #315f49;
+  color: var(--status-success);
 }
 
 .checkout-inline-state[data-state="error"] {
-  border-color: #d8aaa3;
-  background: #fff5f3;
+  border-color: var(--status-danger-border);
+  background: var(--status-danger-soft);
 }
 
 .checkout-inline-state[data-state="error"] p {
-  color: #743b34;
+  color: var(--status-danger);
 }
 
 .checkout-retry {

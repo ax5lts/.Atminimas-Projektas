@@ -148,7 +148,8 @@
     return savedGraves().some(function (item) { return item.key === key; });
   }
   function loader() {
-    return "<div class='grave-loader' role='status' aria-live='polite'><span class='grave-loader__spinner' aria-hidden='true'></span><span>Ieškoma kapų duomenyse…</span></div>";
+    if (window.AtminimasLoading) return AtminimasLoading.cards(3);
+    return "<div class='skeleton-list' aria-hidden='true'><article class='skeleton-card'><span class='skeleton-line skeleton-line--eyebrow'></span><span class='skeleton-line skeleton-line--title'></span><span class='skeleton-line'></span><span class='skeleton-line skeleton-line--short'></span></article></div>";
   }
   function photoBlock(row, rawName, rich) {
     if (!rich) return "";
@@ -164,7 +165,7 @@
       "' data-photo-lat='" + html(row.latitude == null ? "" : row.latitude) + "' data-photo-lng='" + html(row.longitude == null ? "" : row.longitude) +
       "' data-photo-src='" + html(source) + "' data-photo-known='" + (known ? "true" : "false") + "'";
     return "<figure class='grave-photo' data-grave-photo" + data + ">" +
-      "<div class='grave-photo__loading' data-photo-loading><span class='grave-loader__spinner' aria-hidden='true'></span><span>Tikrinama kapavietės nuotrauka…</span></div>" +
+      "<div class='grave-photo__loading' data-photo-loading role='status' aria-live='polite'><span class='skeleton-media' aria-hidden='true'></span><span class='visually-hidden'>Tikrinama kapavietės nuotrauka…</span></div>" +
       "<img data-photo-image hidden alt='" + html(alt) + "'>" +
       "<figcaption data-photo-caption hidden><span>" + (known ? "Patikrinta kapavietės nuotrauka." : "Naudotojo pateikta ir administratoriaus patvirtinta nuotrauka.") + "</span>" +
       "<button class='button button--ghost' type='button' data-add-grave-photo>Pateikti naujesnę nuotrauką</button></figcaption>" +
@@ -207,11 +208,13 @@
       photoBlock(row, rawName, rich) +
       (rich && embeddedMap ? "<div class='grave-map-preview'><iframe title='Kapavietės vieta žemėlapyje' loading='lazy' referrerpolicy='no-referrer' src='" + html(embeddedMap) + "'></iframe><small>Žemėlapis: © OpenStreetMap bendruomenė</small></div>" : "") +
       (map ? "<div class='grave-result-actions'" + actionData + ">" +
-        "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą</a>" +
-        "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“</a>" +
+        "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą<span class='visually-hidden'> naujame skirtuke</span></a>" +
+        "<details class='grave-result-more'><summary class='button button--ghost'>Kiti veiksmai</summary><div class='actions'>" +
+        "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“<span class='visually-hidden'> naujame skirtuke</span></a>" +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
         "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti priežiūrą</a>" : "") +
+        "</div></details>" +
         "</div>" : "") +
       "</div></details>";
   }
@@ -494,12 +497,19 @@
     async function run() {
       var query = values(form);
       if (!Object.keys(query).some(function (key) { return query[key] !== null; }) || (query.p_query && query.p_query.length < 2)) {
+        status.dataset.state = "warning";
         status.textContent = "Įveskite bent 2 raides arba pasirinkite kitą kriterijų."; return;
       }
       var pageSize = form.dataset.limit ? Number(form.dataset.limit) : 20;
       query.p_page = page; query.p_page_size = pageSize;
+      var submit = form.querySelector("button[type='submit']");
+      status.dataset.state = "loading";
       status.textContent = "Ieškoma…";
       results.setAttribute("aria-busy", "true");
+      if (submit) {
+        submit.disabled = true;
+        submit.setAttribute("aria-busy", "true");
+      }
       results.innerHTML = loader();
       try {
         var manualCall = page === 1 && query.p_query ? rpc("ieskoti_kapavieciu", { paieska: query.p_query, rezultatu_limitas: pageSize }) : Promise.resolve([]);
@@ -507,6 +517,7 @@
         var officialResult = responses[0] || {}; var official = officialResult.items || [];
         var manualRows = (responses[1] || []).map(manual);
         renderRows(official.concat(manualRows));
+        status.dataset.state = officialResult.failedModels ? "warning" : (official.length + manualRows.length ? "success" : "info");
         status.textContent = official.length + manualRows.length ? "Rodoma įrašų: " + (official.length + manualRows.length) : "Atitikmenų nerasta.";
         if (officialResult.failedModels) status.textContent += " Dalis savivaldybių laikinai neatsakė.";
         if (count) count.textContent = officialResult.hasMore ? "Rasta daugiau rezultatų" : (officialResult.matched ? "Rasta: " + officialResult.matched : "");
@@ -517,10 +528,15 @@
           pager.querySelector("[data-page-next]").disabled = !officialResult.hasMore;
         }
       } catch (error) {
+        status.dataset.state = "error";
         status.textContent = error.message;
         results.innerHTML = "";
       } finally {
         results.setAttribute("aria-busy", "false");
+        if (submit) {
+          submit.disabled = false;
+          submit.removeAttribute("aria-busy");
+        }
       }
     }
     form.addEventListener("submit", function (event) { event.preventDefault(); page = 1; run(); });

@@ -104,17 +104,18 @@ class StoreAuthUsabilityTests(unittest.TestCase):
         self.assertIn("function apiFetch(url, options)", user)
         self.assertNotIn("await fetch(", user)
 
-    def test_shop_is_a_clear_fail_closed_journey(self):
+    def test_shop_is_a_clear_no_payment_preorder_journey(self):
         catalog = (ROOT / "assets" / "product-catalog.js").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         script = (ROOT / "assets" / "shop.js").read_text(encoding="utf-8")
         self.assertIn('metal: { id: "metal", available: false', catalog)
-        self.assertIn('class="shop-journey"', shop)
+        self.assertIn('class="shop-journey shop-journey--preorder"', shop)
         self.assertIn('aria-current="step"', shop)
         self.assertIn('id="shop-catalog-retry"', shop)
         self.assertIn('class="product-order-summary"', shop)
-        self.assertIn('createLink.setAttribute("aria-disabled", "true")', script)
-        self.assertIn('products.metal.price = "–"', script)
+        self.assertIn('createLink.href = "isankstinis-uzsakymas.html?product="', script)
+        self.assertIn('Kainų patikrinti nepavyko. Išankstinį užsakymą vis tiek galite pateikti be mokėjimo.', script)
+        self.assertIn('<span>Mokėjimas dabar</span><strong>0 EUR</strong>', shop)
 
 
 if __name__ == "__main__":

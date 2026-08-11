@@ -124,9 +124,9 @@ Deno.serve(async (request: Request) => {
     params.set("mode", "payment");
     params.set(
       "success_url",
-      `${site}apmokejimas.html?order=${
+      `${site}aciu.html?type=payment&order=${
         encodeURIComponent(order.id)
-      }&payment=success`,
+      }`,
     );
     params.set(
       "cancel_url",

@@ -15,6 +15,8 @@
   var productionReadyEl = document.getElementById("admin-production-ready");
   var memoryCountEl = document.getElementById("admin-memory-count");
   var pendingMemoriesEl = document.getElementById("admin-pending-memories");
+  var preorderCountEl = document.getElementById("admin-preorder-count");
+  var newPreordersEl = document.getElementById("admin-new-preorders");
   var businessSettingsPanel = document.getElementById("admin-business-settings");
   var businessSettingsForm = document.getElementById("business-settings-form");
   var businessSettingsStatus = document.getElementById("business-settings-status");
@@ -44,6 +46,10 @@
   var memoriesPanel = document.getElementById("admin-memories");
   var memoryRows = document.getElementById("memory-rows");
   var memoriesRefresh = document.getElementById("memories-refresh");
+  var preordersPanel = document.getElementById("admin-preorders");
+  var preorderRows = document.getElementById("preorder-rows");
+  var preordersRefresh = document.getElementById("preorders-refresh");
+  var preordersExport = document.getElementById("preorders-export");
   var serviceRequestsPanel = document.getElementById("admin-service-requests");
   var serviceRequestsRefresh = document.getElementById("service-requests-refresh");
   var serviceRequestRows = document.getElementById("service-request-rows");
@@ -58,6 +64,7 @@
   var productionCache = [];
   var automationCache = [];
   var memoryCache = [];
+  var preorderCache = [];
   var servicePriceKeys = [
     "candle_1", "candle_2", "candle_5", "candle_other",
     "flower_1", "flower_3", "flower_5", "flower_bouquet", "flower_other",
@@ -169,6 +176,104 @@
     productionReadyEl.textContent = productionCache.filter(function (row) { return row.status === "ready_to_ship"; }).length + " paruošta siųsti";
     memoryCountEl.textContent = memoryCache.length;
     pendingMemoriesEl.textContent = memoryCache.filter(function (row) { return row.status === "pending"; }).length + " laukia peržiūros";
+    preorderCountEl.textContent = preorderCache.length;
+    newPreordersEl.textContent = preorderCache.filter(function (row) { return row.status === "new"; }).length + " nauja";
+  }
+
+  function preorderStatusName(value) {
+    return {
+      new: "Nauja",
+      contacted: "Susisiekta",
+      confirmed: "Patvirtino susidomėjimą",
+      declined: "Atsisakė",
+      closed: "Uždaryta"
+    }[value] || value || "Nauja";
+  }
+
+  function preorderPrice(row) {
+    if (!Number.isInteger(row.expected_price_cents)) return "Kaina neužfiksuota";
+    return new Intl.NumberFormat("lt-LT", {
+      style: "currency",
+      currency: row.currency || "EUR"
+    }).format(row.expected_price_cents / 100);
+  }
+
+  function renderPreorders() {
+    preorderRows.innerHTML = preorderCache.map(function (row) {
+      return "<tr data-preorder-id='" + html(row.id) + "'>" +
+        "<td><strong>" + html(row.reference_code) + "</strong><br><span class='muted'>" + html(formatDate(row.created_at)) + "</span></td>" +
+        "<td><strong>" + html(productName(row.product_type)) + "</strong><br>" + html(row.quantity) + " vnt. · " + html(preorderPrice(row)) + "</td>" +
+        "<td><strong>" + html(row.customer_name) + "</strong><br><a href='mailto:" + html(row.customer_email) + "'>" + html(row.customer_email) + "</a>" + (row.customer_phone ? "<br><a href='tel:" + html(row.customer_phone) + "'>" + html(row.customer_phone) + "</a>" : "") + "</td>" +
+        "<td><span class='admin-preserve-lines'>" + html(row.notes || "Pastabų nėra") + "</span><label>Vidinė pastaba<textarea data-preorder-note rows='3' maxlength='3000'>" + html(row.admin_note || "") + "</textarea></label></td>" +
+        "<td><label>Būsena<select data-preorder-status>" + ["new", "contacted", "confirmed", "declined", "closed"].map(function (value) {
+          return "<option value='" + value + "' " + (row.status === value ? "selected" : "") + ">" + html(preorderStatusName(value)) + "</option>";
+        }).join("") + "</select></label>" + (row.contacted_at ? "<small>Susisiekta: " + html(formatDate(row.contacted_at)) + "</small>" : "") + "</td>" +
+        "<td><button class='button' type='button' data-save-preorder>Išsaugoti</button></td>" +
+      "</tr>";
+    }).join("") || "<tr><td colspan='6'>Išankstinių užsakymų nėra.</td></tr>";
+  }
+
+  async function loadPreorders() {
+    try {
+      preorderCache = await supabaseJson(restUrl(
+        "preorder_requests",
+        "select=id,reference_code,product_type,product_name,quantity,expected_price_cents,currency,customer_name,customer_email,customer_phone,notes,status,admin_note,consent_at,contacted_at,created_at,updated_at&order=created_at.desc&limit=1000"
+      ));
+    } catch (error) {
+      if (/404|PGRST205|schema cache/i.test(String(error && error.message))) {
+        preorderCache = [];
+        preordersPanel.hidden = true;
+        updateOverview();
+        return;
+      }
+      throw error;
+    }
+    preordersPanel.hidden = false;
+    renderPreorders();
+    updateOverview();
+  }
+
+  async function savePreorder(tr) {
+    var id = tr.dataset.preorderId;
+    var nextStatus = tr.querySelector("[data-preorder-status]").value;
+    var previous = preorderCache.find(function (row) { return row.id === id; });
+    var payload = {
+      status: nextStatus,
+      admin_note: tr.querySelector("[data-preorder-note]").value.trim() || null,
+      updated_at: new Date().toISOString()
+    };
+    if (nextStatus === "contacted" && previous && !previous.contacted_at) {
+      payload.contacted_at = new Date().toISOString();
+    }
+    await supabaseJson(restUrl("preorder_requests", "id=eq." + encodeURIComponent(id)), {
+      method: "PATCH",
+      headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }),
+      body: JSON.stringify(payload)
+    });
+    await loadPreorders();
+    setStatus("Išankstinis užsakymas atnaujintas.");
+  }
+
+  function csvCell(value) {
+    var textValue = String(value == null ? "" : value).replace(/\r?\n/g, " ");
+    if (/^[=+\-@]/.test(textValue)) textValue = "'" + textValue;
+    return '"' + textValue.replace(/"/g, '""') + '"';
+  }
+
+  function exportPreorders() {
+    var headers = ["Numeris", "Data", "Produktas", "Kiekis", "Kaina ct", "Valiuta", "Vardas", "El. paštas", "Telefonas", "Pastaba", "Būsena"];
+    var rows = preorderCache.map(function (row) {
+      return [row.reference_code, row.created_at, row.product_name, row.quantity, row.expected_price_cents, row.currency, row.customer_name, row.customer_email, row.customer_phone, row.notes, preorderStatusName(row.status)];
+    });
+    var csv = [headers].concat(rows).map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
+    var url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "isankstiniai-uzsakymai-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   async function copyText(value) {
@@ -815,6 +920,7 @@
       serviceRequestsPanel.hidden = true;
       legalRequestsPanel.hidden = true;
       memoriesPanel.hidden = true;
+      preordersPanel.hidden = true;
       businessSettingsPanel.hidden = true;
       productionPanel.hidden = true;
       automationPanel.hidden = true;
@@ -834,6 +940,7 @@
       "deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ));
     await loadOrders();
+    await loadPreorders();
     await loadBusinessSettings();
     await loadProduction();
     await loadAutomation();
@@ -1055,6 +1162,16 @@
     }).finally(function () { button.disabled = false; });
   });
 
+  preorderRows.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-save-preorder]");
+    if (!button) return;
+    var tr = button.closest("tr[data-preorder-id]");
+    button.disabled = true;
+    savePreorder(tr).catch(function (err) {
+      setStatus(err.message || "Nepavyko išsaugoti išankstinio užsakymo.");
+    }).finally(function () { button.disabled = false; });
+  });
+
   businessSettingsForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var button = businessSettingsForm.querySelector("button[type='submit']");
@@ -1144,6 +1261,10 @@
   memoriesRefresh.addEventListener("click", function () {
     loadMemories().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti prisiminimų."); });
   });
+  preordersRefresh.addEventListener("click", function () {
+    loadPreorders().catch(function (err) { setStatus(err.message || "Nepavyko atnaujinti išankstinių užsakymų."); });
+  });
+  preordersExport.addEventListener("click", exportPreorders);
   logoutButton.addEventListener("click", function () {
     AtminimasAuth.signOut();
     form.hidden = false;
@@ -1155,6 +1276,7 @@
     serviceRequestsPanel.hidden = true;
     legalRequestsPanel.hidden = true;
     memoriesPanel.hidden = true;
+    preordersPanel.hidden = true;
     businessSettingsPanel.hidden = true;
     productionPanel.hidden = true;
     automationPanel.hidden = true;

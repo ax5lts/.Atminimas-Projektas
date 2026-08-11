@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
+<meta name="description" content="Nemokamai ir neįpareigojančiai rezervuokite QR atminimo lentelę. Mokėjimo dabar nereikia.">
+<title>Išankstinis QR lentelės užsakymas – Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260811-3">
+</head>
+<body data-loading>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="Atminimas">
+        <span class="brand__mark"><img src="assets/atminimas-candle.jpg" alt=""></span>
+        <span class="brand__name">Atminimas</span>
+      </a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija">
+        <a href="parduotuve.html">Lentelės</a>
+        <a href="vartotojas.html">Kliento zona</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main preorder-page">
+    <nav class="breadcrumbs" aria-label="Kelias">
+      <a href="index.html">Pradžia</a>
+      <a href="parduotuve.html">Lentelės</a>
+      <span aria-current="page">Išankstinis užsakymas</span>
+    </nav>
+
+    <header class="preorder-hero">
+      <p class="eyebrow">Rezervacija be rizikos</p>
+      <h1>Išankstinis QR lentelės užsakymas</h1>
+      <p>Parodykite, kuris variantas jus domina. Kortelės duomenų neprašome ir jokio mokėjimo dabar neimame.</p>
+      <ul class="preorder-promises" aria-label="Išankstinio užsakymo sąlygos">
+        <li><span aria-hidden="true">✓</span> Nemokama rezervacija</li>
+        <li><span aria-hidden="true">✓</span> Neįpareigoja pirkti</li>
+        <li><span aria-hidden="true">✓</span> Prieš pirkimą patvirtinsime kainą</li>
+      </ul>
+    </header>
+
+    <div class="preorder-layout">
+      <aside class="preorder-summary" aria-labelledby="preorder-summary-title">
+        <div class="preorder-summary__image"><img id="preorder-product-image" src="assets/qr-plienas-480.webp" width="480" height="640" alt="Graviruota plieno QR atminimo lentelė"></div>
+        <div>
+          <p class="eyebrow">Jūsų pasirinkimas</p>
+          <h2 id="preorder-summary-title">Graviruota plieno QR atminimo lentelė</h2>
+          <p id="preorder-summary-price" class="preorder-summary__price">Orientacinė kaina: 59,00 EUR</p>
+          <p class="muted">Galutinę kainą, komplektaciją ir terminą atsiųsime prieš prašydami priimti sprendimą.</p>
+        </div>
+      </aside>
+
+      <section class="preorder-card" aria-labelledby="preorder-form-title">
+        <div class="preorder-card__heading">
+          <p class="eyebrow">Užtruks apie minutę</p>
+          <h2 id="preorder-form-title">Kurį variantą rezervuoti?</h2>
+        </div>
+        <form class="auth-form preorder-form" id="preorder-form" data-friendly-validation>
+          <fieldset class="preorder-product-picker">
+            <legend>Lentelės variantas</legend>
+            <label><input type="radio" name="product_type" value="metal" checked><span><strong>Graviruotas plienas</strong><small>Patvari metalinė lentelė</small></span></label>
+            <label><input type="radio" name="product_type" value="asa"><span><strong>ASA 3D</strong><small>Dvispalvis lauko plastikas</small></span></label>
+          </fieldset>
+
+          <div class="form-grid preorder-contact-grid">
+            <label class="form-field">Vardas ir pavardė
+              <input name="customer_name" autocomplete="name" minlength="2" maxlength="160" required>
+            </label>
+            <label class="form-field">El. paštas
+              <input name="customer_email" type="email" autocomplete="email" maxlength="254" inputmode="email" required>
+            </label>
+            <label class="form-field">Telefonas <small>(nebūtina)</small>
+              <input name="customer_phone" type="tel" autocomplete="tel" minlength="5" maxlength="40" inputmode="tel">
+            </label>
+            <label class="form-field">Kiekis
+              <select name="quantity" required>
+                <option value="1">1 lentelė</option>
+                <option value="2">2 lentelės</option>
+                <option value="3">3 lentelės</option>
+                <option value="4">4 lentelės</option>
+                <option value="5">5 lentelės</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="form-field">Klausimas ar pageidavimas <small>(nebūtina)</small>
+            <textarea name="notes" rows="4" maxlength="2000" placeholder="Pavyzdžiui, norimas dydis, spalva ar kiekis"></textarea>
+          </label>
+          <label class="form-honeypot" aria-hidden="true">Svetainė
+            <input name="website" tabindex="-1" autocomplete="off">
+          </label>
+          <label class="check-label preorder-consent">
+            <input type="checkbox" name="consent" value="yes" required>
+            <span>Sutinku, kad pateikti duomenys būtų naudojami šiai rezervacijai administruoti ir susisiekti dėl pasiūlymo. Susipažinau su <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</span>
+          </label>
+
+          <div class="preorder-submit">
+            <button class="button" type="submit">Pateikti išankstinį užsakymą</button>
+            <p><strong>Mokėti nereikės.</strong> Tai nėra pirkimo sutartis.</p>
+          </div>
+          <p class="form-status" id="preorder-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>Atminimas</span>
+      <span class="site-footer__support">Į išankstinius užsakymus atsakome <span data-business="responseTime">per 1 darbo dieną</span>.</span>
+      <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="prieinamumas.html">Prieinamumas</a></nav>
+    </div>
+  </footer>
+</div>
+
+<script src="assets/business-config.js?v=20260811-1"></script>
+<script src="assets/business-details.js?v=20260811-1"></script>
+<script src="assets/supabase-config.js?v=20260707-1"></script>
+<script src="assets/product-catalog.js?v=20260811-3"></script>
+<script src="assets/form-validation.js?v=20260724-4"></script>
+<script src="assets/preorder.js?v=20260811-3"></script>
+<script src="assets/loading.js?v=20260811-2"></script>
+<script src="assets/site-ui.js?v=20260811-3"></script>
+</body>
+</html>

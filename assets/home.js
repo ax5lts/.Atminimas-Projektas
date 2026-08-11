@@ -478,14 +478,8 @@
     try {
       await serviceFlow(payload);
       sessionStorage.removeItem(draftKey);
-      form.reset();
-      form.elements.location_source.value = "manual";
-      updateServiceFields();
-      updateLocationStatus();
-      updateEstimate();
-      activateServiceStep(1, true);
-      stepStatusEl.textContent = "Užklausa gauta. Galutinį pasiūlymą atsiųsime nurodytu el. paštu. Prisijungti reikės tik prieš priimant pasiūlymą ir mokant.";
-      statusEl.textContent = "";
+      window.location.assign("aciu.html?type=service");
+      return;
     } catch (error) {
       if (error.status === 401) {
         saveDraft();

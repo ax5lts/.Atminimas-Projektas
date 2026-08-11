@@ -33,7 +33,7 @@
   }
 
   function setupHeaderMenu() {
-    if (!header || !nav || header.querySelector("[data-site-menu-toggle]")) return;
+    if (!header || !nav || document.body.classList.contains("has-mobile-dock") || header.querySelector("[data-site-menu-toggle]")) return;
     var button = document.createElement("button");
     button.className = "site-menu-toggle";
     button.type = "button";
@@ -75,6 +75,39 @@
     document.body.prepend(link);
   }
 
+  function setupBreadcrumbs() {
+    var excluded = ["index.html", "admin.html", "redaktorius.html", "sablonas-viskas.html"];
+    if (excluded.indexOf(page) !== -1 || document.querySelector(".breadcrumbs")) return;
+    var labels = {
+      "404.html": "Puslapis nerastas",
+      "aciu.html": "Ačiū",
+      "apmokejimas.html": "Pristatymas ir apmokėjimas",
+      "grazinimas.html": "Atsisakyti sutarties",
+      "kapu-ieskojimas.html": "Kapų paieška",
+      "klientai.html": "Klientams",
+      "isankstinis-uzsakymas.html": "Išankstinis užsakymas",
+      "parduotuve.html": "Parduotuvė",
+      "pranesti.html": "Pranešti apie turinį",
+      "prieinamumas.html": "Prieinamumas",
+      "prisijungti.html": "Prisijungti",
+      "privatumas.html": "Privatumas",
+      "registruotis.html": "Registruotis",
+      "rekvizitai.html": "Rekvizitai ir kontaktai",
+      "slaptazodis.html": "Atkurti slaptažodį",
+      "taisykles.html": "Taisyklės",
+      "vartotojas.html": "Kliento zona"
+    };
+    var label = labels[page];
+    var main = document.querySelector("main");
+    if (!label || !main) return;
+    var breadcrumbs = document.createElement("nav");
+    breadcrumbs.className = "breadcrumbs breadcrumbs--generated";
+    breadcrumbs.setAttribute("aria-label", "Kelias");
+    breadcrumbs.innerHTML = '<a href="index.html">Pradžia</a><span aria-current="page"></span>';
+    breadcrumbs.querySelector("span").textContent = label;
+    main.prepend(breadcrumbs);
+  }
+
   function setupBackLinks() {
     document.querySelectorAll(".breadcrumbs").forEach(function (breadcrumbs) {
       if (breadcrumbs.querySelector("[data-context-back]")) return;
@@ -97,7 +130,7 @@
     var items = [
       { href: "index.html", label: "Pradžia", pages: ["index.html"], icon: "M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5H15v-6H9v6H3.5a.5.5 0 0 1-.5-.5z" },
       { href: "kapu-ieskojimas.html", label: "Kapų paieška", pages: ["kapu-ieskojimas.html"], icon: "M10.8 3a7.8 7.8 0 1 0 4.9 13.9L21 22l1-1-5.1-5.2A7.8 7.8 0 0 0 10.8 3m0 2a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0-11.6" },
-      { href: "parduotuve.html", label: "Kurti", pages: ["redaktorius.html", "parduotuve.html", "apmokejimas.html"], icon: "M12 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1" },
+      { href: "parduotuve.html", label: "Kurti", pages: ["redaktorius.html", "parduotuve.html", "isankstinis-uzsakymas.html", "apmokejimas.html"], icon: "M12 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1" },
       { href: "vartotojas.html", label: "Paskyra", pages: ["vartotojas.html", "prisijungti.html", "registruotis.html", "slaptazodis.html", "klientai.html"], icon: "M12 3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9m0 11c5 0 8 2.5 8 5.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5C4 16.5 7 14 12 14" }
     ];
     var dock = document.createElement("nav");
@@ -160,6 +193,32 @@
     }
   }
 
+  function loadScriptOnce(src, marker) {
+    if (document.querySelector("script[data-site-module='" + marker + "']")) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.dataset.siteModule = marker;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  function setupSeoAndAnalytics() {
+    var privatePages = ["admin.html", "apmokejimas.html", "redaktorius.html", "slaptazodis.html", "vartotojas.html"];
+    if (privatePages.indexOf(page) !== -1) return;
+    var businessReady = window.ATMINIMAS_BUSINESS
+      ? Promise.resolve()
+      : loadScriptOnce("assets/business-config.js", "business-config");
+    businessReady.then(function () {
+      return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
+    }).catch(function () {});
+    loadScriptOnce("assets/analytics-config.js?v=20260811-1", "analytics-config").then(function () {
+      return loadScriptOnce("assets/analytics.js?v=20260811-1", "analytics");
+    }).catch(function () {});
+  }
+
   function copyText(value) {
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(value);
     var field = document.createElement("textarea");
@@ -190,11 +249,13 @@
   }
 
   setCurrentLinks(document);
-  setupHeaderMenu();
   setupSkipLink();
+  setupBreadcrumbs();
   setupBackLinks();
   setupMobileDock();
+  setupHeaderMenu();
   setupRevealAnimations();
+  setupSeoAndAnalytics();
 
   window.AtminimasUi = {
     copyText: copyText,

@@ -115,11 +115,12 @@ class CemeteryImportTests(unittest.TestCase):
     def test_public_rpc_does_not_return_raw_data(self):
         sql = (ROOT.parent / "supabase" / "migrations" / "20260713194003_official_cemetery_import.sql").read_text(encoding="utf-8")
         self.assertNotIn("raw_data", sql.split("create or replace function public.search_deceased", 1)[1])
-    def test_grave_search_shows_loader_while_waiting(self):
+    def test_grave_search_shows_skeleton_while_waiting(self):
         source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         styles = (ROOT.parent / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn("grave-loader__spinner", source); self.assertIn('aria-busy", "true', source)
-        self.assertIn("@keyframes grave-loader-spin", styles)
+        self.assertIn("AtminimasLoading.cards(3)", source); self.assertIn('aria-busy", "true', source)
+        self.assertIn(".skeleton-card", styles)
+        self.assertNotIn("grave-loader__spinner", source)
 
     def test_grave_results_expand_and_link_to_google_maps(self):
         source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
