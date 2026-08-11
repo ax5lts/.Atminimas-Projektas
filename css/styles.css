@@ -8386,6 +8386,284 @@ body:not(.editor-page):not(.memorial-page) .site-shell :where(input[type="checkb
   white-space: nowrap !important;
 }
 
+/* Išankstinio užsakymo srautas */
+.preorder-page {
+  padding-bottom: 96px;
+}
+
+.preorder-hero {
+  width: min(100%, 850px);
+  margin: 42px 0 34px;
+}
+
+.preorder-hero h1 {
+  max-width: 780px;
+  margin: 0 0 18px;
+  font-size: clamp(2.7rem, 6vw, 5.2rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.preorder-hero > p:last-of-type {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.65;
+}
+
+.preorder-promises {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preorder-promises li {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 13px;
+  border: 1px solid var(--status-success-border);
+  border-radius: 999px;
+  color: var(--status-success);
+  background: var(--status-success-soft);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.preorder-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.78fr) minmax(480px, 1.22fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.preorder-summary,
+.preorder-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--paper);
+}
+
+.preorder-summary {
+  position: sticky;
+  top: 24px;
+  overflow: hidden;
+}
+
+.preorder-summary__image {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  padding: 22px;
+  background: #faf5e8;
+}
+
+.preorder-summary__image img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.preorder-summary > div:last-child {
+  padding: 26px;
+}
+
+.preorder-summary h2 {
+  margin: 0 0 12px;
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+  line-height: 1.1;
+}
+
+.preorder-summary__price {
+  margin: 0 0 14px;
+  color: var(--accent-dark);
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.preorder-card {
+  padding: clamp(24px, 4vw, 42px);
+}
+
+.preorder-card__heading {
+  margin-bottom: 24px;
+}
+
+.preorder-card__heading h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 550;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.preorder-product-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.preorder-product-picker legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.preorder-product-picker label {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.preorder-product-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.preorder-product-picker label > span {
+  display: grid;
+  gap: 5px;
+  min-height: 100%;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.preorder-product-picker label:has(input:checked) > span {
+  border-color: var(--teal-dark);
+  background: var(--status-success-soft);
+  box-shadow: 0 0 0 2px rgba(23, 79, 74, 0.12);
+}
+
+.preorder-product-picker label:has(input:focus-visible) > span {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.preorder-product-picker small,
+.preorder-form label small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.preorder-form :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+.preorder-form textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.preorder-consent {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #faf8f3;
+  line-height: 1.5;
+}
+
+.preorder-submit {
+  display: grid;
+  grid-template-columns: minmax(230px, auto) 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.preorder-submit .button {
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.preorder-submit p,
+.product-preorder-price-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.admin-preorder-table label {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-preorder-table textarea {
+  min-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .preorder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preorder-summary {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(160px, 0.72fr) 1fr;
+  }
+
+  .preorder-summary__image {
+    min-height: 270px;
+  }
+}
+
+@media (max-width: 620px) {
+  .preorder-page {
+    padding-bottom: 48px;
+  }
+
+  .preorder-hero {
+    margin-top: 28px;
+  }
+
+  .preorder-promises {
+    display: grid;
+  }
+
+  .preorder-summary,
+  .preorder-product-picker,
+  .preorder-contact-grid,
+  .preorder-submit {
+    grid-template-columns: 1fr;
+  }
+
+  .preorder-summary__image {
+    min-height: 250px;
+  }
+
+  .preorder-card {
+    padding: 22px;
+  }
+
+  .preorder-submit .button {
+    width: 100% !important;
+  }
+}
+
 .form-field-suggestion {
   display: block;
   padding: 9px 11px;

@@ -13,3 +13,4 @@
 11. Saugumo pakeitimus diekite `SECURITY.md` nurodyta tvarka: nustatykite tikslų Edge Functions `PUBLIC_SITE_URL`, komanda `supabase functions deploy` įdiekite visas funkcijas, tada frontend, atsarginę kopiją ir duomenų bazės migraciją. Po diegimo paleiskite „Supabase Security Advisor“ ir patikrinkite visus viešo, privataus, savininko bei administratoriaus srautus.
 12. Panaikinkite visus anksčiau paviešintus slaptus raktus. Produkcijos paslaptys turi būti tik hostingo ar „Supabase Edge Functions Secrets“ saugykloje.
 13. „GitHub Pages“ diegimas dabar yra rankinis. Workflow lange `backend_ready` pažymėkite tik įdiegę reikiamas Edge Functions; tai apsaugo gyvą svetainę nuo nesuderinto frontend paleidimo.
+14. Išankstinio užsakymo funkcijai pirmiausia pritaikykite migraciją `*_create_preorder_requests.sql`, tada įdiekite `preorder` Edge Function ir tik po sėkmingo bandomojo pateikimo viešinkite frontend. Tiesioginio `anon` rašymo į `preorder_requests` neatverkite.

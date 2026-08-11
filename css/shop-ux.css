@@ -7,6 +7,10 @@
   list-style: none;
 }
 
+.shop-journey--preorder {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .shop-journey li {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
