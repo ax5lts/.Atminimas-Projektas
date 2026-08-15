@@ -156,12 +156,6 @@ async function processEmailEvent(event: AutomationEvent) {
       paragraphs: ["Peržiūrėkite atminimo puslapį ir patvirtinkite, kad QR ženkliuką galima gaminti."],
       action: "Peržiūrėti ir patvirtinti",
     },
-    "order.unpaid_reminder": {
-      subject: "Neužbaigtas Atminimas užsakymas",
-      heading: "Užsakymas dar neapmokėtas",
-      paragraphs: ["Jūsų užsakymas išsaugotas, tačiau mokėjimas dar negautas. Jei norite tęsti, atidarykite kliento zoną."],
-      action: "Tęsti užsakymą",
-    },
     "production.approval_reminder": {
       subject: "Laukiame QR gamybos patvirtinimo",
       heading: "Patvirtinkite galutinį vaizdą",
@@ -226,6 +220,7 @@ async function processEmailEvent(event: AutomationEvent) {
 }
 
 async function processEvent(event: AutomationEvent) {
+  if (event.event_type === "order.unpaid_reminder") return;
   if (event.event_type === "invoice.requested") return processInvoice(event);
   if (event.event_type === "production.qr_requested") return processQr(event);
   if (event.event_type === "shipping.label_requested") {

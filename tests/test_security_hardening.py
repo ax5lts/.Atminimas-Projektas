@@ -90,7 +90,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertNotIn("deleted_at:", response)
         self.assertNotIn("aktyvus:", response)
 
-    def test_orders_are_created_server_side_from_canonical_urls(self):
+    def test_new_paid_orders_are_disabled_server_side(self):
         client = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         edge = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
         migration = (
@@ -100,12 +100,17 @@ class SecurityHardeningTests(unittest.TestCase):
             / "20260730121821_harden_private_profile_media.sql"
         ).read_text(encoding="utf-8").lower()
 
-        self.assertIn('action: "create_order"', client)
+        self.assertNotIn('action: "create_order"', client)
         self.assertNotIn('postJson("uzsakymai"', client)
         self.assertIn('if (action === "create_order")', edge)
-        self.assertIn('new URL("sablonas-viskas.html", publicSiteUrl())', edge)
-        self.assertIn('.from("product_catalog")', edge)
-        self.assertRegex(edge, r'\.from\(\s*"uzsakymai",?\s*\)\s*\.insert')
+        branch = edge[
+            edge.index('if (action === "create_order")'):
+            edge.index('if (action === "update")')
+        ]
+        self.assertIn("payment_enabled: false", branch)
+        self.assertIn("preorder_url:", branch)
+        self.assertNotIn('.from("product_catalog")', branch)
+        self.assertNotIn('.from("uzsakymai")', branch)
         self.assertIn('drop policy if exists "viesas uzsakymu kurimas"', migration)
         self.assertNotRegex(
             migration,
@@ -135,8 +140,8 @@ class SecurityHardeningTests(unittest.TestCase):
         page = (ROOT / "admin.html").read_text(encoding="utf-8")
         script = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         self.assertIn('id="admin-payment-readiness"', page)
-        self.assertIn("Mokėjimas klientui išjungtas", script)
-        self.assertIn("row.enabled === true", script)
+        self.assertIn("Išankstinių užsakymų režimas aktyvus", script)
+        self.assertIn("klientams mokėjimas ir pristatymo pasirinkimas nerodomi", script)
 
     def test_public_product_catalog_policy_does_not_read_admin_roles(self):
         migration = (
@@ -295,11 +300,11 @@ class SecurityHardeningTests(unittest.TestCase):
         engagement = (ROOT / "supabase" / "functions" / "memorial-engagement" / "index.ts").read_text(encoding="utf-8")
         webhook = (ROOT / "supabase" / "functions" / "payment-webhook" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn("readJson(request, 16_000)", payment)
-        self.assertIn('parsed.hostname === "checkout.stripe.com"', payment)
-        self.assertIn('order.payment_status === "processing"', payment)
-        self.assertIn("sessionMatches(existing, order)", payment)
-        self.assertIn('existing.status === "open"', payment)
+        self.assertIn("payment_enabled: false", payment)
+        self.assertIn("preorder_url:", payment)
+        self.assertIn("}, 409);", payment)
+        self.assertNotIn("checkout.stripe.com", payment)
+        self.assertNotIn("STRIPE_SECRET_KEY", payment)
         self.assertIn("readJson(request, 8_000)", shipping)
         self.assertIn("order: adapterOrder(order)", shipping_adapter)
         self.assertNotIn("JSON.stringify(data)", shipping_adapter)
@@ -307,7 +312,6 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertIn("readJson(request, 64_000)", service)
         self.assertIn("readJson(request, 12_000)", engagement)
         self.assertIn("declaredLength > 1_000_000", webhook)
-        self.assertIn('return json({ error: "Nepavyko pradėti mokėjimo" }, 500)', payment)
         self.assertIn('return json({ error: "Paslaugos veiksmas nepavyko" }, 500)', service)
         self.assertIn('return json({ error: "Webhook processing failed" }, 500)', webhook)
 

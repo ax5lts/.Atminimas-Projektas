@@ -12,6 +12,7 @@ Svarbiausi saugumo principai:
 - failus galima kelti tik į prisijungusio vartotojo UUID aplanką;
 - sutarties atsisakymai ir turinio pranešimai leidžiami pateikti viešai, bet juos skaityti ir administruoti gali tik administratorius;
 - išankstiniai užsakymai priimami tik per tikrinamą ir ribojamą `preorder` Edge Function; lentelė viešai neskaitoma ir tiesioginis `anon` įterpimas draudžiamas;
+- naujų mokamų QR lentelių užsakymų kūrimas išjungtas: `profile-manage` veiksmas `create_order` ir `payment-create` grąžina `409`; senos lentelės paliktos istoriniams bei jau apmokėtiems užsakymams vykdyti;
 - gavėjo ir siuntos duomenys keičiami tik per patikrintas funkcijas bei RLS taisykles.
 
 Po kiekvieno schemos pakeitimo paleiskite „Supabase Security Advisor“ ir testus.

@@ -167,7 +167,7 @@
       return ["atlikta", "atsaukta"].indexOf(row.statusas) === -1;
     }).length;
     totalOrdersEl.textContent = orderCache.length;
-    unpaidOrdersEl.textContent = orderCache.filter(function (row) { return !row.apmoketa; }).length + " neapmokėta";
+    unpaidOrdersEl.textContent = orderCache.filter(function (row) { return !row.apmoketa; }).length + " neapmokėta archyve";
     totalProfilesEl.textContent = cache.length;
     activeShipmentsEl.textContent = activeShipments;
     serviceCountEl.textContent = serviceRequestCache.length;
@@ -497,14 +497,9 @@
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
     businessSettingsForm.elements.dpd_price.value = centsToInput(shipping.DPD && shipping.DPD.price_cents);
-    var activeShipping = results[2].filter(function (row) {
-      return row.enabled === true && Number.isInteger(row.price_cents);
-    });
     if (paymentReadiness) {
-      paymentReadiness.dataset.state = activeShipping.length ? "ready" : "error";
-      paymentReadiness.textContent = activeShipping.length
-        ? "Mokėjimo eiga paruošta: aktyvūs pristatymo būdai – " + activeShipping.map(function (row) { return row.carrier; }).join(", ") + "."
-        : "Mokėjimas klientui išjungtas, kol neįrašyta bent viena tikra pristatymo kaina. Įrašykite kainą ir išsaugokite nustatymus.";
+      paymentReadiness.dataset.state = "ready";
+      paymentReadiness.textContent = "Išankstinių užsakymų režimas aktyvus: klientams mokėjimas ir pristatymo pasirinkimas nerodomi. Šios kainos saugomos būsimam naudojimui.";
     }
     businessSettingsPanel.hidden = false;
   }

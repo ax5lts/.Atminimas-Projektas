@@ -22,13 +22,13 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         self.assertIn('id="thank-you-title"', thank_you)
         self.assertIn('src="assets/thank-you.js', thank_you)
 
-    def test_service_and_payment_success_use_thank_you_page(self):
+    def test_service_success_and_product_preorder_mode_are_explicit(self):
         home_js = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         payment = (ROOT / "supabase" / "functions" / "payment-create" / "index.ts").read_text(encoding="utf-8")
         self.assertIn('window.location.assign("aciu.html?type=service")', home_js)
-        self.assertIn('`${site}aciu.html?type=payment&order=${', payment)
-        self.assertIn('"cancel_url"', payment)
-        self.assertIn('`${site}apmokejimas.html?order=${', payment)
+        self.assertIn("payment_enabled: false", payment)
+        self.assertIn("preorder_url:", payment)
+        self.assertNotIn("checkout.stripe.com", payment)
 
     def test_generated_breadcrumbs_cover_public_pages(self):
         self.assertIn("function setupBreadcrumbs()", self.site_ui)

@@ -47,7 +47,7 @@
   }
 
   var chosenProduct = selectedProduct();
-  if (createButton) createButton.href = "parduotuve.html";
+  if (createButton) createButton.href = "isankstinis-uzsakymas.html";
   if (guestActions) {
     var next = requestedServiceId
       ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
@@ -280,11 +280,10 @@
 
   function primaryAction(row, order) {
     if (!order) {
-      return "<a class='button user-card-primary' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Baigti kurti</a>";
+      return "<a class='button user-card-primary' href='isankstinis-uzsakymas.html'>Išankstinis užsakymas</a>";
     }
     if (!order.apmoketa) {
-      return "<a class='button user-card-primary' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>" +
-        (order.shipping_status === "paruošti" && Number.isInteger(order.total_cents) ? "Apmokėti užsakymą" : "Tęsti užsakymą") + "</a>";
+      return "<a class='button user-card-primary' href='isankstinis-uzsakymas.html?product=" + encodeURIComponent(order.product_type || "metal") + "'>Išankstinis užsakymas</a>";
     }
     if (!order.customer_approved_at) {
       return "<button class='button user-card-primary' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>";

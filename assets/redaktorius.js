@@ -13,7 +13,7 @@
   var previewVideo = document.getElementById("editor-preview-video");
   var resultBox = document.getElementById("editor-result");
   var openLink = document.getElementById("editor-open-link");
-  var checkoutLink = document.getElementById("editor-checkout-link");
+  var preorderLink = document.getElementById("editor-preorder-link");
   var clientLink = document.getElementById("editor-client-link");
   var qrLink = document.getElementById("editor-qr-link");
   var orderCode = document.getElementById("editor-order-code");
@@ -110,7 +110,7 @@
   var stageFitMayShrink = false;
   var editorParams = new URLSearchParams(window.location.search);
   var editId = (editorParams.get("edit") || "").trim();
-  var resumeOrder = editorParams.get("resume") === "order";
+  var resumeSave = editorParams.get("resume") === "save";
   var prototypeRequested = editorParams.get("prototype") === "1";
   var isAdminPrototype = false;
   var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
@@ -175,8 +175,6 @@
 
   var requestedProductType = requestedProduct();
   var productType = "metal";
-  var productAvailabilityReady = isDemoMode || !!editId || prototypeRequested;
-  if (!productAvailabilityReady) submitButton.disabled = true;
 
   function setVideoSlotVisible(visible) {
     var wrap = previewVideo ? previewVideo.closest(".editor-video-slot") : null;
@@ -200,9 +198,7 @@
 
   applySelectedProduct("metal");
   function setProductUnavailable(message) {
-    productAvailabilityReady = false;
-    submitButton.disabled = true;
-    if (productSummary) productSummary.textContent = "Šiuo metu naujo užsakymo pradėti negalima.";
+    if (productSummary) productSummary.textContent = "Orientacinės kainos patikrinti nepavyko. Puslapį galite išsaugoti, o išankstinį užsakymą pateikti be mokėjimo.";
     if (productUnavailableMessage) productUnavailableMessage.textContent = message;
     if (productUnavailable) productUnavailable.hidden = false;
   }
@@ -218,15 +214,11 @@
       if (asaAvailable) {
         productOptions.asa.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.asa.price_cents, catalog.asa.currency) + ".";
       }
-      var selectedType = requestedProductType === "asa" && asaAvailable ? "asa" : "metal";
-      if ((selectedType === "metal" && !metalAvailable) || (selectedType === "asa" && !asaAvailable)) {
-        setProductUnavailable(catalog.error || "Nepavyko patvirtinti produkto kainos ir prieinamumo. Bandykite dar kartą parduotuvėje.");
-        return;
-      }
+      var selectedType = requestedProductType === "asa" ? "asa" : "metal";
       applySelectedProduct(selectedType);
-      productAvailabilityReady = true;
-      submitButton.disabled = false;
-      if (productUnavailable) productUnavailable.hidden = true;
+      if (!catalog.remote) {
+        setProductUnavailable(catalog.error || "Kainos patikrinti nepavyko. Išankstinį užsakymą vis tiek galėsite pateikti be mokėjimo.");
+      } else if (productUnavailable) productUnavailable.hidden = true;
     }).catch(function () {
       setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     });
@@ -238,13 +230,13 @@
     return !!(window.AtminimasAuth && AtminimasAuth.accessToken());
   }
 
-  function editorOrderReturnUrl() {
+  function editorSaveReturnUrl() {
     if (prototypeRequested) return "redaktorius.html?prototype=1";
-    return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=order";
+    return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=save";
   }
 
-  function redirectToLoginForOrder() {
-    window.location.href = "prisijungti.html?next=" + encodeURIComponent(editorOrderReturnUrl());
+  function redirectToLoginForSave() {
+    window.location.href = "prisijungti.html?next=" + encodeURIComponent(editorSaveReturnUrl());
   }
 
   function setDraftState(message, state) {
@@ -2646,7 +2638,7 @@
     if (heading) heading.textContent = "Redaguokite puslapį";
     var submit = form.querySelector("button[type='submit']");
     if (submit) submit.textContent = "Išsaugoti pakeitimus";
-    if (checkoutLink) checkoutLink.hidden = true;
+    if (preorderLink) preorderLink.hidden = true;
     previewCode.textContent = "puslapis: " + editId;
     document.title = "Redaguoti atminimo puslapį - Atminimas";
   }
@@ -3605,12 +3597,6 @@
       window.location.href = "sablonas-viskas.html?slug=maironis-pavyzdys";
       return;
     }
-    if (!productAvailabilityReady) {
-      statusEl.textContent = productUnavailable && !productUnavailable.hidden
-        ? "Produkto kainos ir prieinamumo patvirtinti nepavyko. Grįžkite į parduotuvę ir bandykite dar kartą."
-        : "Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.";
-      return;
-    }
     if (!validateDatePickers(false)) {
       activateEditorStep("text", true);
       window.setTimeout(function () {
@@ -3636,7 +3622,7 @@
       try {
         await persistDraftBeforeLogin();
         setDraftState("Juodraštis paruoštas tęsti po prisijungimo", "saved");
-        redirectToLoginForOrder();
+        redirectToLoginForSave();
       } catch (err) {
         console.error(err);
         statusEl.textContent = err.message || "Juodraščio nepavyko paruošti prisijungimui.";
@@ -3663,7 +3649,7 @@
         if (!freshSession) throw new Error("Prisijungimo sesija baigėsi.");
       } catch (sessionError) {
         statusEl.textContent = sessionError.message || "Prisijungimo sesijos patikrinti nepavyko. Bandykite dar kartą.";
-        submitButton.textContent = "Prisijungti ir tęsti užsakymą";
+        submitButton.textContent = "Prisijungti ir išsaugoti puslapį";
         submitButton.disabled = false;
         return;
       }
@@ -3725,7 +3711,7 @@
         statusEl.textContent = "Pakeitimai išsaugoti.";
         previewCode.textContent = "puslapis: " + editId;
         openLink.href = editPageUrl;
-        checkoutLink.hidden = true;
+        preorderLink.hidden = true;
         clientLink.href = "vartotojas.html";
         clientLink.textContent = "Grįžti į kliento zoną";
         qrLink.href = AtminimasApi.qrImageUrl(new URL(editPageUrl, window.location.href).href);
@@ -3746,7 +3732,7 @@
         previewCode.textContent = "Prototipas paskelbtas";
         openLink.href = prototypePageUrl;
         openLink.textContent = "Atidaryti viešą prototipą";
-        checkoutLink.hidden = true;
+        preorderLink.hidden = true;
         clientLink.href = "admin.html";
         clientLink.textContent = "Grįžti į administravimą";
         qrLink.href = prototype.qr_url || AtminimasApi.qrImageUrl(
@@ -3760,20 +3746,20 @@
         setDraftState("Prototipas paskelbtas", "saved");
         return;
       }
-      var order = await AtminimasApi.createUzsakymas(result.identifier, data);
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
       await discardCurrentDraft();
-      statusEl.textContent = "Puslapis sukurtas ir išsaugotas kaip privatus. Paskelbti galėsite kliento zonoje.";
+      statusEl.textContent = "Puslapis išsaugotas kaip privatus. Išankstinį užsakymą galite pateikti atskirai – mokėti nereikės.";
       previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
-      checkoutLink.href = "apmokejimas.html?order=" + encodeURIComponent(order.id || "");
+      preorderLink.hidden = false;
+      preorderLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(productType);
       clientLink.href = clientUrl;
       clientLink.textContent = "Kliento zona";
-      qrLink.href = order.qr_kodas_url;
-      orderCode.textContent = order.id ? "Užsakymo numeris: " + String(order.id).slice(0, 8) : "Užsakymas sukurtas";
+      qrLink.href = AtminimasApi.qrImageUrl(new URL(pageUrl, window.location.href).href);
+      orderCode.textContent = "Mokamo užsakymo nesukūrėme.";
       resultBox.hidden = false;
-      showSaveProgress(100, "Puslapis ir užsakymas sukurti.");
+      showSaveProgress(100, "Puslapis išsaugotas.");
       setDraftState("Puslapis išsaugotas", "saved");
     } catch (err) {
       console.error(err);
@@ -3803,7 +3789,6 @@
         submitButton.disabled = true;
         return;
       }
-      productAvailabilityReady = true;
       if (productUnavailable) productUnavailable.hidden = true;
       if (prototypeNotice) prototypeNotice.hidden = false;
       if (accountNoteEl) accountNoteEl.hidden = true;
@@ -3832,9 +3817,9 @@
       submitButton.textContent = "Išsaugoti pakeitimus";
     } else if (isSignedIn()) {
       if (accountNoteEl) accountNoteEl.hidden = true;
-      submitButton.textContent = "Sukurti puslapį ir tęsti";
+      submitButton.textContent = "Išsaugoti privatų puslapį";
     } else {
-      submitButton.textContent = "Prisijungti ir tęsti užsakymą";
+      submitButton.textContent = "Prisijungti ir išsaugoti puslapį";
     }
     initializeResponsiveStage();
     setupDatePickers();
@@ -3843,11 +3828,11 @@
     syncDatePickersFromHidden();
     var restoredDraft = await restoreDraft();
     syncDatePickersFromHidden();
-    if (!isDemoMode && !editId && resumeOrder && isSignedIn()) {
+    if (!isDemoMode && !editId && resumeSave && isSignedIn()) {
       currentEditorStep = "preview";
       statusEl.textContent = restoredDraft
-        ? "Prisijungėte. Juodraštis atkurtas – dar kartą patvirtinkite sąlygas ir tęskite užsakymą."
-        : "Prisijungėte, tačiau šiame įrenginyje juodraštis nerastas. Užpildykite puslapį ir tęskite užsakymą.";
+        ? "Prisijungėte. Juodraštis atkurtas – patikrinkite sąlygas ir išsaugokite puslapį."
+        : "Prisijungėte, tačiau šiame įrenginyje juodraštis nerastas. Užpildykite ir išsaugokite puslapį.";
       if (accountNoteEl) {
         accountNoteEl.hidden = false;
         accountNoteEl.textContent = "Prisijungimas patvirtintas. Prieš išsaugodami dar kartą patikrinkite puslapį ir pažymėkite privalomus patvirtinimus.";

@@ -16,11 +16,11 @@
     primary.href = "index.html";
   } else if (type === "preorder") {
     title.textContent = "Išankstinį užsakymą gavome";
-    message.textContent = "Ačiū. Mokėjimo neėmėme – susisieksime prieš siūlydami ką nors pirkti.";
+    message.textContent = "Ačiū. Išankstinis užsakymas priimtas, o mokėtina suma yra 0 EUR. Kortelės duomenų nerinkome.";
     note.textContent = reference
       ? "Rezervacijos numeris: " + reference + ". Įprastai atsakome per 1 darbo dieną."
       : "Įprastai atsakome per 1 darbo dieną.";
-    primary.textContent = "Grįžti į lentelių puslapį";
+    primary.textContent = "Peržiūrėti lenteles";
     primary.href = "parduotuve.html";
   } else if (type === "payment") {
     title.textContent = "Mokėjimo žingsnis baigtas";

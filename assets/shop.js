@@ -81,7 +81,7 @@
     fields.mounting.textContent = product.mounting;
     fields.safety.textContent = product.safety;
     createLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(safeType);
-    createLink.textContent = "Rezervuoti be apmokėjimo";
+    createLink.textContent = "Išankstinis užsakymas";
     summaryPrice.textContent = product.price;
     sessionStorage.setItem(selectedKey, safeType);
   }

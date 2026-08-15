@@ -49,7 +49,7 @@
             <span id="editor-product-unavailable-message"></span>
             <a href="parduotuve.html">Grįžti į parduotuvę</a>
           </p>
-          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas, todėl galite užverti redaktorių ir pratęsti vėliau; prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą.</p>
+          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas; prisijungti reikės tik puslapiui išsaugoti. Išankstinis užsakymas pateikiamas atskirai ir be mokėjimo.</p>
           <p class="editor-prototype-notice" id="editor-prototype-notice" hidden>
             Administratoriaus prototipas: puslapis ir QR bus paskelbti be užsakymo bei mokėjimo.
           </p>
@@ -254,7 +254,7 @@
         <section class="editor-step" id="editor-section-preview" data-editor-step="preview" aria-labelledby="editor-step-preview-title" aria-hidden="true" hidden>
           <header class="editor-step__header">
             <span>3 žingsnis iš 3</span>
-            <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir užsakymas</h2>
+            <h2 id="editor-step-preview-title" tabindex="-1">Peržiūra ir išsaugojimas</h2>
             <p>Patikrinkite puslapį, patvirtinkite teises į turinį ir išsaugokite.</p>
           </header>
           <button class="button button--ghost editor-open-preview" type="button" data-editor-preview-open>Peržiūrėti kaip telefone</button>
@@ -279,13 +279,11 @@
           <fieldset class="legal-confirmations">
             <legend>Privalomi patvirtinimai</legend>
             <label><input type="checkbox" name="rights_confirm" value="yes" required> Patvirtinu, kad turiu teisę skelbti pateiktus tekstus, nuotraukas ir vaizdo įrašus, įskaitant mirusio asmens atvaizdą.</label>
-            <label><input type="checkbox" name="terms_confirm" value="yes" required> Susipažinau su <a href="taisykles.html" target="_blank" rel="noopener">naudojimo ir pirkimo taisyklėmis</a> bei <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</label>
-            <label><input type="checkbox" name="early_service_confirm" value="yes" required> Prašau pradėti skaitmeninės paslaugos teikimą nepasibaigus 14 dienų terminui ir suprantu, kad visiškai suteikus paslaugą teisė atsisakyti suteiktos paslaugos dalies gali pasibaigti.</label>
-            <label><input type="checkbox" name="custom_product_confirm" value="yes" required> Suprantu, kad pagal mano nurodymus individualiai pagamintai QR atminimo lentelei gali būti netaikoma 14 dienų sutarties atsisakymo teisė; tai neriboja teisių dėl nekokybiškos prekės.</label>
+            <label><input type="checkbox" name="terms_confirm" value="yes" required> Susipažinau su <a href="taisykles.html" target="_blank" rel="noopener">naudojimo taisyklėmis</a> bei <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</label>
           </fieldset>
           <progress class="editor-save-progress" id="editor-save-progress" max="100" value="0" hidden>0%</progress>
           <div class="editor-final-actions preview-actions" data-preview-actions>
-            <button class="button" type="submit">Tęsti užsakymą</button>
+            <button class="button" type="submit">Išsaugoti puslapį</button>
             <button class="button button--ghost" type="button" id="editor-clear-draft">Pradėti iš naujo</button>
           </div>
           <p class="form-status" id="editor-status" role="status" aria-live="polite"></p>
@@ -420,7 +418,7 @@
       <div class="editor-result" id="editor-result" hidden>
         <h3>Sukurta kaip privatus puslapis</h3>
         <a id="editor-open-link" class="button" href="#">Peržiūrėti prisijungus</a>
-        <a id="editor-checkout-link" class="button" href="#">Tęsti į pristatymą ir apmokėjimą</a>
+        <a id="editor-preorder-link" class="button" href="isankstinis-uzsakymas.html">Išankstinis užsakymas</a>
         <a id="editor-client-link" class="button button--ghost" href="#">Kliento nuoroda</a>
         <a id="editor-qr-link" class="button button--ghost" href="#" download="atminimas-qr.png">Atsisiųsti QR</a>
         <p class="editor-order-code" id="editor-order-code"></p>

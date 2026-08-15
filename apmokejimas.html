@@ -1,62 +1,40 @@
 <!DOCTYPE html>
 <html lang="lt">
-<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org"><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg"><meta name="description" content="Atminimas užsakymo pristatymo ir apmokėjimo duomenys"><meta name="robots" content="noindex,nofollow"><title>Pristatymas ir apmokėjimas - Atminimas</title><link rel="stylesheet" href="css/styles.css?v=20260811-2"><link rel="stylesheet" href="css/checkout-ux.css?v=20260811-2"></head>
-<body data-loading><div class="site-shell">
-<header class="site-header"><div class="site-header__inner"><a class="brand" href="index.html"><span class="brand__mark"><img src="assets/atminimas-candle.jpg" alt=""></span><span class="brand__name">Atminimas</span></a><nav class="site-nav" aria-label="Pagrindinė navigacija"><a href="vartotojas.html">Kliento zona</a><a href="taisykles.html">Taisyklės</a></nav></div></header>
-<main class="site-main checkout-page">
-  <header class="legal-page__header"><p class="eyebrow">Paskutinis žingsnis</p><h1>Kur pristatyti?</h1><p>Pasirinkite paštomatą, patikrinkite sumą ir tęskite vienu mygtuku.</p></header>
-  <section class="checkout-success" id="payment-success" aria-labelledby="payment-success-title" tabindex="-1" hidden>
-    <span class="checkout-success__mark" aria-hidden="true">✓</span>
-    <div>
-      <p class="eyebrow">Mokėjimo būsena</p>
-      <h2 id="payment-success-title">Mokėjimas gautas</h2>
-      <p id="payment-success-message">Tikriname saugų mokėjimo patvirtinimą. Užsakymo būseną visada matysite kliento zonoje.</p>
-      <a class="button" id="payment-success-action" href="vartotojas.html#user-pages">Atidaryti kliento zoną</a>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Atminimas šiuo metu priima tik nemokamus išankstinius QR lentelių užsakymus.">
+<meta name="robots" content="noindex,follow">
+<link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
+<title>Mokėti nereikia – Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260811-4">
+</head>
+<body data-loading>
+<div class="site-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html"><span class="brand__mark"><img src="assets/atminimas-candle.jpg" alt=""></span><span class="brand__name">Atminimas</span></a>
+      <nav class="site-nav" aria-label="Pagrindinė navigacija"><a href="parduotuve.html">Lentelės</a><a href="isankstinis-uzsakymas.html">Išankstinis užsakymas</a></nav>
     </div>
-  </section>
-  <section class="checkout-grid">
-    <form class="legal-form checkout-form" id="delivery-form">
-      <h2>Pristatymas į paštomatą</h2>
-      <label for="checkout-carrier">Vežėjas
-        <select id="checkout-carrier" name="carrier" required disabled aria-describedby="shipping-options-status">
-          <option value="">Kraunami pristatymo būdai…</option>
-        </select>
-      </label>
-      <div class="checkout-inline-state" id="shipping-options-state">
-        <p id="shipping-options-status" role="status" aria-live="polite">Tikriname galimus pristatymo būdus ir galutines kainas.</p>
-        <button class="button button--ghost checkout-retry" id="shipping-options-retry" type="button" hidden>Bandykite dar kartą</button>
+  </header>
+  <main class="site-main status-page__main">
+    <section class="status-card" aria-labelledby="preorder-only-title">
+      <span class="status-card__mark" aria-hidden="true">0 €</span>
+      <p class="eyebrow">Apmokėjimas išjungtas</p>
+      <h1 id="preorder-only-title">Dabar priimame tik išankstinius užsakymus</h1>
+      <p>Šiame etape nereikia rinktis pristatymo ar pateikti kortelės duomenų. Išankstinis užsakymas yra nemokamas ir neįpareigoja pirkti.</p>
+      <p class="status-card__note">Pasirinkite lentelės variantą ir palikite kontaktą. Gavę užsakymą susisieksime dėl kainos, komplektacijos ir termino.</p>
+      <div class="actions">
+        <a class="button" href="isankstinis-uzsakymas.html">Išankstinis užsakymas</a>
+        <a class="button button--ghost" href="parduotuve.html">Peržiūrėti lenteles</a>
       </div>
-      <label for="checkout-city">Miestas / savivaldybė
-        <input id="checkout-city" name="city" type="search" list="checkout-city-list" autocomplete="address-level2" placeholder="Pirmiausia pasirinkite vežėją" required disabled>
-        <datalist id="checkout-city-list"></datalist>
-      </label>
-      <label for="checkout-locker-search">Paštomato paieška
-        <input id="checkout-locker-search" type="search" autocomplete="off" placeholder="Ieškokite pagal pavadinimą ar adresą" aria-controls="checkout-terminal" disabled>
-      </label>
-      <label for="checkout-terminal">Paštomatas
-        <select id="checkout-terminal" name="parcel_terminal" required disabled aria-describedby="locker-status">
-          <option value="">Pirmiausia pasirinkite vežėją</option>
-        </select>
-      </label>
-      <div class="checkout-inline-state" id="locker-state">
-        <p class="editor-note" id="locker-status" role="status" aria-live="polite"></p>
-        <button class="button button--ghost checkout-retry" id="locker-retry" type="button" hidden>Bandykite dar kartą</button>
-      </div>
-      <h2>Gavėjas</h2>
-      <label>Vardas ir pavardė<input name="recipient_name" autocomplete="name" required maxlength="160"></label>
-      <label>Telefonas<input type="tel" name="recipient_phone" autocomplete="tel" required maxlength="40" placeholder="+370..."></label>
-      <label>El. paštas<input type="email" name="recipient_email" autocomplete="email" required maxlength="254"></label>
-      <p class="form-status" id="delivery-status" role="status" aria-live="polite"></p>
-    </form>
-    <aside class="checkout-summary">
-      <p class="eyebrow">Užsakymo santrauka</p><h2 id="checkout-order">Užsakymas kraunamas...</h2>
-      <div class="checkout-price-lines"><p>Produktas <strong id="checkout-subtotal">–</strong></p><p>Pristatymas <strong id="checkout-shipping">–</strong></p></div>
-      <div class="checkout-total"><span>Visa suma</span><strong id="checkout-total">–</strong></div>
-      <button class="button checkout-main-action" id="checkout-submit" type="submit" form="delivery-form" disabled aria-describedby="payment-help">Išsaugoti ir apmokėti</button><p id="payment-help" class="editor-note">Patikrinkite pristatymo duomenis.</p>
-      <p><a href="taisykles.html">Pirkimo ir grąžinimo sąlygos</a></p>
-    </aside>
-  </section>
-</main>
-<footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a></nav></div></footer>
-</div><script src="assets/supabase-config.js"></script><script src="assets/business-config.js"></script><script src="assets/auth.js?v=20260724-3"></script><script src="assets/business-details.js"></script><script src="assets/checkout.js?v=20260724-2"></script><script src="assets/loading.js?v=20260811-2"></script><script src="assets/site-ui.js?v=20260811-2"></script>
-</body></html>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a></nav></div></footer>
+</div>
+<script src="assets/loading.js?v=20260811-2"></script>
+<script src="assets/site-ui.js?v=20260811-4"></script>
+</body>
+</html>

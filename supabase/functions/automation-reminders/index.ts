@@ -17,23 +17,7 @@ Deno.serve(async (request: Request) => {
     const day = now.toISOString().slice(0, 10);
     const week = `${now.getUTCFullYear()}-${Math.ceil((((now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 1)) / 86400000) + new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).getUTCDay() + 1) / 7)}`;
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
     let created = 0;
-
-    const { data: unpaid, error: unpaidError } = await client.from("uzsakymai")
-      .select("id,recipient_email,created_at")
-      .eq("apmoketa", false)
-      .not("recipient_email", "is", null)
-      .lte("created_at", oneDayAgo)
-      .gte("created_at", sevenDaysAgo);
-    if (unpaidError) throw unpaidError;
-    created += await enqueue((unpaid || []).map((row) => ({
-      event_key: `order:${row.id}:unpaid-reminder:${day}`,
-      event_type: "order.unpaid_reminder",
-      order_id: row.id,
-      recipient_email: row.recipient_email,
-      payload: { order_id: row.id },
-    })));
 
     const { data: approvals, error: approvalError } = await client.from("uzsakymai")
       .select("id,recipient_email,paid_at")

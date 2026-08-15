@@ -59,7 +59,7 @@
     </section>
 
     <section class="admin-overview" id="admin-overview" hidden aria-label="Administravimo suvestinė">
-      <article><span>Visi užsakymai</span><strong id="admin-total-orders">0</strong><small id="admin-unpaid-orders">0 neapmokėta</small></article>
+      <article><span>Ankstesni užsakymai</span><strong id="admin-total-orders">0</strong><small id="admin-unpaid-orders">0 neapmokėta archyve</small></article>
       <article><span>Atminimo puslapiai</span><strong id="admin-total-profiles">0</strong><small>Visų klientų puslapiai</small></article>
       <article><span>Aktyvios siuntos</span><strong id="admin-active-shipments">0</strong><small>Laukia pristatymo</small></article>
       <article><span>Paslaugų užklausos</span><strong id="admin-service-count">0</strong><small id="admin-open-services">0 neužbaigta</small></article>
@@ -84,7 +84,7 @@
           <label>Dokumento tipas<select name="invoice_document_type"><option value="payment_confirmation">Mokėjimo patvirtinimas</option><option value="invoice">Sąskaita faktūra</option><option value="vat_invoice">PVM sąskaita faktūra</option></select></label>
           <label>Graviruota plieno QR atminimo lentelė, EUR<input type="number" name="metal_price" min="0" step="0.01"></label>
           <label>ASA QR atminimo lentelė, EUR<input type="number" name="asa_price" min="0" step="0.01"></label>
-          <label class="admin-availability-toggle"><input type="checkbox" name="asa_available"><span><strong>ASA variantą turime</strong><small>Pažymėjus ir įrašius kainą, klientai galės jį pasirinkti parduotuvėje.</small></span></label>
+          <label class="admin-availability-toggle"><input type="checkbox" name="asa_available"><span><strong>ASA variantą rodome</strong><small>Pažymėjus ir įrašius kainą, klientai matys orientacinę kainą išankstinio užsakymo puslapyje.</small></span></label>
           <label>Omniva siuntimas, EUR<input type="number" name="omniva_price" min="0" step="0.01"></label>
           <label>LP Express siuntimas, EUR<input type="number" name="lp_express_price" min="0" step="0.01"></label>
           <label>DPD siuntimas, EUR<input type="number" name="dpd_price" min="0" step="0.01"></label>
@@ -109,7 +109,7 @@
 
     <section class="admin-panel" id="admin-orders" hidden aria-labelledby="orders-title">
       <div class="admin-toolbar">
-        <div><p class="eyebrow">Pardavimai</p><h2 id="orders-title">Visi užsakymai</h2></div>
+        <div><p class="eyebrow">Ankstesnių pardavimų archyvas</p><h2 id="orders-title">Ankstesni užsakymai</h2></div>
         <div class="admin-toolbar__actions">
           <label>Paieška<input type="search" id="admin-order-search" placeholder="numeris, klientas, produktas"></label>
           <button class="button button--ghost" id="orders-refresh" type="button">Atnaujinti</button>
@@ -125,7 +125,7 @@
 
     <section class="admin-panel" id="admin-preorders" hidden aria-labelledby="preorders-title">
       <div class="admin-toolbar">
-        <div><p class="eyebrow">Paklausos patikra</p><h2 id="preorders-title">Išankstiniai užsakymai</h2></div>
+        <div><p class="eyebrow">Pagrindinis užsakymų srautas · mokėjimas 0 EUR</p><h2 id="preorders-title">Išankstiniai užsakymai</h2></div>
         <div class="admin-toolbar__actions"><button class="button button--ghost" id="preorders-export" type="button">Eksportuoti CSV</button><button class="button button--ghost" id="preorders-refresh" type="button">Atnaujinti</button></div>
       </div>
       <div class="admin-table-wrap"><table class="admin-table admin-preorder-table"><thead><tr><th>Rezervacija</th><th>Produktas</th><th>Kontaktas</th><th>Pageidavimas</th><th>Būsena</th><th>Veiksmai</th></tr></thead><tbody id="preorder-rows"></tbody></table></div>

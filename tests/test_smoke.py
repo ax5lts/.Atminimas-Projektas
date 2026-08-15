@@ -173,7 +173,7 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_private_pages_are_not_indexed(self):
         for name in (
-            "admin.html", "apmokejimas.html", "redaktorius.html",
+            "admin.html", "redaktorius.html",
             "slaptazodis.html", "vartotojas.html",
         ):
             html = (ROOT / name).read_text(encoding="utf-8")
@@ -350,7 +350,7 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_homepage_has_qr_and_multi_service_flows(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('href="isankstinis-uzsakymas.html?product=metal">Rezervuoti be apmokėjimo</a>', html)
+        self.assertIn('href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', html)
         self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
         self.assertIn('class="landing-proof"', html)
         self.assertIn("Pradėkite nemokėdami", html)
@@ -555,8 +555,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
         self.assertIn('<a class="button" href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', home)
-        self.assertIn('{ href: "parduotuve.html", label: "Kurti"', site_ui)
-        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Rezervuoti be apmokėjimo</a>', shop)
+        self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
+        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -579,10 +579,10 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('value === "asa" ? "asa" : "metal"', catalog)
         self.assertIn("catalog.asa.available", editor)
         self.assertNotIn("redaktorius.html?product=", user)
-        self.assertIn('createButton.href = "parduotuve.html"', user)
+        self.assertIn('createButton.href = "isankstinis-uzsakymas.html"', user)
         self.assertNotIn("steel: {", editor)
         self.assertIn("data.product_type = productType", editor)
-        self.assertIn('input.product_type === "asa" ? "asa" : "metal"', api)
+        self.assertNotIn('action: "create_order"', api)
         self.assertNotIn("steel_price", admin)
         self.assertIn("asa_available", admin)
         self.assertIn("product_type", admin)
@@ -598,8 +598,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("new.subtotal_cents := catalog.price_cents", availability_sql)
         self.assertIn("disable trigger automation_refresh_product_orders", availability_sql)
         self.assertIn("enable trigger automation_refresh_product_orders", availability_sql)
-        self.assertIn("productAvailabilityReady", editor)
-        self.assertIn("Palaukite, kol patikrinsime pasirinkto produkto prieinamumą.", editor)
+        self.assertNotIn("productAvailabilityReady", editor)
+        self.assertIn("Išankstinį užsakymą vis tiek galėsite pateikti be mokėjimo", editor)
+        self.assertIn('preorderLink.href = "isankstinis-uzsakymas.html?product="', editor)
         self.assertIn('createLink.href = "isankstinis-uzsakymas.html?product="', shop)
 
     def test_admin_has_separate_all_orders_dashboard(self):
@@ -609,7 +610,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('id="admin-overview"', html)
         self.assertIn('id="admin-orders"', html)
         self.assertIn('id="order-rows"', html)
-        self.assertIn("Visi užsakymai", html)
+        self.assertIn("Ankstesni užsakymai", html)
         self.assertIn("await AtminimasAuth.isAdmin()", admin)
         self.assertIn('"uzsakymai",', admin)
         self.assertIn("payment_reference", admin)
@@ -784,22 +785,17 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("to service_role", sql)
         self.assertNotRegex(sql.lower(), r"grant\s+(?:all|select|insert|update|delete)[^;]*public\.(?:payment_events|invoice_documents|production_jobs|automation_events|automation_audit_log)[^;]*\bto\s+anon\b")
 
-    def test_payment_flow_is_server_verified(self):
-        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
+    def test_new_product_payments_are_disabled_but_historical_webhook_is_verified(self):
+        checkout_page = (ROOT / "apmokejimas.html").read_text(encoding="utf-8")
         payment = (ROOT / "supabase" / "functions" / "payment-create" / "index.ts").read_text(encoding="utf-8")
         webhook = (ROOT / "supabase" / "functions" / "payment-webhook" / "index.ts").read_text(encoding="utf-8")
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
-        self.assertIn('functionUrl("payment-create")', checkout)
-        self.assertNotIn("STRIPE_SECRET_KEY", checkout)
-        self.assertRegex(
-            payment,
-            r'\.select\(\s*"id,profilis_id,total_cents,currency',
-        )
-        self.assertRegex(
-            payment,
-            r'params\.set\(\s*"line_items\[0\]\[price_data\]\[unit_amount\]",\s*'
-            r"String\(order\.total_cents\),?\s*\)",
-        )
+        self.assertNotIn("assets/checkout.js", checkout_page)
+        self.assertIn("payment_enabled: false", payment)
+        self.assertIn("preorder_url:", payment)
+        self.assertIn("}, 409);", payment)
+        self.assertNotIn("STRIPE_SECRET_KEY", payment)
+        self.assertNotIn("checkout.stripe.com", payment)
         self.assertIn('request.headers.get("stripe-signature")', webhook)
         self.assertIn("crypto.subtle.sign", webhook)
         self.assertRegex(
@@ -825,7 +821,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         reminders = (ROOT / "supabase" / "functions" / "automation-reminders" / "index.ts").read_text(encoding="utf-8")
         for event in ("invoice.requested", "payment.confirmed", "production.approval_requested", "shipping.sent", "shipping.delivered", "service.scheduled", "service.completed"):
             self.assertIn(event, worker)
-        self.assertIn("order.unpaid_reminder", reminders)
+        self.assertNotIn("order.unpaid_reminder", reminders)
+        self.assertIn('if (event.event_type === "order.unpaid_reminder") return;', worker)
+        self.assertNotIn('heading: "Užsakymas dar neapmokėtas"', worker)
         self.assertIn("profile.unfinished_reminder", reminders)
         self.assertIn("service.reminder", reminders)
         self.assertNotIn('update({ reminder_sent_at: now.toISOString() })', reminders)
@@ -1070,36 +1068,33 @@ class AtminimasSmokeTests(unittest.TestCase):
         # so rendering it exercises backwards-compatible conversion.
         self.assertIn('top: "91%"', demo)
 
-    def test_guest_builds_locally_and_signs_in_only_before_payment(self):
+    def test_guest_builds_locally_and_signs_in_only_to_save_a_page(self):
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         checkout_page = (ROOT / "apmokejimas.html").read_text(encoding="utf-8")
-        checkout = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
         login_page = (ROOT / "prisijungti.html").read_text(encoding="utf-8")
         login = (ROOT / "assets" / "login.js").read_text(encoding="utf-8")
         migration = (ROOT / "supabase" / "migrations" / "20260719130126_guest_editor_auth_boundary.sql").read_text(encoding="utf-8")
         update_grants = (ROOT / "supabase" / "migrations" / "20260719130334_restore_profile_update_columns.sql").read_text(encoding="utf-8")
 
         self.assertIn("Kurti galite neprisijungę", editor_page)
-        self.assertIn("prisijungti reikės tik tęsiant užsakymą prieš apmokėjimą", editor_page)
+        self.assertIn("prisijungti reikės tik puslapiui išsaugoti", editor_page)
         self.assertIn('if (!isDemoMode && editId && !isSignedIn())', editor)
         self.assertNotIn('if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken())', editor)
         self.assertIn("async function persistDraftBeforeLogin()", editor)
-        self.assertIn("redirectToLoginForOrder", editor)
-        self.assertIn('editorParams.get("resume") === "order"', editor)
+        self.assertIn("redirectToLoginForSave", editor)
+        self.assertIn('editorParams.get("resume") === "save"', editor)
         self.assertIn('changes.push({ key: "captions", file: captions || null })', editor)
         self.assertIn('await getDraftFile("captions")', editor)
         self.assertIn('store.delete(draftFileKey("captions"))', editor)
         self.assertGreaterEqual(editor.count("await discardCurrentDraft();"), 2)
         self.assertIn('var clientUrl = "vartotojas.html"', editor)
 
-        self.assertIn("function checkoutReturnUrl()", checkout)
-        self.assertIn('"prisijungti.html?next=" + encodeURIComponent(checkoutReturnUrl())', checkout)
-        self.assertIn("var me = await AtminimasAuth.user()", checkout)
+        self.assertNotIn('assets/checkout.js', checkout_page)
+        self.assertIn('href="isankstinis-uzsakymas.html"', checkout_page)
         self.assertIn("hasExplicitNext", login)
         self.assertIn('!hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next', login)
-        self.assertIn("Kurti galite ir neprisijungę", login_page)
-        self.assertIn("assets/checkout.js?v=20260724-2", checkout_page)
+        self.assertIn("be paskyros ir be mokėjimo", login_page)
 
         lower_migration = migration.lower()
         self.assertIn("revoke all privileges on table public.profiliai from anon", lower_migration)
@@ -1114,7 +1109,6 @@ class AtminimasSmokeTests(unittest.TestCase):
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor_js = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         checkout_page = (ROOT / "apmokejimas.html").read_text(encoding="utf-8")
-        checkout_js = (ROOT / "assets" / "checkout.js").read_text(encoding="utf-8")
         user_js = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -1130,12 +1124,11 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('id="editor-advanced-layout" hidden', editor_page)
         self.assertIn("setupAdvancedLayout", editor_js)
 
-        self.assertIn('name="city" type="search" list="checkout-city-list"', checkout_page)
-        self.assertIn('id="checkout-submit"', checkout_page)
-        self.assertNotIn('id="payment-button"', checkout_page)
-        self.assertNotIn('name="delivery_confirm"', checkout_page)
-        self.assertIn("prefillAccount", checkout_js)
-        self.assertIn("startPayment", checkout_js)
+        self.assertIn('id="preorder-only-title"', checkout_page)
+        self.assertIn('href="isankstinis-uzsakymas.html"', checkout_page)
+        self.assertNotIn('id="checkout-submit"', checkout_page)
+        self.assertNotIn('assets/checkout.js', checkout_page)
+        self.assertNotIn('name="parcel_terminal"', checkout_page)
 
         self.assertIn("primaryAction", user_js)
         self.assertIn("user-card-more", user_js)

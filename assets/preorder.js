@@ -53,7 +53,7 @@
     summaryImage.alt = product.alt;
     summaryPrice.textContent = product.price
       ? "Orientacinė kaina: " + product.price
-      : "Kainą patvirtinsime prieš pirkimą";
+      : "Orientacinę kainą patvirtinsime susisiekę · dabar 0 EUR";
   }
 
   function applyRequestedProduct() {

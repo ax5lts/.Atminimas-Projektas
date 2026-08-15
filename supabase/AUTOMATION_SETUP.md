@@ -3,7 +3,7 @@
 Kode nėra ir neturi būti tikrų API raktų. Prieš diegiant automatizavimą reikia:
 
 1. Supabase Edge Function Secrets nustatyti `PUBLIC_SITE_URL`, `AUTOMATION_SECRET`, `ADMIN_EMAIL`, `EMAIL_FROM`, `RESEND_API_KEY`, `STRIPE_SECRET_KEY` ir `STRIPE_WEBHOOK_SECRET`.
-2. Stripe webhook nukreipti į `https://tpwrkgdmtucecqxbpwwf.supabase.co/functions/v1/payment-webhook` ir prenumeruoti `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`.
+2. QR lentelių išankstiniams užsakymams „Stripe“ nenaudojamas. `payment-create` tyčia nekuria sesijų. Esamą `payment-webhook` konfigūraciją palikite tik tada, jei dar gali būti užbaigiama anksčiau pradėta istorinė mokėjimo sesija.
 3. Resend patvirtinti siuntėjo domeną. `EMAIL_FROM` turi priklausyti patvirtintam domenui.
    `ADMIN_EMAIL` galima nustatyti į `atminimokodas@gmail.com`; šis adresas taip
    pat naudojamas administratoriaus pranešimams. Gamintojo adresas įrašomas
@@ -16,7 +16,7 @@ Kode nėra ir neturi būti tikrų API raktų. Prieš diegiant automatizavimą re
 ## QR failų ir gamintojo eiga
 
 1. Klientas savo zonoje gali atsisiųsti 1200 × 1200 QR kodą PNG arba JPG formatu.
-2. Klientui patvirtinus apmokėtą užsakymą, automatikos darbininkas paruošia SVG
+2. Jau anksčiau apmokėtam istoriniam užsakymui klientui patvirtinus gamybą, automatikos darbininkas paruošia SVG
    ir išsaugo jį privačiame `automation-documents` bucket'e.
 3. Administratorius gamybos eilėje pirmiausia gali SVG atsisiųsti ir patikrinti,
    tada mygtuku „Siųsti SVG gamintojui“ išsiųsti jį kaip laiško priedą.

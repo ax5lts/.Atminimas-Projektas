@@ -324,21 +324,6 @@
     return { identifier: identifier, table: "profiliai" };
   }
 
-  async function createUzsakymas(identifier, input) {
-    var row = await manageProfile({
-      action: "create_order",
-      profile_id: identifier,
-      product_type: input && input.product_type === "asa" ? "asa" : "metal"
-    });
-    return {
-      id: row.id,
-      profilis_id: identifier,
-      puslapio_url: row.puslapio_url,
-      qr_kodas_url: row.qr_kodas_url,
-      busena: row.busena || "sukurtas"
-    };
-  }
-
   async function publishAdminPrototype(identifier) {
     return manageProfile({
       action: "publish_prototype",
@@ -415,7 +400,6 @@
     createAtminimas: createAtminimas,
     updateAtminimas: updateAtminimas,
     deleteAtminimas: deleteAtminimas,
-    createUzsakymas: createUzsakymas,
     publishAdminPrototype: publishAdminPrototype,
     uploadBuilderMedia: uploadBuilderMedia,
     qrImageUrl: qrImageUrl

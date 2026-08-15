@@ -22,14 +22,14 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('name="customer_email"', self.page)
         self.assertIn('name="consent" value="yes" required', self.page)
         self.assertIn('name="website"', self.page)
-        self.assertIn("jokio mokėjimo dabar neimame", self.page)
+        self.assertIn("šio išankstinio užsakymo suma yra 0 EUR", self.page)
         self.assertIn("Tai nėra pirkimo sutartis", self.page)
 
     def test_shop_and_home_link_to_preorder(self):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', shop)
-        self.assertIn("Rezervuoti be apmokėjimo", shop)
+        self.assertIn(">Išankstinis užsakymas</a>", shop)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', home)
         self.assertNotIn("Saugiai apmokėkite", shop)
 
@@ -39,7 +39,7 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('window.location.assign("aciu.html?"', self.client)
         thank_you = (ROOT / "assets" / "thank-you.js").read_text(encoding="utf-8")
         self.assertIn('type === "preorder"', thank_you)
-        self.assertIn("Mokėjimo neėmėme", thank_you)
+        self.assertIn("mokėtina suma yra 0 EUR", thank_you)
 
     def test_edge_validates_and_rate_limits_before_service_role_insert(self):
         self.assertIn('body.consent !== "yes"', self.edge)

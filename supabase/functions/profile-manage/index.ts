@@ -214,48 +214,12 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "create_order") {
-      if (!isOwner) {
-        return json(
-          { error: "Užsakymą gali sukurti tik puslapio savininkas" },
-          403,
-        );
-      }
-      const productType = String(body.product_type || "");
-      if (productType !== "metal" && productType !== "asa") {
-        return json({ error: "Neteisingas produkto tipas" }, 400);
-      }
-      const { data: product, error: productError } = await client
-        .from("product_catalog")
-        .select("id")
-        .eq("id", productType)
-        .eq("enabled", true)
-        .not("price_cents", "is", null)
-        .maybeSingle();
-      if (productError) throw productError;
-      if (!product) {
-        return json({ error: "Šio produkto šiuo metu užsakyti negalima" }, 409);
-      }
-
-      const page = new URL("sablonas-viskas.html", publicSiteUrl());
-      page.searchParams.set("slug", profileId);
-      const pageUrl = page.href;
-      const qrUrl = `${
-        env("SUPABASE_URL").replace(/\/$/, "")
-      }/functions/v1/qr-code?data=${encodeURIComponent(pageUrl)}&format=png`;
-      const { data: order, error: orderError } = await client
-        .from("uzsakymai")
-        .insert({
-          profilis_id: profileId,
-          puslapio_url: pageUrl,
-          qr_kodas_url: qrUrl,
-          product_type: productType,
-          busena: "sukurtas",
-          apmoketa: false,
-        })
-        .select("id,profilis_id,puslapio_url,qr_kodas_url,busena")
-        .single();
-      if (orderError) throw orderError;
-      return json(order, 201);
+      return json({
+        error:
+          "Nauji mokami užsakymai išjungti. Pateikite išankstinį užsakymą be mokėjimo.",
+        preorder_url: "/isankstinis-uzsakymas.html",
+        payment_enabled: false,
+      }, 409);
     }
 
     if (action === "update") {

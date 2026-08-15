@@ -67,7 +67,9 @@ pasirašytas nuorodas. Diekite tokia tvarka:
      neveikia, o paskelbtos kapavietės nuotrauką grąžina `grave-photo`;
    - naują užsakymą galima sukurti tik per `profile-manage`, naudojant serverio
      sugeneruotą atminimo puslapio ir QR URL;
-   - administratoriaus, užsakymo, pristatymo ir mokėjimo srautai tebėra veikiantys.
+   - administratorius gali peržiūrėti ir keisti išankstinių užsakymų būsenas;
+   - naujas mokamas QR lentelės užsakymas nesukuriamas per `profile-manage`, o `payment-create` grąžina `409` ir nekuria mokėjimo sesijos;
+   - jau apmokėtų istorinių užsakymų administravimo, gamybos ir pristatymo duomenys tebėra pasiekiami įgaliotiems naudotojams.
 7. „Supabase Dashboard“ paleiskite „Security Advisor“ ir patikrinkite Edge
    Functions bei Auth žurnalus.
 
