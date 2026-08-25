@@ -6,7 +6,9 @@ import {
   safeStoryBlocks,
 } from "../_shared/core.ts";
 
-const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
+// Nauji kodai kuriami mažosiomis raidėmis, tačiau seni įrašai gali turėti
+// didžiųjų raidžių. Juos priimame skaitymui, kad anksčiau pagaminti QR veiktų.
+const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/i;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MEDIA_TYPES = new Set(["image", "video", "captions"]);

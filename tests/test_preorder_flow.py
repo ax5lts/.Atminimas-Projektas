@@ -29,7 +29,7 @@ class PreorderFlowTests(unittest.TestCase):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', shop)
-        self.assertIn(">Išankstinis užsakymas</a>", shop)
+        self.assertIn(">PREORDER</a>", shop)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', home)
         self.assertNotIn("Saugiai apmokėkite", shop)
 
@@ -40,6 +40,9 @@ class PreorderFlowTests(unittest.TestCase):
         thank_you = (ROOT / "assets" / "thank-you.js").read_text(encoding="utf-8")
         self.assertIn('type === "preorder"', thank_you)
         self.assertIn("mokėtina suma yra 0 EUR", thank_you)
+        self.assertIn('params.get("product") === "asa" ? "asa" : "metal"', thank_you)
+        self.assertIn('primary.href = "redaktorius.html?product="', thank_you)
+        self.assertIn("Pradėti kurti atminimo puslapį", thank_you)
 
     def test_edge_validates_and_rate_limits_before_service_role_insert(self):
         self.assertIn('body.consent !== "yes"', self.edge)

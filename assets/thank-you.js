@@ -3,6 +3,7 @@
   var type = (params.get("type") || "generic").toLowerCase();
   var orderId = (params.get("order") || "").trim();
   var reference = (params.get("ref") || "").trim();
+  var product = params.get("product") === "asa" ? "asa" : "metal";
   var title = document.getElementById("thank-you-title");
   var message = document.getElementById("thank-you-message");
   var note = document.getElementById("thank-you-note");
@@ -20,8 +21,8 @@
     note.textContent = reference
       ? "Rezervacijos numeris: " + reference + ". Įprastai atsakome per 1 darbo dieną."
       : "Įprastai atsakome per 1 darbo dieną.";
-    primary.textContent = "Peržiūrėti lenteles";
-    primary.href = "parduotuve.html";
+    primary.textContent = "Pradėti kurti atminimo puslapį";
+    primary.href = "redaktorius.html?product=" + encodeURIComponent(product);
   } else if (type === "payment") {
     title.textContent = "Mokėjimo žingsnis baigtas";
     message.textContent = "Ačiū. Saugus mokėjimo patvirtinimas gali užtrukti kelias akimirkas. Užsakymo būseną ir gamybos patvirtinimą visada rasite kliento zonoje.";

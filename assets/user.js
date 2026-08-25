@@ -442,11 +442,14 @@
       var shipment = order
         ? "<div class='user-card-status'><span>Užsakymas</span><strong>" + html(fulfillmentName(order.fulfillment_status)) + "</strong><span>Pristatymas</span><strong>" + html(shippingName(order.shipping_status)) + "</strong></div>"
         : "";
+      var qrActions = row.aktyvus
+        ? "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>QR PNG</button>" +
+          "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='jpg'>QR JPG</button>"
+        : "<p class='user-card-qr-note'>Paskelbkite puslapį, tada čia galėsite atsisiųsti veikiantį QR kodą.</p>";
       var moreActions =
         "<a class='button button--ghost' href='" + publicUrl + "'>Peržiūrėti puslapį</a>" +
         "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a>" +
-        "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>QR PNG</button>" +
-        "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='jpg'>QR JPG</button>" +
+        qrActions +
         (invoice && invoice.storage_path ? "<button class='button button--ghost' type='button' data-document-order='" + html(order.id) + "' data-document-type='invoice'>Sąskaita PDF</button>" : "") +
         "<button class='button button--ghost' type='button' data-profile-id='" + html(row.id) + "' data-next-active='" + (!row.aktyvus) + "'>" + (row.aktyvus ? "Paslėpti nuo lankytojų" : "Rodyti viešai") + "</button>" +
         "<button class='button button--danger' type='button' data-delete-profile='" + html(row.id) + "' data-profile-name='" + html(name) + "'>Ištrinti puslapį</button>";

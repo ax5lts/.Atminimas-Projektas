@@ -71,6 +71,11 @@
     cleaning_monument: "Paminklo nuvalymas",
     cleaning_leaves: "Lapų ir šiukšlių surinkimas"
   };
+  var priceGroups = {
+    zvakes: ["candle_1", "candle_2", "candle_5"],
+    geles: ["flower_1", "flower_3", "flower_5", "flower_bouquet"],
+    kapu_tvarkymas: ["cleaning_full", "cleaning_grooves", "cleaning_surface", "cleaning_monument", "cleaning_leaves"]
+  };
 
   function config() {
     return window.ATMINIMAS_CONFIG;
@@ -206,6 +211,12 @@
     form.querySelectorAll("[data-service-price]").forEach(function (element) {
       var value = priceValue(element.dataset.servicePrice);
       element.textContent = value === null ? "Kaina –" : formatCents(value);
+    });
+    form.querySelectorAll("[data-service-price-group]").forEach(function (element) {
+      var values = (priceGroups[element.dataset.servicePriceGroup] || [])
+        .map(priceValue)
+        .filter(function (value) { return value !== null; });
+      element.textContent = values.length ? formatCents(Math.min.apply(Math, values)) : "–";
     });
   }
 

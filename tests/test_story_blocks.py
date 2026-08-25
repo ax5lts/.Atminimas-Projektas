@@ -323,23 +323,52 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn("remainingChars", limiter)
         self.assertIn("MAX_STORY_CHARS", limiter)
 
-    def test_long_story_preview_refits_after_images_load(self):
+    def test_editor_story_preview_uses_the_public_flow_contract(self):
         preview = balanced_block(
             self.editor_js, r"function\s+renderStoryPreview\s*\(",
-        )
-        keep_video = balanced_block(
-            self.editor_js, r"function\s+keepVideoBelowStory\s*\(",
         )
         self.assertRegex(
             preview,
             r"addEventListener\(\s*\"load\"[\s\S]{0,160}scheduleStageFit",
         )
-        self.assertRegex(
-            self.editor_js,
-            r"MAX_STORY_STAGE_HEIGHT_PCT\s*=\s*8000\b",
+        self.assertIn("var MIN_STORY_HEADER_HEIGHT_PCT = 42", self.editor_js)
+        self.assertIn(
+            'memorial-story-block memorial-story-block--text '
+            'memorial-story-block--positioned',
+            preview,
         )
-        self.assertIn("previewLongText.offsetHeight", keep_video)
-        self.assertNotIn("setPieceTopPct(videoPiece", keep_video)
+        self.assertIn("memorial-story-block--photo-", preview)
+        self.assertIn("memorial-story-block--positioned", preview)
+        self.assertIn("memorial-story-block--photo-fit-cover", self.editor_js)
+        self.assertIn("memorial-story-block--photo-fit-contain", self.editor_js)
+
+        stage_start = self.editor_html.index('id="editor-preview-stage"')
+        stage_end = self.editor_html.index("</article>", stage_start)
+        story_start = self.editor_html.index('id="editor-preview-story"')
+        video_start = self.editor_html.index('id="editor-preview-video"')
+        self.assertLess(stage_end, story_start)
+        self.assertLess(story_start, video_start)
+        story_tag = re.search(
+            r'<section class="[^"]+"[^>]*id="editor-preview-story"[^>]*>',
+            self.editor_html,
+        ).group(0)
+        for class_name in (
+            "editor-preview-story",
+            "memorial-story",
+            "memorial-story-blocks",
+        ):
+            self.assertIn(class_name, story_tag)
+        self.assertNotIn("editor-piece", story_tag)
+        self.assertNotIn("data-piece", story_tag)
+
+        stage_tag = re.search(
+            r'<article class="[^"]+"[^>]*id="editor-preview-stage"[^>]*>',
+            self.editor_html,
+        ).group(0)
+        self.assertIn("builder-view", stage_tag)
+        self.assertIn("builder-view--story-blocks", stage_tag)
+        self.assertIn("builder-header", self.editor_html)
+        self.assertIn("builder-epitaph", self.editor_html)
 
     def test_story_mode_video_uses_flow_after_the_ordered_story(self):
         builder = balanced_block(
@@ -354,6 +383,13 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertLess(story_append, video_append)
         self.assertIn(".memorial-story-video", self.styles)
+        editor_video = re.search(
+            r'<div class="editor-video-slot memorial-story-video"[^>]*>',
+            self.editor_html,
+        ).group(0)
+        self.assertIn(" hidden", editor_video)
+        self.assertNotIn("editor-piece", editor_video)
+        self.assertNotIn("data-piece", editor_video)
 
     def test_photo_alignment_wraps_full_story_text_and_round_trips(self):
         self.assertNotIn("PREVIEW_STORY_WORDS", self.editor_js)
@@ -538,7 +574,7 @@ class StoryBlocksContractTests(unittest.TestCase):
 
         self.assertRegex(
             self.styles,
-            r"\.editor-preview-story__photo,[\s\S]{0,420}"
+            r"\.editor-preview-story__photo\s*\{[\s\S]{0,420}"
             r"background:\s*transparent",
         )
         self.assertRegex(

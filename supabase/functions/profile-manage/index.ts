@@ -22,7 +22,9 @@ type MediaItem = {
   order?: number;
 };
 
-const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
+// Išlaikome suderinamumą su senais profiliais, kurių koduose buvo didžiųjų
+// raidžių. Nauji profiliai ir toliau generuojami tik mažosiomis raidėmis.
+const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/i;
 const MEDIA_TYPES = new Set(["image", "video", "captions"]);
 const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
   image: /^photo-[1-8]\.(?:jpg|jpeg|png|webp)$/,

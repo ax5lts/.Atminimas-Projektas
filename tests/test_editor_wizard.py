@@ -74,6 +74,20 @@ class EditorWizardTests(unittest.TestCase):
         self.assertIn("step: currentEditorStep", self.script)
         self.assertIn("currentEditorStep = draft.step", self.script)
 
+    def test_mobile_browser_back_returns_to_previous_editor_step(self):
+        self.assertIn("function initializeEditorStepHistory()", self.script)
+        self.assertIn("window.history.replaceState(editorStepHistoryState(currentEditorStep, 0)", self.script)
+        self.assertIn('window.addEventListener("popstate"', self.script)
+        self.assertIn('window.history.pushState(editorStepHistoryState(name, depth + 1)', self.script)
+        self.assertIn("function activatePreviousEditorStep(name, scroll)", self.script)
+        self.assertIn("window.history.back();", self.script)
+
+    def test_guest_login_redirect_is_not_blocked_by_empty_indexeddb_cleanup(self):
+        self.assertIn("function editorLoginUrl()", self.script)
+        self.assertIn("window.location.assign(editorLoginUrl());", self.script)
+        self.assertIn("if (!hasMedia)", self.script)
+        self.assertIn('console.warn("Empty draft media cleanup skipped"', self.script)
+
     def test_desktop_and_mobile_share_the_same_wizard_rules(self):
         self.assertIn(".editor-step:not(.is-active) {", self.styles)
         self.assertIn(".editor-step.is-active {", self.styles)
@@ -125,7 +139,7 @@ class EditorWizardTests(unittest.TestCase):
 
     def test_optional_video_slot_is_hidden_until_a_video_exists(self):
         video_slot = re.search(
-            r'<div class="editor-piece editor-video-slot"[^>]*>',
+            r'<div class="editor-video-slot memorial-story-video"[^>]*>',
             self.page,
         ).group(0)
         self.assertIn(" hidden", video_slot)

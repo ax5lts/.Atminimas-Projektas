@@ -46,6 +46,7 @@
     : null;
   var prototypeNotice = document.getElementById("editor-prototype-notice");
   var editorCanvas = document.querySelector(".editor-canvas");
+  var previewSurface = document.getElementById("editor-preview-surface");
   var openPreviewDialog = null;
   var productImage = document.getElementById("editor-product-image");
   var backgroundInput = document.getElementById("editor-background");
@@ -65,9 +66,9 @@
   var DATE_MIN_YEAR = 1800;
   var LEGACY_STAGE_HEIGHT_PCT = 355;
   var MIN_STAGE_HEIGHT_PCT = 160;
+  var MIN_STORY_HEADER_HEIGHT_PCT = 42;
   var STAGE_BOTTOM_GAP_PCT = 12;
   var MAX_STAGE_HEIGHT_PCT = 1200;
-  var MAX_STORY_STAGE_HEIGHT_PCT = 8000;
   var MAX_PIECE_HEIGHT_PCT = 180;
   var DATE_MONTHS = [
     "Sausis", "Vasaris", "Kovas", "Balandis", "Gegužė", "Birželis",
@@ -136,6 +137,9 @@
     preview: "Peržiūra"
   };
   var currentEditorStep = "text";
+  var editorStepHistoryReady = false;
+  var EDITOR_STEP_HISTORY_KEY = "atminimasEditorStep";
+  var EDITOR_STEP_HISTORY_DEPTH_KEY = "atminimasEditorStepDepth";
   var photoOrderNames = [];
   var photoOrderMode = "files";
   var photoPreviewUrls = new WeakMap();
@@ -235,8 +239,12 @@
     return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=save";
   }
 
+  function editorLoginUrl() {
+    return "prisijungti.html?next=" + encodeURIComponent(editorSaveReturnUrl());
+  }
+
   function redirectToLoginForSave() {
-    window.location.href = "prisijungti.html?next=" + encodeURIComponent(editorSaveReturnUrl());
+    window.location.assign(editorLoginUrl());
   }
 
   function setDraftState(message, state) {
@@ -279,6 +287,7 @@
     if (backgroundValue) backgroundValue.textContent = hex;
     if (colorCurrent) colorCurrent.style.backgroundColor = hex;
     stage.style.backgroundColor = hex;
+    if (previewSurface) previewSurface.style.backgroundColor = hex;
     syncColorSelection(hex);
     updateCompletionChecklist();
     if (persist) scheduleDraftSave();
@@ -632,7 +641,15 @@
       appearance.fit === "cover"
     );
     element.classList.toggle(
+      "memorial-story-block--photo-fit-cover",
+      appearance.fit === "cover"
+    );
+    element.classList.toggle(
       "editor-preview-story__photo--fit-contain",
+      appearance.fit === "contain"
+    );
+    element.classList.toggle(
+      "memorial-story-block--photo-fit-contain",
       appearance.fit === "contain"
     );
   }
@@ -847,7 +864,8 @@
         if (!value) return;
         maximumPositiveOffsetY = Math.max(maximumPositiveOffsetY, position.offsetY);
         var text = document.createElement("div");
-        text.className = "editor-preview-story__text editor-story-layout-piece";
+        text.className = "editor-preview-story__text editor-story-layout-piece " +
+          "memorial-story-block memorial-story-block--text memorial-story-block--positioned";
         text.dataset.storyPreviewIndex = String(index);
         text.style.setProperty("--story-offset-x", position.offsetX + "%");
         text.style.setProperty("--story-offset-y", position.offsetY + "px");
@@ -903,7 +921,8 @@
       var figure = document.createElement("figure");
       var align = normalizeStoryPhotoAlign(block.align);
       figure.className = "editor-preview-story__photo editor-preview-story__photo--" + align +
-        " editor-story-layout-piece";
+        " editor-story-layout-piece memorial-story-block memorial-story-block--photo " +
+        "memorial-story-block--photo-" + align + " memorial-story-block--positioned";
       figure.dataset.storyPreviewIndex = String(index);
       figure.dataset.storyPhotoContainer = String(index);
       figure.style.setProperty("--story-offset-x", position.offsetX + "%");
@@ -2344,10 +2363,19 @@
       auxiliaryMediaPersistenceFailed.video = false;
       auxiliaryMediaPersistenceFailed.captions = false;
     } catch (err) {
-      if (photoOrderMode === "files") photoDraftPersistenceFailed = true;
-      auxiliaryMediaPersistenceFailed.video = true;
-      auxiliaryMediaPersistenceFailed.captions = true;
-      throw err;
+      // Kai failų nėra, užblokuota arba nepasiekiama IndexedDB neturi
+      // sustabdyti tekstinio juodraščio ir perėjimo į prisijungimą telefone.
+      if (!hasMedia) {
+        console.warn("Empty draft media cleanup skipped", err);
+        photoDraftPersistenceFailed = false;
+        auxiliaryMediaPersistenceFailed.video = false;
+        auxiliaryMediaPersistenceFailed.captions = false;
+      } else {
+        if (photoOrderMode === "files") photoDraftPersistenceFailed = true;
+        auxiliaryMediaPersistenceFailed.video = true;
+        auxiliaryMediaPersistenceFailed.captions = true;
+        throw err;
+      }
     }
     if (!saveDraftNow()) throw new Error("Juodraščio nepavyko išsaugoti šiame įrenginyje.");
   }
@@ -2715,9 +2743,9 @@
   }
 
   function fitName() {
-    var size = 52;
+    var size = 58;
     previewName.style.fontSize = size + "px";
-    while (size > 20 && previewName.scrollWidth > previewName.clientWidth) {
+    while (size > 16 && previewName.scrollWidth > previewName.clientWidth) {
       size -= 2;
       previewName.style.fontSize = size + "px";
     }
@@ -2971,10 +2999,13 @@
   }
 
   function setStageHeightPct(heightPct, width) {
-    var maximumHeightPct = stage.classList.contains("has-story-blocks")
-      ? MAX_STORY_STAGE_HEIGHT_PCT
-      : MAX_STAGE_HEIGHT_PCT;
-    var next = Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(maximumHeightPct, Number(heightPct) || MIN_STAGE_HEIGHT_PCT));
+    var minimumHeightPct = stage.classList.contains("has-story-blocks")
+      ? MIN_STORY_HEADER_HEIGHT_PCT
+      : MIN_STAGE_HEIGHT_PCT;
+    var next = Math.max(
+      minimumHeightPct,
+      Math.min(MAX_STAGE_HEIGHT_PCT, Number(heightPct) || minimumHeightPct)
+    );
     var basis = width || stageWidth();
     stage.dataset.heightPct = String(layoutNumber(next));
     stage.style.height = Math.round(basis * next / 100) + "px";
@@ -2996,9 +3027,9 @@
   function desiredStageHeightPct(forcedPiece) {
     var width = stageWidth();
     var stageRect = stage.getBoundingClientRect();
-    var maximumHeightPct = stage.classList.contains("has-story-blocks")
-      ? MAX_STORY_STAGE_HEIGHT_PCT
-      : MAX_STAGE_HEIGHT_PCT;
+    var minimumHeightPct = stage.classList.contains("has-story-blocks")
+      ? MIN_STORY_HEADER_HEIGHT_PCT
+      : MIN_STAGE_HEIGHT_PCT;
     var bottom = 0;
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       if (piece !== forcedPiece && !pieceAffectsStageHeight(piece)) return;
@@ -3016,34 +3047,13 @@
       }
     });
     var desired = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
-    return Math.max(MIN_STAGE_HEIGHT_PCT, Math.min(maximumHeightPct, desired));
-  }
-
-  function keepVideoBelowStory() {
-    if (!stage.classList.contains("has-story-blocks") || !previewLongText) return;
-    var videoPiece = stage.querySelector(".editor-video-slot");
-    if (!videoPiece || !pieceAffectsStageHeight(videoPiece)) return;
-    var width = stageWidth();
-    var gapPx = width * 6 / 100;
-    var savedTopPx = width * pieceTopPct(videoPiece) / 100;
-    var storyRect = previewLongText.getBoundingClientRect();
-    var stageRect = stage.getBoundingClientRect();
-    var storyBottom = Math.max(
-      previewLongText.offsetTop + previewLongText.offsetHeight,
-      storyRect.bottom - stageRect.top
-    );
-    previewLongText.querySelectorAll("[data-story-preview-index]").forEach(function (storyPiece) {
-      storyBottom = Math.max(storyBottom, storyPiece.getBoundingClientRect().bottom - stageRect.top);
-    });
-    var minimumTopPx = storyBottom + gapPx;
-    videoPiece.style.top = Math.round(Math.max(savedTopPx, minimumTopPx)) + "px";
+    return Math.max(minimumHeightPct, Math.min(MAX_STAGE_HEIGHT_PCT, desired));
   }
 
   function fitStageToContent(allowShrink, forcedPiece) {
     if (stage.getBoundingClientRect().width < 1) {
       return parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
     }
-    keepVideoBelowStory();
     var desired = desiredStageHeightPct(forcedPiece);
     var current = parseFloat(stage.dataset.heightPct || "") || LEGACY_STAGE_HEIGHT_PCT;
     if (!allowShrink) desired = Math.max(current, desired);
@@ -3136,7 +3146,49 @@
     return false;
   }
 
-  function activateEditorStep(name, scroll) {
+  function editorStepHistoryState(name, depth) {
+    var state = Object.assign({}, window.history.state || {});
+    state[EDITOR_STEP_HISTORY_KEY] = name;
+    state[EDITOR_STEP_HISTORY_DEPTH_KEY] = Math.max(0, Number(depth) || 0);
+    return state;
+  }
+
+  function updateEditorStepHistory(name, action) {
+    if (!editorStepHistoryReady || !window.history || !window.history.pushState) return;
+    var state = window.history.state || {};
+    var depth = Math.max(0, Number(state[EDITOR_STEP_HISTORY_DEPTH_KEY]) || 0);
+    if (action === "push") {
+      window.history.pushState(editorStepHistoryState(name, depth + 1), "", window.location.href);
+    } else if (action === "replace") {
+      window.history.replaceState(editorStepHistoryState(name, depth), "", window.location.href);
+    }
+  }
+
+  function initializeEditorStepHistory() {
+    if (!window.history || !window.history.replaceState) return;
+    window.history.replaceState(editorStepHistoryState(currentEditorStep, 0), "", window.location.href);
+    editorStepHistoryReady = true;
+    window.addEventListener("popstate", function (event) {
+      var name = event.state && event.state[EDITOR_STEP_HISTORY_KEY];
+      if (editorSteps.indexOf(name) >= 0) activateEditorStep(name, true);
+    });
+  }
+
+  function activatePreviousEditorStep(name, scroll) {
+    var state = window.history && window.history.state ? window.history.state : {};
+    var depth = Math.max(0, Number(state[EDITOR_STEP_HISTORY_DEPTH_KEY]) || 0);
+    if (
+      editorStepHistoryReady &&
+      depth > 0 &&
+      state[EDITOR_STEP_HISTORY_KEY] === currentEditorStep
+    ) {
+      window.history.back();
+      return;
+    }
+    activateEditorStep(name, scroll, "replace");
+  }
+
+  function activateEditorStep(name, scroll, historyAction) {
     var index = editorSteps.indexOf(name);
     if (index < 0) return;
     currentEditorStep = name;
@@ -3192,6 +3244,7 @@
       }
       saveDraftNow();
     }
+    updateEditorStepHistory(name, historyAction);
   }
 
   function setupEditorStepActions() {
@@ -3208,7 +3261,7 @@
         previous.textContent = "Atgal";
         previous.setAttribute("aria-label", "Grįžti į žingsnį „" + editorStepLabels[editorSteps[index - 1]] + "“");
         previous.addEventListener("click", function () {
-          activateEditorStep(editorSteps[index - 1], true);
+          activatePreviousEditorStep(editorSteps[index - 1], true);
         });
         var finalActions = step.querySelector(".editor-final-actions");
         if (index === editorSteps.length - 1 && finalActions) {
@@ -3225,7 +3278,7 @@
         next.textContent = "Toliau: " + editorStepLabels[editorSteps[index + 1]];
         next.addEventListener("click", function () {
           if (!validateEditorStep(step.dataset.editorStep)) return;
-          activateEditorStep(editorSteps[index + 1], true);
+          activateEditorStep(editorSteps[index + 1], true, "push");
         });
         actions.appendChild(next);
       }
@@ -3270,13 +3323,17 @@
   function setupEditorSectionButtons() {
     document.querySelectorAll("[data-editor-section]").forEach(function (button) {
       button.addEventListener("click", function () {
-        activateEditorStep(button.dataset.editorSection, true);
+        var target = button.dataset.editorSection;
+        var action = editorSteps.indexOf(target) > editorSteps.indexOf(currentEditorStep) ? "push" : "replace";
+        activateEditorStep(target, true, action);
       });
     });
     var stepButtons = Array.from(document.querySelectorAll("[data-editor-step-button]"));
     stepButtons.forEach(function (button, buttonIndex) {
       button.addEventListener("click", function () {
-        activateEditorStep(button.dataset.editorStepButton, true);
+        var target = button.dataset.editorStepButton;
+        var action = editorSteps.indexOf(target) > editorSteps.indexOf(currentEditorStep) ? "push" : "replace";
+        activateEditorStep(target, true, action);
       });
       button.addEventListener("keydown", function (event) {
         var targetIndex = buttonIndex;
@@ -3292,6 +3349,7 @@
     setupEditorStepActions();
     setupPreviewDialog();
     activateEditorStep(currentEditorStep, false);
+    initializeEditorStepHistory();
   }
 
   function bindDrag() {
@@ -3598,7 +3656,7 @@
       return;
     }
     if (!validateDatePickers(false)) {
-      activateEditorStep("text", true);
+      activateEditorStep("text", true, "replace");
       window.setTimeout(function () {
         validateDatePickers(true);
       }, 0);
@@ -3611,7 +3669,7 @@
     });
     if (invalid) {
       var invalidStep = invalid.closest("[data-editor-step]");
-      if (invalidStep) activateEditorStep(invalidStep.dataset.editorStep, true);
+      if (invalidStep) activateEditorStep(invalidStep.dataset.editorStep, true, "replace");
       invalid.reportValidity();
       invalid.focus();
       return;
@@ -3634,7 +3692,7 @@
     }
     var videoForSubmission = (videoInput.files && videoInput.files[0]) ? videoInput.files[0] : savedVideoFile;
     if (videoForSubmission && videoForSubmission.size > MAX_VIDEO_BYTES) {
-      activateEditorStep("colors", true);
+      activateEditorStep("colors", true, "replace");
       var additionalSettings = document.querySelector(".editor-additional-settings");
       if (additionalSettings) additionalSettings.open = true;
       statusEl.textContent = "Vaizdo įrašas per didelis. Pasirinkite ne didesnį kaip 50 MB failą.";
@@ -3714,8 +3772,8 @@
         preorderLink.hidden = true;
         clientLink.href = "vartotojas.html";
         clientLink.textContent = "Grįžti į kliento zoną";
-        qrLink.href = AtminimasApi.qrImageUrl(new URL(editPageUrl, window.location.href).href);
-        orderCode.textContent = "";
+        qrLink.hidden = true;
+        orderCode.textContent = "QR kodą atsisiųskite kliento zonoje, kai puslapis rodomas viešai.";
         var resultHeading = resultBox.querySelector("h3");
         if (resultHeading) resultHeading.textContent = "Pakeitimai išsaugoti";
         resultBox.hidden = false;
@@ -3738,6 +3796,7 @@
         qrLink.href = prototype.qr_url || AtminimasApi.qrImageUrl(
           new URL(prototypePageUrl, window.location.href).href
         );
+        qrLink.hidden = false;
         orderCode.textContent = "Administratoriaus prototipas – užsakymo ir mokėjimo nereikia.";
         var prototypeHeading = resultBox.querySelector("h3");
         if (prototypeHeading) prototypeHeading.textContent = "Viešas prototipas sukurtas";
@@ -3756,8 +3815,8 @@
       preorderLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(productType);
       clientLink.href = clientUrl;
       clientLink.textContent = "Kliento zona";
-      qrLink.href = AtminimasApi.qrImageUrl(new URL(pageUrl, window.location.href).href);
-      orderCode.textContent = "Mokamo užsakymo nesukūrėme.";
+      qrLink.hidden = true;
+      orderCode.textContent = "Pirmiausia kliento zonoje paskelbkite puslapį. Tada galėsite atsisiųsti veikiantį QR kodą.";
       resultBox.hidden = false;
       showSaveProgress(100, "Puslapis išsaugotas.");
       setDraftState("Puslapis išsaugotas", "saved");

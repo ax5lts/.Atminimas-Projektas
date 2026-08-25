@@ -22,8 +22,8 @@ window.ATMINIMAS_BUSINESS = Object.freeze({
   responseTime: "per 1 darbo dieną",
   manufacturer: "",
   productIdentifier: "",
-  material: "",
-  dimensions: "",
-  mounting: "",
-  safetyWarnings: ""
+  material: "Plienas",
+  dimensions: "5 × 5 cm",
+  mounting: "Klijais",
+  safetyWarnings: "Tvirtinti pagal klijų gamintojo instrukciją."
 });

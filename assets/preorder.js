@@ -7,18 +7,21 @@
   var status = document.getElementById("preorder-status");
   var summaryTitle = document.getElementById("preorder-summary-title");
   var summaryPrice = document.getElementById("preorder-summary-price");
+  var summaryDetails = document.getElementById("preorder-summary-details");
   var summaryImage = document.getElementById("preorder-product-image");
   var products = {
     metal: {
-      title: "Graviruota plieno QR atminimo lentelė",
+      title: "Plieninė QR lentelė",
       image: "assets/qr-plienas-480.webp",
       alt: "Graviruota plieno QR atminimo lentelė",
+      details: "5 × 5 cm · plienas · klijuojama · siunčiame",
       price: business.price && business.price !== "–" ? business.price : ""
     },
     asa: {
-      title: "ASA 3D spausdinta QR atminimo lentelė",
+      title: "3D spausdinta QR lentelė",
       image: "assets/qr-asa-480.webp",
       alt: "ASA 3D spausdinta QR atminimo lentelė",
+      details: "5 × 5 cm · ASA plastikas · klijuojama · siunčiame",
       price: ""
     }
   };
@@ -51,6 +54,7 @@
     summaryTitle.textContent = product.title;
     summaryImage.src = product.image;
     summaryImage.alt = product.alt;
+    summaryDetails.textContent = product.details;
     summaryPrice.textContent = product.price
       ? "Orientacinė kaina: " + product.price
       : "Orientacinę kainą patvirtinsime susisiekę · dabar 0 EUR";
@@ -101,7 +105,7 @@
     };
 
     setBusy(true);
-    setStatus("Išankstinis užsakymas pateikiamas…", "info");
+    setStatus("PREORDER pateikiamas…", "info");
     try {
       var response = await fetch(
         config.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/preorder",

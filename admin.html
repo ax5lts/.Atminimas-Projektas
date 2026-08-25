@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Admin - Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260811-3">
+<link rel="stylesheet" href="css/styles.css?v=20260819-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -69,7 +69,7 @@
     </section>
 
     <section class="admin-panel" id="admin-business-settings" hidden aria-labelledby="business-settings-title">
-      <div class="admin-toolbar"><div><p class="eyebrow">Automatikos paruošimas</p><h2 id="business-settings-title">Rekvizitai ir kainos</h2></div></div>
+      <div class="admin-toolbar"><div><p class="eyebrow">Automatikos paruošimas</p><h2 id="business-settings-title">Rekvizitai ir lentelių kainos</h2></div></div>
       <form class="admin-settings-form" id="business-settings-form">
         <div class="form-grid">
           <label>Veiklos vykdytojas / įmonė<input name="legal_name" maxlength="200"></label>
@@ -93,6 +93,60 @@
         <label class="check-label"><input type="checkbox" name="ready_for_invoicing"> Patvirtinu, kad rekvizitai ir pasirinktas dokumento tipas teisingi.</label>
         <div class="actions"><button class="button" type="submit">Išsaugoti nustatymus</button></div>
         <p class="form-status" id="business-settings-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="admin-panel" id="admin-service-pricing" hidden aria-labelledby="service-pricing-title">
+      <div class="admin-toolbar"><div><p class="eyebrow">Kapavietės priežiūra</p><h2 id="service-pricing-title">Gėlių, žvakių ir tvarkymo kainos</h2></div></div>
+      <p class="editor-note">Įrašytos kainos automatiškai rodomos pagrindinio puslapio paslaugų kortelėse ir pasirinkimuose. Tuščią lauką palikite, jei kainą derinsite individualiai.</p>
+      <form id="service-pricing-form" class="auth-form admin-settings-form">
+        <div class="admin-price-groups">
+          <fieldset>
+            <legend>Žvakės</legend>
+            <div class="form-grid admin-service-price-grid">
+              <label>1 žvakė, €<input name="price_candle_1" type="number" min="0" step="0.01"></label>
+              <label>2 žvakės, €<input name="price_candle_2" type="number" min="0" step="0.01"></label>
+              <label>5 žvakės, €<input name="price_candle_5" type="number" min="0" step="0.01"></label>
+              <label>Kitas kiekis, €<input name="price_candle_other" type="number" min="0" step="0.01"></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Gėlės</legend>
+            <div class="form-grid admin-service-price-grid">
+              <label>1 gėlė, €<input name="price_flower_1" type="number" min="0" step="0.01"></label>
+              <label>3 gėlės, €<input name="price_flower_3" type="number" min="0" step="0.01"></label>
+              <label>5 gėlės, €<input name="price_flower_5" type="number" min="0" step="0.01"></label>
+              <label>Puokštė, €<input name="price_flower_bouquet" type="number" min="0" step="0.01"></label>
+              <label>Kitas kiekis, €<input name="price_flower_other" type="number" min="0" step="0.01"></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Tvarkymas</legend>
+            <div class="form-grid admin-service-price-grid">
+              <label>Pilnas sutvarkymas, €<input name="price_cleaning_full" type="number" min="0" step="0.01"></label>
+              <label>Griovelių išvalymas, €<input name="price_cleaning_grooves" type="number" min="0" step="0.01"></label>
+              <label>Viršaus nušlavimas, €<input name="price_cleaning_surface" type="number" min="0" step="0.01"></label>
+              <label>Paminklo nuvalymas, €<input name="price_cleaning_monument" type="number" min="0" step="0.01"></label>
+              <label>Lapų ir šiukšlių surinkimas, €<input name="price_cleaning_leaves" type="number" min="0" step="0.01"></label>
+            </div>
+          </fieldset>
+        </div>
+        <details class="admin-settings-card">
+          <summary>Kelionės ir išvykimo vietos nustatymai</summary>
+          <p class="editor-note">Šios reikšmės naudojamos preliminariai kelionės kainai apskaičiuoti. Klientui tikslios bazės koordinatės nerodomos.</p>
+          <div class="form-grid">
+            <label>Išvykimo zona<input name="base_label" maxlength="120" required></label>
+            <label>Bazės platuma<input name="base_latitude" type="number" min="-90" max="90" step="0.000001" required></label>
+            <label>Bazės ilguma<input name="base_longitude" type="number" min="-180" max="180" step="0.000001" required></label>
+            <label>Kelio koeficientas nuo<input name="road_factor_min" type="number" min="1" max="3" step="0.01" required></label>
+            <label>Kelio koeficientas iki<input name="road_factor_max" type="number" min="1" max="3" step="0.01" required></label>
+            <label>Įskaičiuota kelionė pirmyn ir atgal, km<input name="included_round_trip_km" type="number" min="0" step="1" required></label>
+            <label>Kelionės tarifas, €/km<input name="travel_rate_eur_per_km" type="number" min="0" step="0.01" placeholder="Palikite tuščią rankiniam vertinimui"></label>
+            <label>Virš kiek km viena kryptimi vertinti rankiniu būdu<input name="manual_review_over_one_way_km" type="number" min="1" step="1" required></label>
+          </div>
+        </details>
+        <div class="actions"><button class="button" type="submit">Išsaugoti paslaugų kainas</button></div>
+        <p class="form-status" id="service-pricing-status" role="status" aria-live="polite"></p>
       </form>
     </section>
 
@@ -138,42 +192,6 @@
 
     <section class="admin-panel" id="admin-service-requests" hidden aria-labelledby="service-requests-title">
       <div class="admin-toolbar"><div><p class="eyebrow">Kapavietės priežiūra</p><h2 id="service-requests-title">Paslaugų užklausos</h2></div><button class="button button--ghost" id="service-requests-refresh" type="button">Atnaujinti</button></div>
-      <details class="admin-settings-card">
-        <summary>Preliminarios kainodaros nustatymai</summary>
-        <form id="service-pricing-form" class="auth-form admin-settings-form">
-          <p class="editor-note">Bazės koordinatės ir kilometro tarifas matomi tik administratoriui. Klientui rodoma tik išvykimo zona ir apytikslis kelionės intervalas.</p>
-          <div class="form-grid">
-            <label>Išvykimo zona<input name="base_label" maxlength="120" required></label>
-            <label>Bazės platuma<input name="base_latitude" type="number" min="-90" max="90" step="0.000001" required></label>
-            <label>Bazės ilguma<input name="base_longitude" type="number" min="-180" max="180" step="0.000001" required></label>
-            <label>Kelio koeficientas nuo<input name="road_factor_min" type="number" min="1" max="3" step="0.01" required></label>
-            <label>Kelio koeficientas iki<input name="road_factor_max" type="number" min="1" max="3" step="0.01" required></label>
-            <label>Įskaičiuota kelionė pirmyn ir atgal, km<input name="included_round_trip_km" type="number" min="0" step="1" required></label>
-            <label>Kelionės tarifas, €/km<input name="travel_rate_eur_per_km" type="number" min="0" step="0.01" placeholder="Palikite tuščią rankiniam vertinimui"></label>
-            <label>Virš kiek km viena kryptimi vertinti rankiniu būdu<input name="manual_review_over_one_way_km" type="number" min="1" step="1" required></label>
-          </div>
-          <fieldset>
-            <legend>Paslaugų kainos, €</legend>
-            <div class="form-grid admin-service-price-grid">
-              <label>1 žvakė<input name="price_candle_1" type="number" min="0" step="0.01"></label>
-              <label>2 žvakės<input name="price_candle_2" type="number" min="0" step="0.01"></label>
-              <label>5 žvakės<input name="price_candle_5" type="number" min="0" step="0.01"></label>
-              <label>Kitas žvakių kiekis<input name="price_candle_other" type="number" min="0" step="0.01"></label>
-              <label>1 gėlė<input name="price_flower_1" type="number" min="0" step="0.01"></label>
-              <label>3 gėlės<input name="price_flower_3" type="number" min="0" step="0.01"></label>
-              <label>5 gėlės<input name="price_flower_5" type="number" min="0" step="0.01"></label>
-              <label>Puokštė<input name="price_flower_bouquet" type="number" min="0" step="0.01"></label>
-              <label>Kitas gėlių kiekis<input name="price_flower_other" type="number" min="0" step="0.01"></label>
-              <label>Pilnas sutvarkymas<input name="price_cleaning_full" type="number" min="0" step="0.01"></label>
-              <label>Griovelių išvalymas<input name="price_cleaning_grooves" type="number" min="0" step="0.01"></label>
-              <label>Viršaus nušlavimas<input name="price_cleaning_surface" type="number" min="0" step="0.01"></label>
-              <label>Paminklo nuvalymas<input name="price_cleaning_monument" type="number" min="0" step="0.01"></label>
-              <label>Lapų ir šiukšlių surinkimas<input name="price_cleaning_leaves" type="number" min="0" step="0.01"></label>
-            </div>
-          </fieldset>
-          <div class="actions"><button class="button" type="submit">Išsaugoti kainodarą</button><span class="form-status" id="service-pricing-status" role="status" aria-live="polite"></span></div>
-        </form>
-      </details>
       <div class="admin-table-wrap"><table class="admin-table admin-service-table"><thead><tr><th>Asmuo / vieta</th><th>Paslaugos ir pageidavimai</th><th>Preliminarus įvertis</th><th>Galutinis pasiūlymas</th><th>Atlikimas / būsena</th><th>Veiksmai</th></tr></thead><tbody id="service-request-rows"></tbody></table></div>
     </section>
 
@@ -249,7 +267,7 @@
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
-<script src="assets/admin.js?v=20260811-3"></script>
+<script src="assets/admin.js?v=20260825-1"></script>
 <script src="assets/graves-admin.js?v=20260712-1"></script>
 <script src="assets/grave-photo-admin.js?v=20260719-1"></script>
 <script src="assets/loading.js?v=20260811-2"></script>

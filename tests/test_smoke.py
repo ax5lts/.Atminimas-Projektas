@@ -84,6 +84,16 @@ class AtminimasSmokeTests(unittest.TestCase):
                 with self.subTest(page=page.name, reference=reference):
                     self.assertTrue(target.exists(), "Nerastas vietinis failas: {0}".format(target))
 
+    def test_navigation_controls_do_not_use_placeholder_targets(self):
+        button_without_type = re.compile(r"<button(?![^>]*\btype=)[^>]*>", re.I)
+        javascript_href = re.compile(r'href=["\']javascript:', re.I)
+        for page in ROOT.glob("*.html"):
+            html = page.read_text(encoding="utf-8")
+            with self.subTest(page=page.name):
+                self.assertNotIn('href="#"', html)
+                self.assertNotRegex(html, javascript_href)
+                self.assertNotRegex(html, button_without_type)
+
     def test_legacy_runtime_assets_are_removed(self):
         api = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         memorial = (
@@ -317,17 +327,35 @@ class AtminimasSmokeTests(unittest.TestCase):
                 self.assertIn(private_error.exception.code, (401, 403))
 
     def test_qr_function_returns_png_by_default(self):
-        value = urllib.parse.quote(
-            "https://ax5lts.github.io/.Atminimas-Projektas/sablonas-viskas.html?slug=qa-test",
-            safe="",
-        )
-        with urllib.request.urlopen(
-            self.supabase_url + "/functions/v1/qr-code?data=" + value + "&format=png",
-            timeout=20,
-        ) as response:
-            self.assertEqual(response.status, 200)
-            self.assertIn("image/png", response.headers.get("Content-Type", ""))
-            self.assertEqual(response.read(8), b"\x89PNG\r\n\x1a\n")
+        for slug in ("qa-test", "Romualdas-Rimaitis"):
+            with self.subTest(slug=slug):
+                value = urllib.parse.quote(
+                    "https://ax5lts.github.io/.Atminimas-Projektas/sablonas-viskas.html?slug=" + slug,
+                    safe="",
+                )
+                with urllib.request.urlopen(
+                    self.supabase_url + "/functions/v1/qr-code?data=" + value + "&format=png",
+                    timeout=20,
+                ) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertIn("image/png", response.headers.get("Content-Type", ""))
+                    self.assertEqual(response.read(8), b"\x89PNG\r\n\x1a\n")
+
+    def test_legacy_mixed_case_profile_ids_keep_working_and_private_qr_is_gated(self):
+        qr = (ROOT / "supabase" / "functions" / "qr-code" / "index.ts").read_text(encoding="utf-8")
+        content = (ROOT / "supabase" / "functions" / "profile-content" / "index.ts").read_text(encoding="utf-8")
+        manager = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
+        user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
+
+        self.assertIn('/^[a-z0-9][a-z0-9-]{0,99}$/i.test(slug)', qr)
+        for source in (content, manager):
+            self.assertIn("PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/i", source)
+        self.assertIn("var qrActions = row.aktyvus", user)
+        self.assertIn("var qrAction = row.aktyvus", admin)
+        self.assertIn("Paskelbkite puslapį", user)
+        self.assertIn("qrLink.hidden = true", editor)
 
     def test_parcel_locker_function_returns_lithuanian_locations(self):
         with urllib.request.urlopen(
@@ -363,14 +391,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertGreaterEqual(len(product_rules), 2)
         product_rule = product_rules[0]
         self.assertIn("left: 50%", product_rule)
-        self.assertIn("top: 52%", product_rule)
+        self.assertIn("top: 51%", product_rule)
         self.assertIn("transform: translate(-50%, -50%)", product_rule)
+        self.assertNotIn("border-radius: 50%", product_rule)
         self.assertNotIn("right:", product_rule)
         self.assertNotIn("bottom:", product_rule)
         mobile_product_rule = product_rules[1]
         self.assertIn("left: 50%", mobile_product_rule)
-        self.assertIn("top: 54%", mobile_product_rule)
-        self.assertIn("width: min(112vw, 500px)", mobile_product_rule)
+        self.assertIn("top: 53%", mobile_product_rule)
+        self.assertIn("width: min(90vw, 430px)", mobile_product_rule)
         self.assertIn("transform: translate(-50%, -50%)", mobile_product_rule)
         self.assertEqual(html.count('name="services"'), 3)
         for service in ("zvakes", "geles", "kapu_tvarkymas"):
@@ -394,6 +423,11 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('functionUrl("service-flow")', home)
         self.assertIn("estimated_total_min_cents", home)
         self.assertIn("data-cleaning-full", html)
+        for group in ("zvakes", "geles", "kapu_tvarkymas"):
+            self.assertIn('data-service-price-group="{0}"'.format(group), html)
+        self.assertIn("var priceGroups = {", home)
+        self.assertIn("Math.min.apply(Math, values)", home)
+        self.assertNotIn('assets/service-prices.js', html)
 
     def test_service_request_flow_is_guest_first_and_claimed_before_payment(self):
         page = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -535,6 +569,14 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("ASA 3D spausdinta QR atminimo lentelė", html)
         self.assertIn("Išankstinis užsakymas", html)
         self.assertIn("Kaina tikslinama", html)
+        self.assertGreaterEqual(html.count("5 × 5 cm"), 3)
+        self.assertIn("Plieninė QR lentelė", html)
+        self.assertIn("3D spausdinta QR lentelė", html)
+        self.assertIn("Klijais", html)
+        self.assertIn("Siunčiame", html)
+        self.assertIn('class="product-highlights"', html)
+        self.assertNotIn('id="product-safety"', html)
+        self.assertNotIn('id="product-type-detail"', html)
         self.assertIn('src="assets/product-catalog.js?v=20260811-3"', html)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-atminimo-lentele.webp").stat().st_size, 100_000)
@@ -542,6 +584,26 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertLess((ROOT / "assets" / "qr-plienas.webp").stat().st_size, 100_000)
         self.assertLess((ROOT / "assets" / "qr-asa-480.webp").stat().st_size, 30_000)
         self.assertLess((ROOT / "assets" / "qr-asa.webp").stat().st_size, 100_000)
+
+    def test_admin_service_prices_are_visible_and_feed_homepage(self):
+        page = (ROOT / "admin.html").read_text(encoding="utf-8")
+        admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
+        home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        self.assertIn('id="admin-service-pricing"', page)
+        self.assertIn("Gėlių, žvakių ir tvarkymo kainos", page)
+        self.assertEqual(page.count('id="service-pricing-form"'), 1)
+        for field in (
+            "price_candle_1",
+            "price_flower_1",
+            "price_flower_bouquet",
+            "price_cleaning_full",
+            "price_cleaning_monument",
+        ):
+            self.assertIn('name="{0}"'.format(field), page)
+        self.assertIn('serviceFlow("save_settings"', admin)
+        self.assertIn("price_catalog: catalog", admin)
+        self.assertIn("price_catalog_cents", home)
+        self.assertIn("renderPrices", home)
 
     def test_public_product_copy_has_no_sticker_variant(self):
         public_files = list(ROOT.glob("*.html")) + list((ROOT / "assets").glob("*.js"))
@@ -556,7 +618,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
         self.assertIn('<a class="button" href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', home)
         self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
-        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Išankstinis užsakymas</a>', shop)
+        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">PREORDER</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -624,7 +686,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         manage = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn('assets/admin.js?v=20260811-3', html)
+        self.assertIn('assets/admin.js?v=20260825-1', html)
         self.assertIn("data-delete-admin-profile", admin)
         self.assertIn("data-delete-admin-order", admin)
         self.assertIn("orderCanBeDeleted", admin)

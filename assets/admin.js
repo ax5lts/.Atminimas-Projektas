@@ -53,6 +53,7 @@
   var serviceRequestsPanel = document.getElementById("admin-service-requests");
   var serviceRequestsRefresh = document.getElementById("service-requests-refresh");
   var serviceRequestRows = document.getElementById("service-request-rows");
+  var servicePricingPanel = document.getElementById("admin-service-pricing");
   var servicePricingForm = document.getElementById("service-pricing-form");
   var servicePricingStatus = document.getElementById("service-pricing-status");
   var cache = [];
@@ -401,6 +402,9 @@
       var publicPath = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
       var fullUrl = pageUrl(row.id);
       var qrImage = qrUrl(row.id);
+      var qrAction = row.aktyvus
+        ? "<a class='button button--ghost' href='" + qrImage + "' download='qr-" + html(row.id) + ".png'>QR kodas</a>"
+        : "<span class='muted'>QR bus pasiekiamas paskelbus puslapį</span>";
       var fullDelete = profileCanBeDeletedCompletely(row.id);
       return (
         "<tr data-id='" + html(row.id) + "'>" +
@@ -413,7 +417,7 @@
           "</select></td>" +
           "<td><div class='actions admin-actions'>" +
             "<a class='button button--ghost' href='" + publicPath + "'>Atidaryti</a>" +
-            "<a class='button button--ghost' href='" + qrImage + "' download='qr-" + html(row.id) + ".png'>QR kodas</a>" +
+            qrAction +
             "<button class='button button--ghost' type='button' data-copy-url='" + html(fullUrl) + "'>Kopijuoti URL</button>" +
             "<button class='button' type='button' data-save='" + html(row.id) + "'>Išsaugoti</button>" +
             "<button class='button button--danger' type='button' data-delete-admin-profile='" + html(row.id) + "' data-delete-label='" + html(name) + "' data-delete-mode='" + (fullDelete ? "full" : "retain") + "'>Ištrinti puslapį</button>" +
@@ -841,7 +845,8 @@
       manual_review_over_one_way_km: servicePricingForm.elements.manual_review_over_one_way_km.value,
       price_catalog: catalog
     });
-    servicePricingStatus.textContent = "Kainodara išsaugota. Nauji preliminarūs įverčiai naudos šias reikšmes.";
+    servicePricingStatus.textContent = "Kainos išsaugotos. Jos rodomos pagrindiniame puslapyje ir naujuose įverčiuose.";
+    servicePricingStatus.dataset.state = "success";
   }
 
   function legalStatusControl(row) {
@@ -913,6 +918,7 @@
       panel.hidden = true;
       shipmentsPanel.hidden = true;
       serviceRequestsPanel.hidden = true;
+      servicePricingPanel.hidden = true;
       legalRequestsPanel.hidden = true;
       memoriesPanel.hidden = true;
       preordersPanel.hidden = true;
@@ -928,6 +934,7 @@
     adminEmail.textContent = me.email || "";
     overview.hidden = false;
     panel.hidden = false;
+    servicePricingPanel.hidden = false;
     window.dispatchEvent(new CustomEvent("atminimas:admin-ready"));
     setStatus("Įkeliami administravimo duomenys...");
     cache = await supabaseJson(restUrl(
@@ -1182,8 +1189,10 @@
     var button = servicePricingForm.querySelector("button[type='submit']");
     button.disabled = true;
     servicePricingStatus.textContent = "Kainodara saugoma...";
+    servicePricingStatus.dataset.state = "info";
     saveServicePricing().catch(function (err) {
       servicePricingStatus.textContent = err.message || "Kainodaros išsaugoti nepavyko.";
+      servicePricingStatus.dataset.state = "error";
     }).finally(function () { button.disabled = false; });
   });
 
@@ -1269,6 +1278,7 @@
     panel.hidden = true;
     shipmentsPanel.hidden = true;
     serviceRequestsPanel.hidden = true;
+    servicePricingPanel.hidden = true;
     legalRequestsPanel.hidden = true;
     memoriesPanel.hidden = true;
     preordersPanel.hidden = true;

@@ -8,7 +8,7 @@
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <meta name="description" content="Nemokamai ir neįpareigojančiai rezervuokite QR atminimo lentelę. Mokėjimo dabar nereikia.">
 <title>Išankstinis QR lentelės užsakymas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260811-3">
+<link rel="stylesheet" href="css/styles.css?v=20260819-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -33,8 +33,8 @@
     </nav>
 
     <header class="preorder-hero">
-      <p class="eyebrow">Rezervacija be rizikos</p>
-      <h1>Išankstinis QR lentelės užsakymas</h1>
+      <p class="eyebrow">PREORDER · rezervacija be rizikos</p>
+      <h1>QR lentelės PREORDER</h1>
       <p>Pasirinkite variantą ir palikite kontaktą. Kortelės bei pristatymo duomenų neprašome – šio išankstinio užsakymo suma yra 0 EUR.</p>
       <ul class="preorder-promises" aria-label="Išankstinio užsakymo sąlygos">
         <li><span aria-hidden="true">✓</span> Mokėjimas: 0 EUR</li>
@@ -48,22 +48,22 @@
         <div class="preorder-summary__image"><img id="preorder-product-image" src="assets/qr-plienas-480.webp" width="480" height="640" alt="Graviruota plieno QR atminimo lentelė"></div>
         <div>
           <p class="eyebrow">Jūsų pasirinkimas</p>
-          <h2 id="preorder-summary-title">Graviruota plieno QR atminimo lentelė</h2>
+          <h2 id="preorder-summary-title">Plieninė QR lentelė</h2>
           <p id="preorder-summary-price" class="preorder-summary__price">Orientacinė kaina: 59,00 EUR</p>
-          <p class="muted">Tai orientacinė vieneto kaina. Dabar mokėtina suma: <strong>0 EUR</strong>.</p>
+          <p class="muted" id="preorder-summary-details">5 × 5 cm · plienas · klijuojama · siunčiame</p>
         </div>
       </aside>
 
       <section class="preorder-card" aria-labelledby="preorder-form-title">
         <div class="preorder-card__heading">
           <p class="eyebrow">Užtruks apie minutę</p>
-          <h2 id="preorder-form-title">Pateikite išankstinį užsakymą</h2>
+          <h2 id="preorder-form-title">Pateikite PREORDER</h2>
         </div>
         <form class="auth-form preorder-form" id="preorder-form" data-friendly-validation>
           <fieldset class="preorder-product-picker">
             <legend>Lentelės variantas</legend>
-            <label><input type="radio" name="product_type" value="metal" checked><span><strong>Graviruotas plienas</strong><small>Patvari metalinė lentelė</small></span></label>
-            <label><input type="radio" name="product_type" value="asa"><span><strong>ASA 3D</strong><small>Dvispalvis lauko plastikas</small></span></label>
+            <label><input type="radio" name="product_type" value="metal" checked><span><strong>Plieninė QR lentelė</strong><small>5 × 5 cm · klijuojama</small></span></label>
+            <label><input type="radio" name="product_type" value="asa"><span><strong>3D spausdinta QR lentelė</strong><small>5 × 5 cm · ASA plastikas</small></span></label>
           </fieldset>
 
           <div class="form-grid preorder-contact-grid">
@@ -88,7 +88,7 @@
           </div>
 
           <label class="form-field">Klausimas ar pageidavimas <small>(nebūtina)</small>
-            <textarea name="notes" rows="4" maxlength="2000" placeholder="Pavyzdžiui, norimas dydis, spalva ar kiekis"></textarea>
+            <textarea name="notes" rows="4" maxlength="2000" placeholder="Pavyzdžiui, norima spalva ar kiekis"></textarea>
           </label>
           <label class="form-honeypot" aria-hidden="true">Svetainė
             <input name="website" tabindex="-1" autocomplete="off">
@@ -99,7 +99,7 @@
           </label>
 
           <div class="preorder-submit">
-            <button class="button" type="submit">Pateikti išankstinį užsakymą</button>
+            <button class="button" type="submit">Pateikti PREORDER</button>
             <p><strong>Mokėti nereikės.</strong> Tai nėra pirkimo sutartis.</p>
           </div>
           <p class="form-status" id="preorder-status" role="status" aria-live="polite"></p>
@@ -117,12 +117,12 @@
   </footer>
 </div>
 
-<script src="assets/business-config.js?v=20260811-1"></script>
+<script src="assets/business-config.js?v=20260819-1"></script>
 <script src="assets/business-details.js?v=20260811-1"></script>
 <script src="assets/supabase-config.js?v=20260707-1"></script>
 <script src="assets/product-catalog.js?v=20260811-3"></script>
 <script src="assets/form-validation.js?v=20260724-4"></script>
-<script src="assets/preorder.js?v=20260811-3"></script>
+<script src="assets/preorder.js?v=20260825-1"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
 <script src="assets/site-ui.js?v=20260811-3"></script>
 </body>

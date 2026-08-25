@@ -84,7 +84,7 @@ Deno.serve(async (request: Request) => {
       target.origin !== expected.origin ||
       target.pathname !== expected.pathname ||
       !slug ||
-      !/^[a-z0-9][a-z0-9-]{0,99}$/.test(slug)
+      !/^[a-z0-9][a-z0-9-]{0,99}$/i.test(slug)
     ) {
       return new Response("Unsupported QR target", {
         status: 400,
