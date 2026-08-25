@@ -776,6 +776,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertNotIn('name="lastName"', search)
         self.assertIn('https://data.gov.lt/datasets/2779/?resource_version=1619', home)
         self.assertIn('https://data.gov.lt/datasets/2779/', search)
+        self.assertIn('https://www.cemety.lt/public/deceaseds', search)
         self.assertIn('id="grave-admin-form"', admin)
         self.assertIn('/rest/v1/rpc/', search_js)
         self.assertIn('rpc("ieskoti_kapavieciu"', search_js)

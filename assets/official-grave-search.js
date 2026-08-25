@@ -186,6 +186,7 @@
     var burial = row.burial_date || row.burial_year ? html(shownDate(row.burial_date, row.burial_year, row.burial_date_text)) : "";
     var coordinates = row.latitude != null && row.longitude != null ? Number(row.latitude).toFixed(6) + ", " + Number(row.longitude).toFixed(6) : "";
     var map = mapLocation(row);
+    var sourceUrl = row.source_url || "";
     var distance = distanceText(row);
     var embeddedMap = rich ? mapEmbed(row) : "";
     var saved = isSaved(row);
@@ -208,10 +209,12 @@
       (grave ? "<p class='grave-list-item__location'>" + grave + "</p>" : "") +
       photoBlock(row, rawName, rich) +
       (rich && embeddedMap ? "<div class='grave-map-preview'><iframe title='Kapavietės vieta žemėlapyje' loading='lazy' referrerpolicy='no-referrer' src='" + html(embeddedMap) + "'></iframe><small>Žemėlapis: © OpenStreetMap bendruomenė</small></div>" : "") +
-      (map ? "<div class='grave-result-actions'" + actionData + ">" +
-        "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą<span class='visually-hidden'> naujame skirtuke</span></a>" +
+      (map || sourceUrl ? "<div class='grave-result-actions'" + actionData + ">" +
+        (map ? "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą<span class='visually-hidden'> naujame skirtuke</span></a>" :
+          "<a class='button' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Atidaryti kapavietės įrašą<span class='visually-hidden'> naujame skirtuke</span></a>") +
         "<details class='grave-result-more'><summary class='button button--ghost'>Kiti veiksmai</summary><div class='actions'>" +
-        "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“<span class='visually-hidden'> naujame skirtuke</span></a>" +
+        (map ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
+        (map && sourceUrl ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Patikrinti šaltinio įrašą<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
         "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti priežiūrą</a>" : "") +

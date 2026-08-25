@@ -1,10 +1,14 @@
 import { readJson, RequestError } from "../_shared/core.ts";
 
 const DATA_BASE_URL = "https://get.data.gov.lt/datasets/gov/kapines/registras";
+const CEMETY_BASE_URL = "https://www.cemety.lt";
 const MAX_PAGE = 5;
 const MAX_PAGE_SIZE = 50;
 const MODEL_CONCURRENCY = 8;
 const UPSTREAM_TIMEOUT_MS = 15000;
+const CEMETY_SEARCH_TIMEOUT_MS = 15000;
+const CEMETY_DETAIL_TIMEOUT_MS = 7000;
+const CEMETY_DETAIL_LIMIT = 5;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -131,6 +135,241 @@ async function upstreamJson(url: string): Promise<any> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function upstreamText(url: string, timeoutMs: number): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "lt-LT,lt;q=0.9",
+        "User-Agent": "Atminimas-cemetery-search/1.0",
+      },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`cemety.lt HTTP ${response.status}`);
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function htmlText(value: string, max = 220): string {
+  const named: Record<string, string> = {
+    amp: "&",
+    quot: '"',
+    apos: "'",
+    lt: "<",
+    gt: ">",
+    nbsp: " ",
+    ndash: "–",
+    mdash: "—",
+  };
+  return text(
+    value
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&#x([0-9a-f]+);/gi, (_match, code) =>
+        String.fromCodePoint(Number.parseInt(code, 16)))
+      .replace(/&#(\d+);/g, (_match, code) =>
+        String.fromCodePoint(Number.parseInt(code, 10)))
+      .replace(/&([a-z]+);/gi, (match, entity) =>
+        named[String(entity).toLowerCase()] ?? match),
+    max,
+  );
+}
+
+function looseMatch(haystack: string, needle: string): boolean {
+  const source = normalized(haystack);
+  const wanted = normalized(needle);
+  if (!wanted || source.includes(wanted)) return true;
+  // Vietovardžiai formoje dažniausiai įvedami vardininku (Kaunas, Vilnius),
+  // o šaltinyje pateikiami kilmininku (Kauno, Vilniaus).
+  const stem = wanted.replace(/(IAI|AS|IS|YS|US|OS|ES|A|E|I|O|U)$/u, "");
+  return stem.length >= 4 && source.includes(stem);
+}
+
+function dateParts(value: string): {
+  date: string | null;
+  year: number | null;
+  text: string | null;
+} {
+  const clean = text(value, 40);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return { date: clean, year: Number(clean.slice(0, 4)), text: null };
+  }
+  if (/^\d{4}$/.test(clean)) {
+    return { date: null, year: Number(clean), text: null };
+  }
+  return { date: null, year: null, text: clean || null };
+}
+
+function firstMatch(block: string, expression: RegExp): string {
+  return expression.exec(block)?.[1] || "";
+}
+
+function parseCemetyRows(document: string): any[] {
+  const starts = [...document.matchAll(
+    /<div class=['"]deceased-preview['"] id=['"]deceased-(\d+)['"]>/gi,
+  )];
+  return starts.flatMap((start, index) => {
+    const blockStart = start.index ?? 0;
+    const blockEnd = starts[index + 1]?.index ?? document.length;
+    const block = document.slice(blockStart, blockEnd);
+    const nameMatch = /<a[^>]+href=['"](\/public\/deceaseds\/\d+[^'"]*)['"][^>]*>([\s\S]*?)<\/a>/i
+      .exec(block);
+    const fullName = htmlText(nameMatch?.[2] || "", 180);
+    if (!fullName) return [];
+    const id = start[1];
+    const href = htmlText(nameMatch?.[1] || `/public/deceaseds/${id}`, 300);
+    const livingRange = htmlText(firstMatch(
+      block,
+      /<p class=['"][^'"]*deceased-living-range[^'"]*['"][^>]*>([\s\S]*?)<\/p>/i,
+    ), 100);
+    const range = /^\s*(.*?)\s+[–—-]\s+(.*?)\s*$/.exec(livingRange);
+    const birth = dateParts(range?.[1] || "");
+    const death = dateParts(range?.[2] || "");
+    const cemetery = htmlText(firstMatch(
+      block,
+      /<a[^>]+href=['"]\/public\/cemeteries\/\d+['"][^>]*>([\s\S]*?)<\/a>/i,
+    ));
+    const municipality = htmlText(firstMatch(
+      block,
+      /<p class=['"][^'"]*deceased-region[^'"]*['"][^>]*>([\s\S]*?)<\/p>/i,
+    ));
+    const names = fullName.split(/\s+/);
+    return [{
+      id: `cemety-${id}`,
+      grave_source_id: id,
+      first_name: names.length > 1 ? names.slice(0, -1).join(" ") : fullName,
+      last_name: names.length > 1 ? names[names.length - 1] : null,
+      full_name: fullName,
+      birth_date: birth.date,
+      birth_year: birth.year,
+      birth_date_text: birth.text,
+      death_date: death.date,
+      death_year: death.year,
+      death_date_text: death.text,
+      burial_date: null,
+      burial_year: null,
+      municipality: municipality || null,
+      cemetery: cemetery || null,
+      section: null,
+      row_name: null,
+      place_number: null,
+      latitude: null,
+      longitude: null,
+      source_model: "cemety",
+      source_url: new URL(href, CEMETY_BASE_URL).toString(),
+      source_label: "CEMETY",
+    }];
+  });
+}
+
+function cemetyDetailValue(document: string, label: string): string {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return htmlText(firstMatch(
+    document,
+    new RegExp(
+      `<th>[\\s\\S]*?<h5>\\s*${escaped}\\s*</h5>[\\s\\S]*?</th>\\s*<td[^>]*>[\\s\\S]*?<p[^>]*>([\\s\\S]*?)</p>`,
+      "i",
+    ),
+  ), 120);
+}
+
+async function enrichCemetyRow(row: any): Promise<any> {
+  const document = await upstreamText(row.source_url, CEMETY_DETAIL_TIMEOUT_MS);
+  const point = /google\.com\/maps\/search\/\?api=1(?:&amp;|&)query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i
+    .exec(document);
+  const latitude = point ? Number(point[1]) : null;
+  const longitude = point ? Number(point[2]) : null;
+  return {
+    ...row,
+    cemetery: cemetyDetailValue(document, "Kapinės") || row.cemetery,
+    section: cemetyDetailValue(document, "Kvartalas") || null,
+    row_name: cemetyDetailValue(document, "Eilės nr.") || null,
+    place_number: cemetyDetailValue(document, "Kapavietės nr.") || null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+  };
+}
+
+async function searchCemety(
+  criteria: {
+    query: string;
+    firstName: string;
+    lastName: string;
+    birthYear: number;
+    deathYear: number;
+    municipality: string;
+    cemetery: string;
+  },
+  page: number,
+  pageSize: number,
+) {
+  const searchTerms = criteria.query ||
+    [criteria.firstName, criteria.lastName].filter(Boolean).join(" ");
+  const url = new URL("/public/deceaseds", CEMETY_BASE_URL);
+  url.searchParams.set("locale", "lt");
+  url.searchParams.set("q", searchTerms);
+  const document = await upstreamText(url.toString(), CEMETY_SEARCH_TIMEOUT_MS);
+  let rows = parseCemetyRows(document);
+  if (criteria.firstName) {
+    rows = rows.filter((row) =>
+      looseMatch(`${row.first_name || ""} ${row.full_name || ""}`, criteria.firstName)
+    );
+  }
+  if (criteria.lastName) {
+    rows = rows.filter((row) =>
+      looseMatch(`${row.last_name || ""} ${row.full_name || ""}`, criteria.lastName)
+    );
+  }
+  if (Number.isInteger(criteria.birthYear) && criteria.birthYear >= 1000) {
+    rows = rows.filter((row) => row.birth_year === criteria.birthYear);
+  }
+  if (Number.isInteger(criteria.deathYear) && criteria.deathYear >= 1000) {
+    rows = rows.filter((row) => row.death_year === criteria.deathYear);
+  }
+  if (criteria.municipality) {
+    rows = rows.filter((row) =>
+      looseMatch(row.municipality || "", criteria.municipality)
+    );
+  }
+  if (criteria.cemetery) {
+    rows = rows.filter((row) =>
+      looseMatch(row.cemetery || "", criteria.cemetery)
+    );
+  }
+
+  const start = (page - 1) * pageSize;
+  let items = rows.slice(start, start + pageSize);
+  if (items.length > 0 && items.length <= CEMETY_DETAIL_LIMIT) {
+    const details = await pooled(items, enrichCemetyRow);
+    items = details.map((result, index) =>
+      result.status === "fulfilled" ? result.value : items[index]
+    );
+  }
+  const totalMatch = /Paieškos rezultatai\s*\((\d+)(\+?)\)/i.exec(document);
+  const hasLocalFilters = Boolean(
+    criteria.firstName || criteria.lastName || criteria.birthYear ||
+      criteria.deathYear || criteria.municipality || criteria.cemetery,
+  );
+  const reportedTotal = Number(totalMatch?.[1]) || rows.length;
+  const reportedHasMore = totalMatch?.[2] === "+";
+  const matched = hasLocalFilters ? rows.length : reportedTotal;
+  return {
+    items,
+    page,
+    pageSize,
+    hasMore: page < MAX_PAGE && (
+      rows.length > start + pageSize ||
+      (!hasLocalFilters && (reportedHasMore || reportedTotal > start + pageSize))
+    ),
+    matched,
+    failedModels: 0,
+    source: "cemety.lt",
+  };
 }
 
 async function models(): Promise<Model[]> {
@@ -381,6 +620,24 @@ Deno.serve(async (request: Request) => {
   }
   if (Number.isInteger(deathYear) && deathYear >= 1000 && deathYear <= 2200) {
     filters.push(...yearRange("mirties_data", deathYear));
+  }
+
+  // CEMETY vieša paieška turi vardui skirtą indeksą ir atsako gerokai greičiau
+  // nei neindeksuotas visų savivaldybių data.gov.lt filtravimas. Išsamų
+  // data.gov.lt kelią paliekame kaip atsarginį, jei vieša paieška neatsakytų.
+  try {
+    const result = await searchCemety({
+      query,
+      firstName,
+      lastName,
+      birthYear: Number.isInteger(birthYear) ? birthYear : 0,
+      deathYear: Number.isInteger(deathYear) ? deathYear : 0,
+      municipality,
+      cemetery,
+    }, page, pageSize);
+    return jsonResponse(result);
+  } catch (error) {
+    console.warn("cemety.lt paieška neatsakė, naudojamas data.gov.lt", error);
   }
 
   try {

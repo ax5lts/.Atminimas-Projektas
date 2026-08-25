@@ -141,11 +141,16 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertNotIn("|| valid[0]", edge)
         self.assertIn("matchAll", edge)
 
-    def test_public_search_uses_data_gov_edge_function(self):
+    def test_public_search_uses_fast_public_index_with_data_gov_fallback(self):
         frontend = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         edge = (ROOT.parent / "supabase" / "functions" / "cemetery-search" / "index.ts").read_text(encoding="utf-8")
         self.assertIn("/functions/v1/cemetery-search", frontend)
         self.assertNotIn('rpc("search_deceased"', frontend)
+        self.assertIn("https://www.cemety.lt", edge)
+        self.assertIn("parseCemetyRows", edge)
+        self.assertIn("enrichCemetyRow", edge)
+        self.assertIn('source_model: "cemety"', edge)
+        self.assertIn("Patikrinti šaltinio įrašą", frontend)
         self.assertIn("https://get.data.gov.lt/datasets/gov/kapines/registras", edge)
         self.assertNotIn("DATA_GOV_API_TOKEN", edge)
         self.assertNotIn("Authorization", edge)
