@@ -122,6 +122,13 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertIn(".skeleton-card", styles)
         self.assertNotIn("grave-loader__spinner", source)
 
+    def test_grave_search_recovers_from_slow_official_source(self):
+        source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
+        self.assertIn("new AbortController()", source)
+        self.assertIn("Promise.allSettled", source)
+        self.assertIn("data-refine-grave-search", source)
+        self.assertIn("Dalis oficialių šaltinių šiuo metu neatsakė", source)
+
     def test_grave_results_expand_and_link_to_google_maps(self):
         source = (ROOT.parent / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         styles = (ROOT.parent / "css" / "styles.css").read_text(encoding="utf-8")

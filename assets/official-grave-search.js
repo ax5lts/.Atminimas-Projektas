@@ -1,6 +1,7 @@
 (function () {
   var userLocation = null;
   var savedKey = "atminimas.saved-graves.v1";
+  var officialSearchTimeoutMs = 22000;
   var photoDialog = document.getElementById("grave-photo-dialog");
   var photoForm = document.getElementById("grave-photo-form");
   var photoContext = null;
@@ -234,10 +235,26 @@
     var key = config().SUPABASE_ANON_KEY;
     var headers = { apikey: key, "Content-Type": "application/json" };
     if (key && !key.startsWith("sb_publishable_")) headers.Authorization = "Bearer " + key;
-    var response = await fetch(edgeUrl(), { method: "POST", headers: headers, body: JSON.stringify(payload) });
-    var result = await response.json().catch(function () { return {}; });
-    if (!response.ok) throw new Error(result.error || "Paieška šiuo metu nepasiekiama.");
-    return result;
+    var controller = new AbortController();
+    var timeout = window.setTimeout(function () { controller.abort(); }, officialSearchTimeoutMs);
+    try {
+      var response = await fetch(edgeUrl(), {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      var result = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(result.error || "Oficiali paieška šiuo metu neatsakė.");
+      return result;
+    } catch (error) {
+      if (error && error.name === "AbortError") throw new Error("Oficiali paieška užtruko per ilgai.");
+      throw new Error(error && error.message && error.message !== "Failed to fetch"
+        ? error.message
+        : "Oficiali paieška šiuo metu neatsakė.");
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
   async function rpc(name, payload) {
     var key = config().SUPABASE_ANON_KEY;
@@ -432,6 +449,15 @@
       wirePhotoBlocks();
     }
 
+    function renderSearchHelp() {
+      lastRows = [];
+      results.innerHTML = "<div class='grave-empty grave-empty--search-help'>" +
+        "<h3>Patikslinkite paiešką</h3>" +
+        "<p>Valstybės duomenų šaltinis šiuo metu atsako per lėtai. Įrašius savivaldybę bus tikrinama mažiau oficialių šaltinių.</p>" +
+        "<div class='actions'><button class='button' type='button' data-refine-grave-search>Įrašyti savivaldybę</button>" +
+        "<button class='button button--ghost' type='button' data-retry-grave-search>Bandyti dar kartą</button></div></div>";
+    }
+
     if (locationButton) {
       locationButton.addEventListener("click", function () {
         if (!navigator.geolocation) {
@@ -457,6 +483,21 @@
     }
 
     results.addEventListener("click", function (event) {
+      var refineButton = event.target.closest("[data-refine-grave-search]");
+      if (refineButton) {
+        var advanced = form.querySelector(".grave-search-advanced");
+        var municipalityInput = form.elements.municipality;
+        if (advanced) advanced.open = true;
+        if (municipalityInput) {
+          municipalityInput.focus();
+          municipalityInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+      if (event.target.closest("[data-retry-grave-search]")) {
+        run();
+        return;
+      }
       var photoButton = event.target.closest("[data-add-grave-photo]");
       if (photoButton) {
         openPhotoDialog(photoButton.closest("[data-grave-photo]"));
@@ -513,16 +554,23 @@
       results.innerHTML = loader();
       try {
         var manualCall = page === 1 && query.p_query ? rpc("ieskoti_kapavieciu", { paieska: query.p_query, rezultatu_limitas: pageSize }) : Promise.resolve([]);
-        var responses = await Promise.all([officialSearch(query), manualCall]);
-        var officialResult = responses[0] || {}; var official = officialResult.items || [];
-        var manualRows = (responses[1] || []).map(manual);
-        renderRows(official.concat(manualRows));
-        status.dataset.state = officialResult.failedModels ? "warning" : (official.length + manualRows.length ? "success" : "info");
-        status.textContent = official.length + manualRows.length ? "Rodoma įrašų: " + (official.length + manualRows.length) : "Atitikmenų nerasta.";
-        if (officialResult.failedModels) status.textContent += " Dalis savivaldybių laikinai neatsakė.";
+        var responses = await Promise.allSettled([officialSearch(query), manualCall]);
+        var officialFailed = responses[0].status === "rejected";
+        var officialResult = officialFailed ? {} : (responses[0].value || {});
+        var official = officialResult.items || [];
+        var manualRows = responses[1].status === "fulfilled" ? (responses[1].value || []).map(manual) : [];
+        var rows = official.concat(manualRows);
+        var officialIncomplete = officialFailed || Boolean(officialResult.failedModels);
+        if (!rows.length && officialIncomplete) renderSearchHelp();
+        else renderRows(rows);
+        status.dataset.state = officialIncomplete ? "warning" : (rows.length ? "success" : "info");
+        status.textContent = rows.length ? "Rodoma įrašų: " + rows.length : (officialIncomplete
+          ? "Dalis oficialių šaltinių šiuo metu neatsakė. Patikslinkite savivaldybę arba bandykite dar kartą."
+          : "Atitikmenų nerasta.");
+        if (rows.length && officialIncomplete) status.textContent += " Dalis savivaldybių laikinai neatsakė.";
         if (count) count.textContent = officialResult.hasMore ? "Rasta daugiau rezultatų" : (officialResult.matched ? "Rasta: " + officialResult.matched : "");
         if (pager) {
-          pager.hidden = page <= 1 && !officialResult.hasMore;
+          pager.hidden = officialFailed || (page <= 1 && !officialResult.hasMore);
           pager.querySelector("[data-page-label]").textContent = "Puslapis " + page;
           pager.querySelector("[data-page-prev]").disabled = page <= 1;
           pager.querySelector("[data-page-next]").disabled = !officialResult.hasMore;

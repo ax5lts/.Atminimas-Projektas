@@ -4019,6 +4019,9 @@ video {
 .grave-photo-review__preview { width: 112px; height: 84px; object-fit: cover; border: 1px solid var(--line); border-radius: 10px; background: #eceae4; }
 .grave-photo-review__description { max-width: 360px; white-space: pre-wrap; }
 .grave-empty { grid-column: 1 / -1; padding: 36px; border: 1px dashed var(--line); border-radius: 16px; text-align: center; }
+.grave-empty--search-help { max-width: 720px; margin-inline: auto; background: rgba(255, 253, 246, 0.78); }
+.grave-empty--search-help p { max-width: 580px; margin: 10px auto 0; color: var(--muted); }
+.grave-empty--search-help .actions { justify-content: center; margin-top: 22px; }
 .grave-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 24px 0; }
 .grave-source { margin-top: 28px; }
 .button--danger { background: #8b3434; border-color: #8b3434; color: #fff; }
@@ -4030,6 +4033,7 @@ video {
 }
 
 @media (max-width: 620px) {
+  .grave-empty--search-help { padding: 24px 18px; }
   .grave-search-form,
   .grave-admin-form__three { grid-template-columns: 1fr; }
   .grave-search-form .button { width: 100%; }
