@@ -135,7 +135,7 @@ async function upstreamJson(url: string): Promise<any> {
 
 async function models(): Promise<Model[]> {
   if (modelCache && modelCache.expires > Date.now()) return modelCache.models;
-  const payload = await upstreamJson(`${DATA_BASE_URL}/velioniai/:format/json`);
+  const payload = await upstreamJson(`${DATA_BASE_URL}/velioniai/:ns`);
   const prefix = "datasets/gov/kapines/registras/velioniai/";
   const found = (payload?._data || []).flatMap((row: any) => {
     const name = text(row.name, 300);

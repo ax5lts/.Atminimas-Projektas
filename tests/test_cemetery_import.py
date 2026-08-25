@@ -143,6 +143,8 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertNotIn("DATA_GOV_API_TOKEN", edge)
         self.assertNotIn("Authorization", edge)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", edge)
+        self.assertIn("/velioniai/:ns", edge)
+        self.assertNotIn("/velioniai/:format/json", edge)
 
     def test_data_gov_name_search_ignores_letter_case(self):
         edge = (ROOT.parent / "supabase" / "functions" / "cemetery-search" / "index.ts").read_text(encoding="utf-8")
