@@ -377,10 +377,13 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_homepage_has_qr_and_multi_service_flows(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
+        service_page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('href="redaktorius.html?product=digital">Kurti atminimo puslapį</a>', html)
+        self.assertIn('href="redaktorius.html?product=digital">Sukurti atminimo puslapį</a>', html)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal">QR lentelės PREORDER</a>', html)
-        self.assertIn('href="#kitos-paslaugos">Kitos paslaugos</a>', html)
+        self.assertIn('class="home-paths"', html)
+        self.assertIn('href="kapu-prieziura.html"', html)
+        self.assertNotIn('id="service-request-form"', html)
         self.assertIn('class="landing-proof"', html)
         self.assertIn("Pradėkite nemokėdami", html)
         self.assertIn("Puslapis iš pradžių privatus", html)
@@ -402,15 +405,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("top: 53%", mobile_product_rule)
         self.assertIn("width: min(90vw, 430px)", mobile_product_rule)
         self.assertIn("transform: translate(-50%, -50%)", mobile_product_rule)
-        self.assertEqual(html.count('name="services"'), 3)
+        self.assertEqual(service_page.count('name="services"'), 3)
         for service in ("zvakes", "geles", "kapu_tvarkymas"):
-            self.assertIn('value="{0}"'.format(service), html)
+            self.assertIn('value="{0}"'.format(service), service_page)
         for field in ("deceased_name", "cemetery_name", "municipality", "grave_location", "contact_email"):
-            self.assertRegex(html, r'name="{0}"[^>]*required'.format(field))
-        self.assertGreaterEqual(html.count('service-choice__price'), 3)
+            self.assertRegex(service_page, r'name="{0}"[^>]*required'.format(field))
+        self.assertGreaterEqual(service_page.count('service-choice__price'), 3)
 
     def test_service_variants_have_separate_price_slots(self):
-        html = (ROOT / "index.html").read_text(encoding="utf-8")
+        html = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         prices = (ROOT / "assets" / "service-prices.js").read_text(encoding="utf-8")
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         for value in ("candle_1", "candle_2", "candle_5", "flower_1", "flower_bouquet"):
@@ -431,7 +434,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertNotIn('assets/service-prices.js', html)
 
     def test_service_request_flow_is_guest_first_and_claimed_before_payment(self):
-        page = (ROOT / "index.html").read_text(encoding="utf-8")
+        page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         service_flow = (ROOT / "supabase" / "functions" / "service-flow" / "index.ts").read_text(encoding="utf-8")
         user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
@@ -460,7 +463,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertNotRegex(sql.lower(), r"grant\s+[^;]*\bto\s+anon\b")
 
     def test_service_quotes_use_server_estimate_admin_offer_customer_acceptance_and_separate_payment(self):
-        home_page = (ROOT / "index.html").read_text(encoding="utf-8")
+        home_page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         admin_page = (ROOT / "admin.html").read_text(encoding="utf-8")
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
@@ -476,7 +479,8 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('name="destination_latitude"', home_page)
         self.assertIn('name="destination_longitude"', home_page)
         self.assertIn('id="service-estimate-travel"', home_page)
-        self.assertIn("kelionės įvertį nuo Panevėžio", home_page)
+        self.assertIn("kelionės kainą įvertinsime rankiniu būdu", home_page)
+        self.assertIn("apytikslį kelionės atstumą nuo", home)
         self.assertIn('graveMunicipality', grave_search)
         self.assertIn('graveCemetery', grave_search)
 
@@ -617,10 +621,10 @@ class AtminimasSmokeTests(unittest.TestCase):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
-        self.assertIn('<a class="button" href="redaktorius.html?product=digital">Kurti atminimo puslapį</a>', home)
+        self.assertIn('<a class="button" href="redaktorius.html?product=digital">Sukurti atminimo puslapį</a>', home)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal">QR lentelės PREORDER</a>', home)
         self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
-        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">PREORDER</a>', shop)
+        self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Pateikti PREORDER · 0 € dabar</a>', shop)
 
     def test_shop_explains_qr_flow_and_links_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
@@ -838,7 +842,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             self.assertNotIn(text, clients)
         for text in ("DB builderis", "saugomi į DB", "slug bus"):
             self.assertNotIn(text, editor)
-        self.assertIn('<a href="klientai.html">Atidaryti puslapį</a>', editor)
+        self.assertIn('<a href="vartotojas.html">Mano puslapiai</a>', editor)
 
     def test_automation_schema_uses_rls_and_private_documents(self):
         sql = (ROOT / "supabase" / "migrations" / "20260707164259_automation_foundation.sql").read_text(encoding="utf-8")
@@ -913,6 +917,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             "index.html", "parduotuve.html", "vartotojas.html", "admin.html",
             "apmokejimas.html", "redaktorius.html", "sablonas-viskas.html",
             "klientai.html", "prisijungti.html", "registruotis.html",
+            "kapu-prieziura.html",
         )
         for name in core_pages:
             html = (ROOT / name).read_text(encoding="utf-8")
@@ -950,7 +955,7 @@ class AtminimasSmokeTests(unittest.TestCase):
 
         self.assertIn("maironis-pavyzdys", home)
         self.assertIn("maironis-pavyzdys", shop)
-        self.assertIn('<a href="parduotuve.html">Parduotuvė</a>\n        <a href="sablonas-viskas.html?slug=maironis-pavyzdys">Pavyzdys</a>', home)
+        self.assertIn('href="sablonas-viskas.html?slug=maironis-pavyzdys">Pavyzdys</a>', home)
         self.assertIn("Peržiūrėti Maironio puslapio pavyzdį", shop)
         self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', editor_page)
         self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', memorial_markup)
@@ -1142,7 +1147,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         update_grants = (ROOT / "supabase" / "migrations" / "20260719130334_restore_profile_update_columns.sql").read_text(encoding="utf-8")
 
         self.assertIn("Kurti galite neprisijungę", editor_page)
-        self.assertIn("prisijungti reikės tik puslapiui išsaugoti", editor_page)
+        self.assertIn("prisijungti paprašysime tik išsaugant puslapį", editor_page)
         self.assertIn('if (!isDemoMode && editId && !isSignedIn())', editor)
         self.assertNotIn('if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken())', editor)
         self.assertIn("async function persistDraftBeforeLogin()", editor)
@@ -1176,6 +1181,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         user_js = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
+        service_page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         home_js = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         grave_js = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
         auth = (ROOT / "assets" / "auth.js").read_text(encoding="utf-8")
@@ -1201,9 +1207,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertNotIn('id="delivery-option"', shop)
 
         for number in range(1, 5):
-            self.assertIn('data-service-step="{0}"'.format(number), home)
-            self.assertIn('data-service-step-button="{0}"'.format(number), home)
-        self.assertIn('id="service-saved-grave"', home)
+            self.assertIn('data-service-step="{0}"'.format(number), service_page)
+            self.assertIn('data-service-step-button="{0}"'.format(number), service_page)
+        self.assertIn('id="service-saved-grave"', service_page)
         self.assertIn("activateServiceStep", home_js)
         self.assertIn("setupSavedGraves", home_js)
         self.assertIn("graveName", grave_js)

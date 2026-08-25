@@ -84,6 +84,7 @@
       "apmokejimas.html": "Išankstinis užsakymas",
       "grazinimas.html": "Atsisakyti sutarties",
       "kapu-ieskojimas.html": "Kapų paieška",
+      "kapu-prieziura.html": "Kapavietės priežiūra",
       "klientai.html": "Klientams",
       "isankstinis-uzsakymas.html": "Išankstinis užsakymas",
       "parduotuve.html": "Parduotuvė",
@@ -130,7 +131,7 @@
     var items = [
       { href: "index.html", label: "Pradžia", pages: ["index.html"], icon: "M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5H15v-6H9v6H3.5a.5.5 0 0 1-.5-.5z" },
       { href: "kapu-ieskojimas.html", label: "Kapų paieška", pages: ["kapu-ieskojimas.html"], icon: "M10.8 3a7.8 7.8 0 1 0 4.9 13.9L21 22l1-1-5.1-5.2A7.8 7.8 0 0 0 10.8 3m0 2a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0-11.6" },
-      { href: "parduotuve.html", label: "Užsakyti", pages: ["redaktorius.html", "parduotuve.html", "isankstinis-uzsakymas.html", "apmokejimas.html"], icon: "M12 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1" },
+      { href: "parduotuve.html", label: "Užsakyti", pages: ["redaktorius.html", "parduotuve.html", "isankstinis-uzsakymas.html", "kapu-prieziura.html", "apmokejimas.html"], icon: "M12 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1" },
       { href: "vartotojas.html", label: "Paskyra", pages: ["vartotojas.html", "prisijungti.html", "registruotis.html", "slaptazodis.html", "klientai.html"], icon: "M12 3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9m0 11c5 0 8 2.5 8 5.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5C4 16.5 7 14 12 14" }
     ];
     var dock = document.createElement("nav");

@@ -68,7 +68,7 @@
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
     createLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(safeType);
-    createLink.textContent = "PREORDER";
+    createLink.textContent = "Pateikti PREORDER · 0 € dabar";
     sessionStorage.setItem(selectedKey, safeType);
   }
 

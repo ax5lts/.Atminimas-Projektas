@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260825-3">
+<link rel="stylesheet" href="css/styles.css?v=20260825-4">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -23,9 +23,8 @@
       <span>Puslapio adresas sugeneruojamas automatiškai, o pakeitimai išsaugomi kartu su puslapiu</span>
     </div>
     <nav class="editor-topbar__nav" aria-label="Redaktoriaus navigacija">
-      <a href="parduotuve.html">Parduotuvė</a>
-      <a href="klientai.html">Atidaryti puslapį</a>
-      <a href="vartotojas.html">Kliento zona</a>
+      <a href="index.html">← Išeiti</a>
+      <a href="vartotojas.html">Mano puslapiai</a>
       <a href="privatumas.html">Privatumas</a>
     </nav>
   </header>
@@ -33,7 +32,7 @@
   <main class="editor-workspace">
     <section class="editor-panel" aria-labelledby="editor-panel-title">
       <p class="eyebrow">Puslapio kūrimas</p>
-      <h1 id="editor-panel-title">Sukurkite puslapį</h1>
+      <h1 id="editor-panel-title">Sukurkite atminimo puslapį</h1>
       <aside class="editor-demo-notice" id="editor-demo-notice" hidden>
         <div>
           <strong>Demonstracinis Jono Mačiulio-Maironio pavyzdys</strong>
@@ -49,7 +48,7 @@
             <span id="editor-product-unavailable-message"></span>
             <a href="parduotuve.html">Grįžti į parduotuvę</a>
           </p>
-          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas; prisijungti reikės tik puslapiui išsaugoti. Išankstinis užsakymas pateikiamas atskirai ir be mokėjimo.</p>
+          <p class="editor-note" id="editor-account-note">Kurti galite neprisijungę. Juodraštį saugosime šiame įrenginyje, o prisijungti paprašysime tik išsaugant puslapį.</p>
           <p class="editor-prototype-notice" id="editor-prototype-notice" hidden>
             Administratoriaus prototipas: puslapis ir QR bus paskelbti be užsakymo bei mokėjimo.
           </p>
@@ -63,14 +62,14 @@
         </div>
         <button class="editor-quick-preview" type="button" data-editor-preview-open>Peržiūrėti puslapį</button>
       </div>
-      <section class="editor-completion" aria-labelledby="editor-completion-title">
-        <header><strong id="editor-completion-title">Puslapio paruošimas</strong><span id="editor-completion-count">0 iš 3</span></header>
+      <details class="editor-completion">
+        <summary><strong id="editor-completion-title">Puslapio paruošimas</strong><span id="editor-completion-count">0 iš 3</span></summary>
         <ul>
           <li data-editor-check="person"><span aria-hidden="true">1</span><div><strong>Asmens informacija</strong><small>Įrašykite vardą</small></div></li>
           <li data-editor-check="story"><span aria-hidden="true">2</span><div><strong>Istorija</strong><small>Pridėkite tekstą arba nuotrauką</small></div></li>
           <li data-editor-check="design"><span aria-hidden="true">3</span><div><strong>Dizainas</strong><small>Fonas jau parinktas</small></div></li>
         </ul>
-      </section>
+      </details>
       <nav class="editor-stepper" aria-label="Puslapio kūrimo žingsniai">
         <button class="is-active" type="button" data-editor-step-button="text" aria-controls="editor-section-text" aria-current="step"><span>1</span>Turinys</button>
         <button type="button" data-editor-step-button="colors" aria-controls="editor-section-colors"><span>2</span>Dizainas</button>
@@ -83,17 +82,16 @@
           <header class="editor-step__header">
             <span>1 žingsnis iš 3</span>
             <h2 id="editor-step-text-title" tabindex="-1">Asmuo ir gyvenimo istorija</h2>
-            <p>Įrašykite pagrindinius duomenis, įkelkite nuotraukas ir sudėliokite istoriją paprasta blokų tvarka.</p>
+            <p>Pradžiai užtenka vardo ir kelių sakinių. Datas, nuotraukas ir daugiau istorijos galėsite pridėti kada norėsite.</p>
           </header>
-          <label>
-            Vardas
-            <input type="text" name="vardas" required>
-          </label>
-          <label>
-            Pavardė
-            <input type="text" name="pavarde">
-          </label>
-          <div class="editor-date-grid">
+          <div class="editor-name-grid">
+            <label>Vardas<input type="text" name="vardas" autocomplete="given-name" required placeholder="Vardas"></label>
+            <label>Pavardė <span class="optional">(nebūtina)</span><input type="text" name="pavarde" autocomplete="family-name" placeholder="Pavardė"></label>
+          </div>
+          <details class="editor-person-details">
+            <summary><span><strong>Gyvenimo datos ir epitafija</strong><small>Nebūtina – galite pridėti ir vėliau</small></span></summary>
+            <div class="editor-person-details__content">
+              <div class="editor-date-grid">
             <fieldset class="editor-date-picker" data-date-picker data-date-name="gimimo_data">
               <legend>
                 <span class="editor-date-picker__icon" aria-hidden="true">○</span>
@@ -157,19 +155,21 @@
                 <button type="button" data-date-clear>Išvalyti</button>
               </div>
             </fieldset>
-          </div>
-          <label>
-            Epitafija
-            <input type="text" name="epitafija" maxlength="180" placeholder="Trumpa frazė po datomis">
-          </label>
+              </div>
+              <label>Epitafija <span class="optional">(nebūtina)</span><input type="text" name="epitafija" maxlength="180" placeholder="Trumpa frazė po datomis"></label>
+            </div>
+          </details>
           <fieldset class="editor-story-builder" aria-describedby="editor-story-help">
             <legend id="editor-story-builder-title">Gyvenimo istorija</legend>
-            <p class="editor-field-help" id="editor-story-help">Kiekviena kortelė yra viena būsimo puslapio dalis. Jų tvarka šiame sąraše bus tokia pati ir galutiniame puslapyje.</p>
-            <ol class="editor-story-quick-guide" aria-label="Kaip sudėti gyvenimo istoriją">
-              <li><strong>Įkelkite nuotraukas</strong><span>Pasirinkite visas nuotraukas, kurias norėsite panaudoti.</span></li>
-              <li><strong>Rašykite dalimis</strong><span>Pridėkite atskirą teksto kortelę kiekvienai istorijos daliai.</span></li>
-              <li><strong>Koreguokite iškart</strong><span>Keiskite dydį kortelėje, o paspaudę nuotrauką galėsite ją judinti peržiūroje.</span></li>
-            </ol>
+            <p class="editor-field-help" id="editor-story-help">Parašykite vieną prisiminimą arba trumpą gyvenimo istoriją. Papildomas teksto dalis ir nuotraukas galėsite sudėti norima tvarka.</p>
+            <details class="editor-story-help-details">
+              <summary>Kaip sudėti ilgesnę istoriją?</summary>
+              <ol class="editor-story-quick-guide" aria-label="Kaip sudėti gyvenimo istoriją">
+                <li><strong>Įkelkite nuotraukas</strong><span>Pasirinkite visas nuotraukas, kurias norėsite panaudoti.</span></li>
+                <li><strong>Rašykite dalimis</strong><span>Pridėkite atskirą teksto kortelę kiekvienai istorijos daliai.</span></li>
+                <li><strong>Koreguokite iškart</strong><span>Keiskite dydį kortelėje, o paspaudę nuotrauką galėsite ją judinti peržiūroje.</span></li>
+              </ol>
+            </details>
             <label class="editor-story-upload">
               <span><strong>Nuotraukos</strong><small>Iki 8 nuotraukų. Pasirinkus failus, jų kortelės atsiras istorijoje automatiškai.</small></span>
               <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
@@ -433,9 +433,9 @@
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/demo-jonas.js?v=20260719-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260806-1"></script>
-<script src="assets/redaktorius.js?v=20260825-3"></script>
+<script src="assets/redaktorius.js?v=20260825-4"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
-<script src="assets/site-ui.js?v=20260811-2"></script>
+<script src="assets/site-ui.js?v=20260825-1"></script>
 </body>
 </html>
 

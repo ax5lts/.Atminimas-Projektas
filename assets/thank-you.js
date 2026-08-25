@@ -13,8 +13,8 @@
     title.textContent = "Užklausą gavome";
     message.textContent = "Ačiū. Peržiūrėsime kapavietės vietą ir pasirinktus darbus, tada el. paštu atsiųsime galutinį pasiūlymą.";
     note.innerHTML = "Įprastai atsakome <strong data-business=\"responseTime\">per 1 darbo dieną</strong>.";
-    primary.textContent = "Grįžti į pradžią";
-    primary.href = "index.html";
+    primary.textContent = "Grįžti į kapavietės priežiūrą";
+    primary.href = "kapu-prieziura.html";
   } else if (type === "preorder") {
     title.textContent = "Išankstinį užsakymą gavome";
     message.textContent = "Ačiū. Išankstinis užsakymas priimtas, o mokėtina suma yra 0 EUR. Kortelės duomenų nerinkome.";

@@ -22,14 +22,14 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('name="customer_email"', self.page)
         self.assertIn('name="consent" value="yes" required', self.page)
         self.assertIn('name="website"', self.page)
-        self.assertIn("šio išankstinio užsakymo suma yra 0 EUR", self.page)
+        self.assertIn("šio PREORDER suma yra 0 EUR", self.page)
         self.assertIn("Tai nėra pirkimo sutartis", self.page)
 
     def test_shop_and_home_link_to_preorder(self):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', shop)
-        self.assertIn(">PREORDER</a>", shop)
+        self.assertIn(">Pateikti PREORDER · 0 € dabar</a>", shop)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', home)
         self.assertNotIn("Saugiai apmokėkite", shop)
 

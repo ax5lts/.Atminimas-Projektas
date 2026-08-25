@@ -33,7 +33,7 @@
   function nextPage() {
     var value = (new URLSearchParams(window.location.search).get("next") || "").trim();
     if (/^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(value)) return value;
-    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "index.html#kitos-paslaugos" : "vartotojas.html";
+    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "kapu-prieziura.html#uzklausa" : "vartotojas.html";
   }
 
   var next = nextPage();

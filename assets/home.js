@@ -495,7 +495,7 @@
       if (error.status === 401) {
         saveDraft();
         AtminimasAuth.signOut();
-        window.location.href = "prisijungti.html?next=" + encodeURIComponent("index.html#kitos-paslaugos");
+        window.location.href = "prisijungti.html?next=" + encodeURIComponent("kapu-prieziura.html#uzklausa");
         return;
       }
       statusEl.textContent = error.message || "Nepavyko pateikti užklausos.";

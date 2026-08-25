@@ -23,7 +23,7 @@
 
   function nextPage() {
     if (hasExplicitNext) return requestedNext;
-    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "index.html#kitos-paslaugos" : "vartotojas.html";
+    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "kapu-prieziura.html#uzklausa" : "vartotojas.html";
   }
 
   var next = nextPage();

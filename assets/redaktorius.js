@@ -1260,7 +1260,9 @@
         textarea.dataset.storyText = "";
         textarea.rows = 5;
         textarea.maxLength = 10000;
-        textarea.placeholder = "Įrašykite šią gyvenimo istorijos dalį…";
+        textarea.placeholder = index === 0
+          ? "Pavyzdžiui: kuo šis žmogus buvo ypatingas, ką mėgo ir kokį prisiminimą norite išsaugoti…"
+          : "Įrašykite kitą gyvenimo istorijos dalį…";
         textarea.value = String(block.text || "");
         textLabel.appendChild(textLabelCopy);
         textLabel.appendChild(textarea);
@@ -1823,6 +1825,8 @@
 
   function showDatePickerError(picker, message, focus) {
     var fields = datePickerElements(picker);
+    var personDetails = picker.closest(".editor-person-details");
+    if (personDetails) personDetails.open = true;
     picker.classList.add("has-error");
     fields.status.textContent = message;
     [fields.year, fields.month, fields.day].forEach(function (field) {

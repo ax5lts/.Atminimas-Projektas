@@ -21,7 +21,7 @@ class DigitalPageFlowTests(unittest.TestCase):
         self.assertIn(link, self.home)
         self.assertIn(link, self.shop)
         self.assertIn(link, self.preorder)
-        self.assertIn("Lentelė, pristatymas ir PREORDER nebus kuriami", self.shop)
+        self.assertIn("Jokios lentelės ir pristatymo neužsakysite", self.shop)
         self.assertIn("PREORDER galima praleisti", self.preorder)
         self.assertIn(".digital-page-offer", self.styles)
 

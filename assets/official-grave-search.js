@@ -120,7 +120,7 @@
     if (municipality) params.set("graveMunicipality", municipality);
     if (latitude != null && latitude !== "") params.set("graveLat", latitude);
     if (longitude != null && longitude !== "") params.set("graveLng", longitude);
-    return "index.html?" + params.toString() + "#kitos-paslaugos";
+    return "kapu-prieziura.html?" + params.toString() + "#uzklausa";
   }
   function mapEmbed(row) {
     var latitude = number(row.latitude);
