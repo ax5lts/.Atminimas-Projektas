@@ -49,6 +49,7 @@
   var previewSurface = document.getElementById("editor-preview-surface");
   var openPreviewDialog = null;
   var productImage = document.getElementById("editor-product-image");
+  var productCard = productImage ? productImage.closest(".editor-product-card") : null;
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
   var colorCurrent = document.getElementById("editor-color-current");
@@ -165,6 +166,12 @@
       alt: "Pasirinkta ASA QR atminimo lentelė",
       name: "ASA 3D spausdinta QR atminimo lentelė",
       priceNote: "."
+    },
+    digital: {
+      image: "",
+      alt: "",
+      name: "skaitmeninis atminimo puslapis be fizinio gaminio",
+      priceNote: "."
     }
   };
 
@@ -172,6 +179,7 @@
     var requested = (new URLSearchParams(window.location.search).get("product") || "").trim();
     var stored = sessionStorage.getItem(PRODUCT_KEY);
     var value = requested || stored || "metal";
+    if (value === "digital") return "digital";
     return window.AtminimasProductCatalog
       ? AtminimasProductCatalog.normalizeType(value)
       : (value === "asa" ? "asa" : "metal");
@@ -188,26 +196,38 @@
   function applySelectedProduct(type) {
     productType = productOptions[type] ? type : "metal";
     var selectedProductOption = productOptions[productType];
+    var digitalOnly = productType === "digital";
     sessionStorage.setItem(PRODUCT_KEY, productType);
     if (productImage) {
-      productImage.src = selectedProductOption.image;
-      productImage.alt = selectedProductOption.alt;
+      productImage.hidden = digitalOnly;
+      if (!digitalOnly) {
+        productImage.src = selectedProductOption.image;
+        productImage.alt = selectedProductOption.alt;
+      }
     }
-    if (productSummary) productSummary.textContent = isDemoMode
-      ? "Demonstracinis puslapis užpildytas taip, kaip jį galėtų paruošti klientas."
-      : (editId
-        ? "Redaguojamas jūsų atminimo puslapis."
-        : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote);
+    if (productCard) productCard.classList.toggle("editor-product-card--digital", digitalOnly);
+    if (productSummary) {
+      productSummary.textContent = isDemoMode
+        ? "Demonstracinis puslapis užpildytas taip, kaip jį galėtų paruošti klientas."
+        : (editId
+          ? "Redaguojamas jūsų atminimo puslapis."
+          : (digitalOnly
+            ? "Kuriamas tik skaitmeninis atminimo puslapis. Fizinis gaminys, PREORDER ir pristatymas nebus kuriami."
+            : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote));
+    }
+    if (accountNoteEl && digitalOnly && !editId) {
+      accountNoteEl.textContent = "Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas; prisijungti reikės tik puslapiui išsaugoti. Paskelbę puslapį kliento zonoje atsisiųsite QR kodą.";
+    }
   }
 
-  applySelectedProduct("metal");
+  applySelectedProduct(requestedProductType);
   function setProductUnavailable(message) {
     if (productSummary) productSummary.textContent = "Orientacinės kainos patikrinti nepavyko. Puslapį galite išsaugoti, o išankstinį užsakymą pateikti be mokėjimo.";
     if (productUnavailableMessage) productUnavailableMessage.textContent = message;
     if (productUnavailable) productUnavailable.hidden = false;
   }
 
-  if (!isDemoMode && !editId && !prototypeRequested && window.AtminimasProductCatalog) {
+  if (!isDemoMode && !editId && !prototypeRequested && requestedProductType !== "digital" && window.AtminimasProductCatalog) {
     if (productSummary) productSummary.textContent = "Tikrinamas pasirinkto produkto prieinamumas…";
     AtminimasProductCatalog.load().then(function (catalog) {
       var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
@@ -226,7 +246,7 @@
     }).catch(function () {
       setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     });
-  } else if (!isDemoMode && !editId && !prototypeRequested) {
+  } else if (!isDemoMode && !editId && !prototypeRequested && requestedProductType !== "digital") {
     setProductUnavailable("Nepavyko paleisti produkto patikros. Atnaujinkite puslapį arba grįžkite į parduotuvę.");
   }
 
@@ -3706,9 +3726,18 @@
         var freshSession = await AtminimasAuth.ensureFreshSession();
         if (!freshSession) throw new Error("Prisijungimo sesija baigėsi.");
       } catch (sessionError) {
-        statusEl.textContent = sessionError.message || "Prisijungimo sesijos patikrinti nepavyko. Bandykite dar kartą.";
-        submitButton.textContent = "Prisijungti ir išsaugoti puslapį";
-        submitButton.disabled = false;
+        statusEl.textContent = "Prisijungimo sesija baigėsi. Išsaugome juodraštį ir perkeliame prisijungti…";
+        try {
+          await persistDraftBeforeLogin();
+          setDraftState("Juodraštis paruoštas tęsti po prisijungimo", "saved");
+          if (AtminimasAuth.signOut) AtminimasAuth.signOut();
+          redirectToLoginForSave();
+        } catch (draftError) {
+          console.error(draftError);
+          statusEl.textContent = draftError.message || "Juodraščio nepavyko paruošti prisijungimui.";
+          submitButton.textContent = "Prisijungti ir išsaugoti puslapį";
+          submitButton.disabled = false;
+        }
         return;
       }
     }
@@ -3808,15 +3837,20 @@
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
       await discardCurrentDraft();
-      statusEl.textContent = "Puslapis išsaugotas kaip privatus. Išankstinį užsakymą galite pateikti atskirai – mokėti nereikės.";
+      var digitalOnly = productType === "digital";
+      statusEl.textContent = digitalOnly
+        ? "Puslapis išsaugotas kaip privatus. Kliento zonoje paskelbkite jį ir atsisiųskite QR kodą."
+        : "Puslapis išsaugotas kaip privatus. Išankstinį užsakymą galite pateikti atskirai – mokėti nereikės.";
       previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
-      preorderLink.hidden = false;
-      preorderLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(productType);
+      preorderLink.hidden = digitalOnly;
+      if (!digitalOnly) preorderLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(productType);
       clientLink.href = clientUrl;
-      clientLink.textContent = "Kliento zona";
+      clientLink.textContent = digitalOnly ? "Paskelbti ir gauti QR" : "Kliento zona";
       qrLink.hidden = true;
       orderCode.textContent = "Pirmiausia kliento zonoje paskelbkite puslapį. Tada galėsite atsisiųsti veikiantį QR kodą.";
+      var savedHeading = resultBox.querySelector("h3");
+      if (savedHeading && digitalOnly) savedHeading.textContent = "Skaitmeninis puslapis išsaugotas";
       resultBox.hidden = false;
       showSaveProgress(100, "Puslapis išsaugotas.");
       setDraftState("Puslapis išsaugotas", "saved");

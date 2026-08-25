@@ -6,6 +6,7 @@
   var serviceListEl = document.getElementById("user-services");
   var logoutButton = document.getElementById("user-logout");
   var createButton = document.getElementById("user-create");
+  var preorderButton = document.getElementById("user-preorder");
   var guestActions = document.getElementById("user-guest-actions");
   var pageParams = new URLSearchParams(window.location.search);
   var requestedServiceId = (pageParams.get("service") || "").trim();
@@ -47,7 +48,8 @@
   }
 
   var chosenProduct = selectedProduct();
-  if (createButton) createButton.href = "isankstinis-uzsakymas.html";
+  if (createButton) createButton.href = "redaktorius.html?product=digital";
+  if (preorderButton) preorderButton.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(chosenProduct);
   if (guestActions) {
     var next = requestedServiceId
       ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
@@ -280,7 +282,10 @@
 
   function primaryAction(row, order) {
     if (!order) {
-      return "<a class='button user-card-primary' href='isankstinis-uzsakymas.html'>Išankstinis užsakymas</a>";
+      if (!row.aktyvus) {
+        return "<button class='button user-card-primary' type='button' data-profile-id='" + html(row.id) + "' data-next-active='true'>Paskelbti ir gauti QR</button>";
+      }
+      return "<button class='button user-card-primary' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>Atsisiųsti QR kodą</button>";
     }
     if (!order.apmoketa) {
       return "<a class='button user-card-primary' href='isankstinis-uzsakymas.html?product=" + encodeURIComponent(order.product_type || "metal") + "'>Išankstinis užsakymas</a>";
@@ -369,6 +374,7 @@
       if (serviceSectionEl) serviceSectionEl.hidden = true;
       logoutButton.hidden = true;
       if (createButton) createButton.hidden = true;
+      if (preorderButton) preorderButton.hidden = true;
       if (guestActions) guestActions.hidden = false;
       setStatus(requestedServiceId && claimRequested
         ? "Galutinį pasiūlymą gavote el. paštu. Prisijunkite tuo pačiu el. paštu tik tada, kai norėsite jį priimti ir apmokėti."
@@ -378,6 +384,7 @@
 
     logoutButton.hidden = false;
     if (createButton) createButton.hidden = false;
+    if (preorderButton) preorderButton.hidden = false;
     if (guestActions) guestActions.hidden = true;
     var claimedNow = false;
     var claimErrorMessage = "";
@@ -415,7 +422,7 @@
     var rows = await res.json();
     if (!rows.length) {
       finishPageSkeleton();
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Pradėkite nuo QR atminimo lentelės pasirinkimo.</p><a class='button' href='parduotuve.html'>Rinktis lentelę</a></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę, jei jos reikės, galėsite rezervuoti atskirai.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='isankstinis-uzsakymas.html'>QR lentelės PREORDER</a></div></div>";
       scrollToRequestedService();
       return;
     }
@@ -458,7 +465,7 @@
           "<div class='user-card-heading'><p class='eyebrow'>" + (row.aktyvus ? "Viešas puslapis" : "Privatus puslapis") + "</p><span class='user-card-visibility " + (row.aktyvus ? "is-public" : "") + "'>" + (row.aktyvus ? "Viešas" : "Privatus") + "</span></div>" +
           "<h2>" + html(name) + "</h2>" +
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
-          "<p class='user-card-product'>" + (order ? html(productName(order.product_type)) : "Atminimo puslapio juodraštis") + "</p>" +
+          "<p class='user-card-product'>" + (order ? html(productName(order.product_type)) : "Skaitmeninis atminimo puslapis · be fizinio gaminio") + "</p>" +
           shipment +
           primaryAction(row, order) +
           "<details class='user-card-more'><summary>Daugiau veiksmų</summary><div class='actions'>" + moreActions + "</div></details>" +
@@ -535,7 +542,7 @@
     try {
       await setVisibility(button.dataset.profileId, nextActive);
       await fetchMyPages();
-      setStatus(nextActive ? "Puslapis paskelbtas viešai." : "Puslapis nebėra viešas.", "success");
+      setStatus(nextActive ? "Puslapis paskelbtas viešai. QR kodą jau galite atsisiųsti." : "Puslapis nebėra viešas.", "success");
     } catch (error) {
       setStatus(error.message || "Nepavyko pakeisti puslapio viešumo.", "error");
       button.disabled = false;
@@ -595,6 +602,7 @@
     if (serviceSectionEl) serviceSectionEl.hidden = true;
     logoutButton.hidden = true;
     if (createButton) createButton.hidden = true;
+    if (preorderButton) preorderButton.hidden = true;
     if (guestActions) guestActions.hidden = false;
   });
 

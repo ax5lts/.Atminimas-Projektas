@@ -130,7 +130,11 @@
       });
       window.location.assign("aciu.html?" + params.toString());
     } catch (error) {
-      setStatus(error.message || "Nepavyko pateikti. Bandykite vėliau arba susisiekite su mumis.", "error");
+      var message = error && error.message ? error.message : "";
+      if (!message || /failed to fetch|networkerror|load failed/i.test(message)) {
+        message = "Nepavyko susisiekti su PREORDER serveriu. Užsakymas neišsaugotas – patikrinkite interneto ryšį ir bandykite dar kartą.";
+      }
+      setStatus(message, "error");
     } finally {
       setBusy(false);
     }

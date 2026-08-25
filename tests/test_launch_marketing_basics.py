@@ -36,8 +36,8 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         self.assertIn('"privatumas.html": "Privatumas"', self.site_ui)
         self.assertIn('setupBreadcrumbs();', self.site_ui)
 
-    def test_home_has_five_faqs_and_response_promise(self):
-        self.assertEqual(self.home.count('class="faq-item"'), 5)
+    def test_home_has_six_faqs_and_response_promise(self):
+        self.assertEqual(self.home.count('class="faq-item"'), 6)
         self.assertIn('id="faq-title"', self.home)
         self.assertIn('data-business="responseTime"', self.home)
         business = (ROOT / "assets" / "business-config.js").read_text(encoding="utf-8")
