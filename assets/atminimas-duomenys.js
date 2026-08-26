@@ -33,7 +33,8 @@
 
   function restUrl(table, query) {
     var cfg = getConfig();
-    return cfg.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + encodeURIComponent(table) + "?" + query;
+    var url = cfg.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + encodeURIComponent(table);
+    return query ? url + "?" + query : url;
   }
 
   function storageObjectUrl(bucket, path) {
@@ -50,19 +51,18 @@
   }
 
   async function postJson(table, payload) {
-    var res = await apiFetch(restUrl(table, "select=*"), {
+    var res = await apiFetch(restUrl(table), {
       method: "POST",
       headers: Object.assign({}, headers(), {
         "Content-Type": "application/json",
-        Prefer: "return=representation"
+        Prefer: "return=minimal"
       }),
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
       throw new Error("Duomenų įkelti nepavyko (" + res.status + ").");
     }
-    var rows = await res.json();
-    return rows && rows[0] ? rows[0] : payload;
+    return payload;
   }
 
   function absoluteUrl(path) {

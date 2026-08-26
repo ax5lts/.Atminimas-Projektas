@@ -56,6 +56,13 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertIn("savedAt", source)
         self.assertIn("discardCurrentDraft", source)
 
+    def test_profile_insert_does_not_request_restricted_columns(self):
+        source = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
+        post_json = source[source.index("async function postJson"):source.index("function absoluteUrl")]
+        self.assertIn('Prefer: "return=minimal"', post_json)
+        self.assertNotIn('select=*', post_json)
+        self.assertNotIn('return=representation', post_json)
+
     def test_memorial_source_links_only_accept_safe_https(self):
         source = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
         self.assertIn("function safeHttpsUrl(value)", source)

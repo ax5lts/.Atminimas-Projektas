@@ -120,6 +120,20 @@ class EditorWizardTests(unittest.TestCase):
             r"[^}]*\}",
         )
 
+    def test_legal_confirmations_keep_linked_text_in_one_mobile_column(self):
+        confirmations = re.search(
+            r'<fieldset class="legal-confirmations">([\s\S]+?)</fieldset>',
+            self.page,
+        ).group(1)
+        self.assertEqual(confirmations.count("<label>"), 2)
+        self.assertEqual(confirmations.count("<span>"), 2)
+        self.assertIn(".legal-confirmations label > span", self.styles)
+        self.assertRegex(
+            self.styles,
+            r"(?s)\.legal-confirmations label\s*\{"
+            r"[^}]*grid-template-columns:\s*22px minmax\(0, 1fr\);",
+        )
+
     def test_narrow_mobile_navigation_stays_on_one_scrollable_row(self):
         self.assertRegex(
             self.styles,

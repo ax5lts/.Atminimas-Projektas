@@ -2740,6 +2740,15 @@ video {
   margin-top: 2px;
 }
 
+.legal-confirmations label {
+  grid-template-columns: 22px minmax(0, 1fr);
+}
+
+.legal-confirmations label > span {
+  min-width: 0;
+  line-height: 1.55;
+}
+
 .editor-alt-fields,
 .legal-confirmations {
   border: 1px solid var(--line);
