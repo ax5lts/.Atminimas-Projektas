@@ -1,6 +1,9 @@
 name: Deploy website to GitHub Pages
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       backend_ready:
@@ -20,7 +23,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ inputs.backend_ready }}
+    if: ${{ github.event_name == 'push' || inputs.backend_ready }}
     timeout-minutes: 15
     environment:
       name: github-pages

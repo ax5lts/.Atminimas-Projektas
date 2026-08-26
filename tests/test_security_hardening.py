@@ -335,6 +335,9 @@ class SecurityHardeningTests(unittest.TestCase):
         tests_at = workflow.index('python -m unittest discover -s tests -p "test_*.py" -v')
         artifact_at = workflow.index("actions/upload-pages-artifact@")
         self.assertLess(tests_at, artifact_at)
+        self.assertRegex(workflow, r"(?m)^\s{2}push:\s*$")
+        self.assertRegex(workflow, r"(?m)^\s{6}- main\s*$")
+        self.assertIn("github.event_name == 'push' || inputs.backend_ready", workflow)
         self.assertTrue((ROOT / ".github" / "dependabot.yml").is_file())
 
     def test_repository_does_not_contain_common_secret_value_patterns(self):
