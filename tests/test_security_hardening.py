@@ -322,7 +322,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertIn('return json({ error: "Paslaugos veiksmas nepavyko" }, 500)', service)
         self.assertIn('return json({ error: "Webhook processing failed" }, 500)', webhook)
 
-    def test_github_actions_are_immutable_and_security_tests_run_before_publish(self):
+    def test_github_pages_auto_deploys_main_after_security_tests(self):
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
         expected = (
             "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
