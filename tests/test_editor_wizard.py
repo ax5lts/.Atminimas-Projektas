@@ -152,7 +152,7 @@ class EditorWizardTests(unittest.TestCase):
         self.assertIn('id="editor-product-unavailable"', self.page)
         self.assertIn("function setProductUnavailable(message)", self.script)
         self.assertIn(
-            'if (!isDemoMode && !editId && !prototypeRequested && requestedProductType !== "digital" && window.AtminimasProductCatalog)',
+            'if (!editId && !prototypeRequested && requestedProductType !== "digital" && window.AtminimasProductCatalog)',
             self.script,
         )
         self.assertIn("catalog.remote && catalog.metal", self.script)

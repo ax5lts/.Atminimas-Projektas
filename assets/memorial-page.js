@@ -560,11 +560,7 @@
       if (builderTitle) fitBuilderName(builderTitle);
       applyResponsiveBuilderHeights(builderView);
     }
-    if (atminimas.demo) {
-      document.getElementById("memorial-demo-notice").hidden = false;
-      document.title = [atminimas.vardas, atminimas.pavarde].filter(Boolean).join(" ") + " – demonstracinis atminimo puslapis";
-    }
-    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas, { demo: !!atminimas.demo });
+    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas);
   }
 
   function fillGallery(images) {
@@ -705,11 +701,6 @@
     var identifier = (params.get("id") || params.get("slug") || params.get("s") || "").trim();
     if (!identifier) {
       window.location.replace("index.html");
-      return;
-    }
-
-    if (window.AtminimasDemo && AtminimasDemo.isMaironisIdentifier(identifier)) {
-      renderPage({ atminimas: AtminimasDemo.maironis.profile }, "");
       return;
     }
 

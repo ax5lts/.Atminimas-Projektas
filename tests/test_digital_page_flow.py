@@ -16,14 +16,16 @@ class DigitalPageFlowTests(unittest.TestCase):
         cls.user = (ROOT / "assets" / "user.js").read_text(encoding="utf-8")
         cls.styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
-    def test_digital_only_entry_is_visible_across_the_journey(self):
+    def test_digital_only_entry_is_not_advertised_across_the_public_journey(self):
         link = 'href="redaktorius.html?product=digital"'
-        self.assertIn(link, self.home)
-        self.assertIn(link, self.shop)
-        self.assertIn(link, self.preorder)
-        self.assertIn("Jokios lentelės ir pristatymo neužsakysite", self.shop)
-        self.assertIn("PREORDER galima praleisti", self.preorder)
-        self.assertIn(".digital-page-offer", self.styles)
+        self.assertNotIn(link, self.home)
+        self.assertNotIn(link, self.shop)
+        self.assertNotIn(link, self.preorder)
+        self.assertNotIn("Jokios lentelės ir pristatymo neužsakysite", self.shop)
+        self.assertNotIn("PREORDER galima praleisti", self.preorder)
+        self.assertNotIn(".digital-page-offer", self.styles)
+        self.assertIn("Pasirinkite QR lentelę", self.shop)
+        self.assertIn("Fizinės lentelės PREORDER", self.shop)
 
     def test_editor_preserves_digital_mode_through_login_and_save(self):
         self.assertIn('if (value === "digital") return "digital"', self.editor)

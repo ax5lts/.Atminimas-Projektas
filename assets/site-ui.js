@@ -211,7 +211,7 @@
     if (privatePages.indexOf(page) !== -1) return;
     var businessReady = window.ATMINIMAS_BUSINESS
       ? Promise.resolve()
-      : loadScriptOnce("assets/business-config.js", "business-config");
+      : loadScriptOnce("assets/business-config.js?v=20260826-1", "business-config");
     businessReady.then(function () {
       return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
     }).catch(function () {});

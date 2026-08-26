@@ -1,4 +1,15 @@
 (function () {
+  var PUBLIC_KEYS = [
+    "legalName",
+    "activityForm",
+    "registrationCode",
+    "registry",
+    "address",
+    "email",
+    "phone",
+    "vatStatus"
+  ];
+
   function refresh() {
     var details = window.ATMINIMAS_BUSINESS || {};
     document.querySelectorAll("[data-business]").forEach(function (element) {
@@ -21,6 +32,35 @@
     });
   }
 
-  window.AtminimasBusinessDetails = { refresh: refresh };
+  async function loadRemote() {
+    var app = window.ATMINIMAS_CONFIG || {};
+    var baseUrl = String(app.SUPABASE_URL || "").replace(/\/$/, "");
+    var publishableKey = String(app.SUPABASE_ANON_KEY || "").trim();
+    if (!baseUrl || !publishableKey) return;
+
+    try {
+      var response = await fetch(baseUrl + "/functions/v1/business-profile", {
+        method: "GET",
+        headers: { apikey: publishableKey, Accept: "application/json" }
+      });
+      if (!response.ok) return;
+      var payload = await response.json();
+      var remote = payload && payload.business;
+      if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
+
+      var merged = Object.assign({}, window.ATMINIMAS_BUSINESS || {});
+      PUBLIC_KEYS.forEach(function (key) {
+        var value = String(remote[key] || "").trim();
+        if (value) merged[key] = value;
+      });
+      window.ATMINIMAS_BUSINESS = Object.freeze(merged);
+      refresh();
+    } catch (_error) {
+      // Statinė konfigūracija lieka patikimas atsarginis variantas.
+    }
+  }
+
+  window.AtminimasBusinessDetails = { refresh: refresh, loadRemote: loadRemote };
   refresh();
+  loadRemote();
 })();

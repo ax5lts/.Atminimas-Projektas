@@ -58,6 +58,9 @@ verify_jwt = false
 [functions.preorder]
 verify_jwt = false
 
+[functions.business-profile]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

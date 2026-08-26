@@ -115,14 +115,12 @@
   var resumeSave = editorParams.get("resume") === "save";
   var prototypeRequested = editorParams.get("prototype") === "1";
   var isAdminPrototype = false;
-  var demoId = (editorParams.get("demo") || "").trim().toLowerCase();
-  var isDemoMode = demoId === "maironis" || demoId === "jonas";
   var DRAFT_KEY = editId
     ? "atminimas.editor.edit." + editId + ".v1"
-    : (isDemoMode ? "atminimas.editor.demo.maironis.v1" : "atminimas.editor.draft.v1");
+    : "atminimas.editor.draft.v1";
   var DRAFT_FILE_PREFIX = editId
     ? "edit-" + editId + "-"
-    : (isDemoMode ? "demo-maironis-" : "create-");
+    : "create-";
   var DRAFT_DB = "atminimas-editor-draft";
   var DRAFT_STORE = "files";
   var DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -207,13 +205,11 @@
     }
     if (productCard) productCard.classList.toggle("editor-product-card--digital", digitalOnly);
     if (productSummary) {
-      productSummary.textContent = isDemoMode
-        ? "Demonstracinis puslapis užpildytas taip, kaip jį galėtų paruošti klientas."
-        : (editId
+      productSummary.textContent = editId
           ? "Redaguojamas jūsų atminimo puslapis."
           : (digitalOnly
             ? "Kuriamas tik skaitmeninis atminimo puslapis. Fizinis gaminys, PREORDER ir pristatymas nebus kuriami."
-            : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote));
+            : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote);
     }
     if (accountNoteEl && digitalOnly && !editId) {
       accountNoteEl.textContent = "Kurti galite neprisijungę. Juodraštis šiame įrenginyje saugomas 7 dienas; prisijungti reikės tik puslapiui išsaugoti. Paskelbę puslapį kliento zonoje atsisiųsite QR kodą.";
@@ -227,7 +223,7 @@
     if (productUnavailable) productUnavailable.hidden = false;
   }
 
-  if (!isDemoMode && !editId && !prototypeRequested && requestedProductType !== "digital" && window.AtminimasProductCatalog) {
+  if (!editId && !prototypeRequested && requestedProductType !== "digital" && window.AtminimasProductCatalog) {
     if (productSummary) productSummary.textContent = "Tikrinamas pasirinkto produkto prieinamumas…";
     AtminimasProductCatalog.load().then(function (catalog) {
       var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
@@ -246,7 +242,7 @@
     }).catch(function () {
       setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
     });
-  } else if (!isDemoMode && !editId && !prototypeRequested && requestedProductType !== "digital") {
+  } else if (!editId && !prototypeRequested && requestedProductType !== "digital") {
     setProductUnavailable("Nepavyko paleisti produkto patikros. Atnaujinkite puslapį arba grįžkite į parduotuvę.");
   }
 
@@ -2540,7 +2536,7 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    if (restoredNames.some(Boolean) || (!editId && !isDemoMode)) {
+    if (restoredNames.some(Boolean) || !editId) {
       photoOrderMode = "files";
       photoOrderNames = restoredNames.filter(Boolean);
       reconcileStoryPhotoBlocks(photoOrderNames.length, false);
@@ -2693,28 +2689,6 @@
     if (preorderLink) preorderLink.hidden = true;
     previewCode.textContent = "puslapis: " + editId;
     document.title = "Redaguoti atminimo puslapį - Atminimas";
-  }
-
-  function loadDemoProfile() {
-    var demo = window.AtminimasDemo && (AtminimasDemo.maironis || AtminimasDemo.jonas);
-    if (!demo) throw new Error("Demonstracinio puslapio duomenys nepasiekiami.");
-    var profile = demo.profile;
-    ["vardas", "pavarde", "gimimo_data", "mirties_data", "epitafija", "tekstas_200"].forEach(function (name) {
-      if (form.elements[name]) form.elements[name].value = profile[name] || "";
-    });
-    showExistingMedia(demo.media);
-    setStoryBlocks(demo.story_blocks_json || (demo.profile && demo.profile.story_blocks_json));
-    applyLayout(demo.layout);
-    var heading = document.getElementById("editor-panel-title");
-    var notice = document.getElementById("editor-demo-notice");
-    var submit = form.querySelector("button[type='submit']");
-    if (heading) heading.textContent = "Išbandykite užpildytą pavyzdį";
-    if (notice) notice.hidden = false;
-    if (submit) submit.textContent = "Atidaryti pilną pavyzdį";
-    previewCode.textContent = "demonstracinis puslapis";
-    document.title = "Maironio pavyzdys redaktoriuje - Atminimas";
-    document.body.classList.add("editor-demo-mode");
-    setDraftState("Galite keisti pavyzdį – duomenys nebus viešinami", "saved");
   }
 
   function setCompletionItem(key, complete, pendingText) {
@@ -3675,10 +3649,6 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
-    if (isDemoMode) {
-      window.location.href = "sablonas-viskas.html?slug=maironis-pavyzdys";
-      return;
-    }
     if (!validateDatePickers(false)) {
       activateEditorStep("text", true, "replace");
       window.setTimeout(function () {
@@ -3895,7 +3865,7 @@
       submitButton.disabled = false;
       document.body.classList.add("editor-prototype-mode");
     }
-    if (!isDemoMode && editId && !isSignedIn()) {
+    if (editId && !isSignedIn()) {
       statusEl.textContent = "Prisijunkite kliento zonoje, tada grįžkite redaguoti puslapio.";
       submitButton.disabled = true;
       setTimeout(function () {
@@ -3904,10 +3874,7 @@
       }, 900);
       return;
     }
-    if (isDemoMode) {
-      if (accountNoteEl) accountNoteEl.hidden = true;
-      submitButton.textContent = "Atidaryti galutinį pavyzdį";
-    } else if (isAdminPrototype) {
+    if (isAdminPrototype) {
       submitButton.textContent = "Sukurti nemokamą prototipą ir QR";
     } else if (editId) {
       if (accountNoteEl) accountNoteEl.hidden = true;
@@ -3920,12 +3887,11 @@
     }
     initializeResponsiveStage();
     setupDatePickers();
-    if (isDemoMode) loadDemoProfile();
-    else await loadProfileForEditing();
+    await loadProfileForEditing();
     syncDatePickersFromHidden();
     var restoredDraft = await restoreDraft();
     syncDatePickersFromHidden();
-    if (!isDemoMode && !editId && resumeSave && isSignedIn()) {
+    if (!editId && resumeSave && isSignedIn()) {
       currentEditorStep = "preview";
       statusEl.textContent = restoredDraft
         ? "Prisijungėte. Juodraštis atkurtas – patikrinkite sąlygas ir išsaugokite puslapį."

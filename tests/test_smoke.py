@@ -275,6 +275,44 @@ class AtminimasSmokeTests(unittest.TestCase):
         download = (ROOT / "supabase" / "functions" / "document-download" / "index.ts").read_text(encoding="utf-8")
         self.assertIn('if (type === "qr" && !isAdmin)', download)
 
+    def test_public_business_profile_only_returns_allowlisted_requisites(self):
+        edge = (ROOT / "supabase" / "functions" / "business-profile" / "index.ts").read_text(encoding="utf-8")
+        details = (ROOT / "assets" / "business-details.js").read_text(encoding="utf-8")
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+
+        self.assertIn('from("business_profile")', edge)
+        self.assertIn(
+            '"legal_name,activity_form,registration_code,vat_code,address,email,phone,updated_at"',
+            edge,
+        )
+        for private_field in (
+            "manufacturer_email",
+            "invoice_prefix",
+            "invoice_document_type",
+            "ready_for_invoicing",
+        ):
+            self.assertNotIn(private_field, edge)
+        self.assertIn('/functions/v1/business-profile', details)
+        self.assertIn('headers: { apikey: publishableKey', details)
+        self.assertRegex(
+            config,
+            r"(?s)\[functions\.business-profile\]\s*verify_jwt\s*=\s*false",
+        )
+
+        for name in (
+            "rekvizitai.html",
+            "taisykles.html",
+            "privatumas.html",
+            "prieinamumas.html",
+        ):
+            html = (ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(page=name):
+                self.assertIn('src="assets/supabase-config.js', html)
+                self.assertLess(
+                    html.index('src="assets/supabase-config.js'),
+                    html.index('src="assets/business-details.js'),
+                )
+
     def test_legal_and_delivery_pages_exist(self):
         for name in (
             "rekvizitai.html",
@@ -379,15 +417,16 @@ class AtminimasSmokeTests(unittest.TestCase):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
         service_page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('href="redaktorius.html?product=digital">Sukurti atminimo puslapį</a>', html)
+        self.assertIn('href="parduotuve.html">Pasirinkti QR lentelę</a>', html)
+        self.assertNotIn('href="redaktorius.html?product=digital"', html)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal">QR lentelės PREORDER</a>', html)
         self.assertIn('class="home-paths"', html)
         self.assertIn('href="kapu-prieziura.html"', html)
         self.assertNotIn('id="service-request-form"', html)
         self.assertIn('class="landing-proof"', html)
-        self.assertIn("Pradėkite nemokėdami", html)
-        self.assertIn("Puslapis iš pradžių privatus", html)
-        self.assertIn("Pamatykite tikrą pavyzdį", html)
+        self.assertIn("Rezervuokite nemokėdami", html)
+        self.assertIn("Tada kurkite puslapį", html)
+        self.assertIn("Sprendimą priimkite vėliau", html)
         product_rules = re.findall(
             r"\.landing-intro__product\s*\{([^}]*)\}",
             styles,
@@ -621,7 +660,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
-        self.assertIn('<a class="button" href="redaktorius.html?product=digital">Sukurti atminimo puslapį</a>', home)
+        self.assertIn('<a class="button" href="parduotuve.html">Pasirinkti QR lentelę</a>', home)
         self.assertIn('href="isankstinis-uzsakymas.html?product=metal">QR lentelės PREORDER</a>', home)
         self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
         self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Pateikti PREORDER · 0 € dabar</a>', shop)
@@ -944,47 +983,37 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("1600 / Math.max(sourceW, sourceH)", editor)
         self.assertIn('"image/webp", 0.82', editor)
 
-    def test_maironis_demo_is_available_in_editor_and_public_page(self):
+    def test_maironis_demo_is_removed_from_public_pages(self):
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor_script = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         memorial_markup = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
         memorial_page = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
-        demo_script = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
         styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
 
-        self.assertIn("maironis-pavyzdys", home)
-        self.assertIn("maironis-pavyzdys", shop)
-        self.assertIn('href="sablonas-viskas.html?slug=maironis-pavyzdys">Pavyzdys</a>', home)
-        self.assertIn("Peržiūrėti Maironio puslapio pavyzdį", shop)
-        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', editor_page)
-        self.assertIn('src="assets/demo-jonas.js?v=20260719-2"', memorial_markup)
-        self.assertIn('demoId === "maironis" || demoId === "jonas"', editor_script)
-        self.assertIn("AtminimasDemo.isMaironisIdentifier", memorial_page)
+        for source in (home, shop, editor_page, editor_script, memorial_markup, memorial_page):
+            self.assertNotIn("maironis", source.lower())
+        self.assertNotIn('src="assets/demo-jonas.js', editor_page)
+        self.assertNotIn('src="assets/demo-jonas.js', memorial_markup)
+        self.assertNotIn("AtminimasDemo", memorial_page)
+        self.assertNotIn("isDemoMode", editor_script)
         self.assertLess(memorial_page.index('document.getElementById("turinys").hidden = false'), memorial_page.index("if (builderTitle) fitBuilderName(builderTitle)"))
-        self.assertIn("maironis, tikrasis vardas jonas mačiulis", demo_script.lower())
-        self.assertIn('gimimo_data: "1862-11-02"', demo_script)
-        self.assertIn('mirties_data: "1932-06-28"', demo_script)
-        self.assertIn("Viešoji sritis (Public Domain)", demo_script)
         self.assertIn("Nuotraukų šaltiniai", memorial_page)
         self.assertIn("buildMediaSources(allImages)", memorial_page)
         self.assertIn('root.style.setProperty("--memorial-page-background", background)', memorial_page)
         self.assertIn("var stageBackground = applyMemorialBackground", memorial_page)
         self.assertGreaterEqual(styles.count("var(--memorial-page-background, #f2ede4)"), 3)
-        self.assertNotIn("Jonas gimė 1948", demo_script)
-        self.assertNotIn("assets/demo-jonas-portretas.jpg", demo_script)
 
-        for image in (
-            "maironis-portretas-1900.jpg",
-            "maironis-portretas-1908.jpg",
-            "maironis-darbo-kabinete-1912.jpg",
-            "maironis-siluvoje-1912.jpg",
-        ):
-            with self.subTest(image=image):
-                path = ROOT / "assets" / image
-                self.assertTrue(path.is_file())
-                self.assertLess(path.stat().st_size, 400_000)
+    def test_homepage_has_no_memorial_example_showcase(self):
+        home = (ROOT / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertNotIn("memorial-showcase", home)
+        self.assertNotIn("memorial-sample", home)
+        self.assertNotIn("Puslapio pavyzdžiai", home)
+        self.assertNotIn(".memorial-showcase", styles)
+        self.assertNotIn(".memorial-sample", styles)
 
     def test_editor_is_responsive_and_has_natural_color_palette(self):
         page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
@@ -1115,7 +1144,6 @@ class AtminimasSmokeTests(unittest.TestCase):
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         memorial = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
-        demo = (ROOT / "assets" / "demo-jonas.js").read_text(encoding="utf-8")
 
         self.assertIn("var MIN_STAGE_HEIGHT_PCT = 160", editor)
         self.assertIn("function fitStageToContent(allowShrink, forcedPiece)", editor)
@@ -1134,10 +1162,6 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("Math.max(heightPct, Math.max(MIN_STAGE_HEIGHT_PCT", memorial)
         self.assertIn("view.style.height = Math.round(width * heightPct / 100) + \"px\"", memorial)
 
-        # The bundled example intentionally remains on the old coordinate shape,
-        # so rendering it exercises backwards-compatible conversion.
-        self.assertIn('top: "91%"', demo)
-
     def test_guest_builds_locally_and_signs_in_only_to_save_a_page(self):
         editor_page = (ROOT / "redaktorius.html").read_text(encoding="utf-8")
         editor = (ROOT / "assets" / "redaktorius.js").read_text(encoding="utf-8")
@@ -1149,8 +1173,9 @@ class AtminimasSmokeTests(unittest.TestCase):
 
         self.assertIn("Kurti galite neprisijungę", editor_page)
         self.assertIn("prisijungti paprašysime tik išsaugant puslapį", editor_page)
-        self.assertIn('if (!isDemoMode && editId && !isSignedIn())', editor)
-        self.assertNotIn('if (!isDemoMode && window.AtminimasAuth && !AtminimasAuth.accessToken())', editor)
+        self.assertIn('if (editId && !isSignedIn())', editor)
+        self.assertNotIn('if (window.AtminimasAuth && !AtminimasAuth.accessToken())', editor)
+        self.assertNotIn("isDemoMode", editor)
         self.assertIn("async function persistDraftBeforeLogin()", editor)
         self.assertIn("redirectToLoginForSave", editor)
         self.assertIn('editorParams.get("resume") === "save"', editor)
