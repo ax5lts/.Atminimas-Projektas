@@ -774,14 +774,15 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("buildStoryGallery", public_page)
         self.assertIn("builder-photo-caption", public_page)
 
-    def test_candle_jpg_brand_and_favicon_are_used_everywhere(self):
-        icon = ROOT / "assets" / "atminimas-candle.jpg"
-        image = icon.read_bytes()
-        self.assertTrue(image.startswith(b"\xff\xd8\xff"))
-        self.assertGreater(len(image), 10_000)
+    def test_svg_brand_and_favicon_are_used_everywhere(self):
+        icon = ROOT / "assets" / "atminimas-mark.svg"
+        image = icon.read_text(encoding="utf-8")
+        self.assertIn('<svg xmlns="http://www.w3.org/2000/svg"', image)
+        self.assertIn('viewBox="0 0 512 512"', image)
+        self.assertNotIn("candle", image.lower())
         for page in ROOT.glob("*.html"):
             html = page.read_text(encoding="utf-8")
-            self.assertIn('rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg"', html, page.name)
+            self.assertIn('rel="icon" href="assets/atminimas-mark.svg" type="image/svg+xml"', html, page.name)
             self.assertNotIn('<span class="brand__mark">A</span>', html, page.name)
 
     def test_public_memorial_has_home_link_and_frame(self):

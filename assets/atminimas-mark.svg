@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Atminimas</title>
+  <rect width="512" height="512" rx="112" fill="#174744"/>
+  <g fill="none" stroke="#fffaf0" stroke-linecap="round" stroke-linejoin="round" stroke-width="34">
+    <path d="M208 128h-60a20 20 0 0 0-20 20v60"/>
+    <path d="M304 128h60a20 20 0 0 1 20 20v60"/>
+    <path d="M128 304v60a20 20 0 0 0 20 20h60"/>
+  </g>
+  <path
+    d="M256 164c9 49 36 76 84 84-48 9-75 36-84 84-9-48-36-75-84-84 48-8 75-35 84-84Z"
+    fill="#e8b94a"
+  />
+  <g fill="#fffaf0">
+    <rect x="304" y="304" width="32" height="32" rx="7"/>
+    <rect x="352" y="304" width="32" height="32" rx="7"/>
+    <rect x="304" y="352" width="32" height="32" rx="7"/>
+    <path d="M352 352h32v12h-12v20h-20Z"/>
+  </g>
+</svg>

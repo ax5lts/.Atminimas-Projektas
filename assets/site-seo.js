@@ -35,7 +35,7 @@
       legalName: business.legalName,
       description: "QR atminimo ženklai, skaitmeniniai atminimo puslapiai ir kapaviečių priežiūros paslaugos.",
       url: baseUrl,
-      logo: new URL("assets/atminimas-candle.jpg", baseUrl).href,
+      logo: new URL("assets/atminimas-mark.svg", baseUrl).href,
       image: new URL("assets/qr-plienas.webp", baseUrl).href,
       email: business.email,
       telephone: business.phone,
