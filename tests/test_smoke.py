@@ -665,10 +665,12 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
         self.assertIn('id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Pateikti PREORDER · 0 € dabar</a>', shop)
 
-    def test_shop_explains_qr_flow_and_links_video(self):
+    def test_shop_explains_qr_flow_without_external_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         self.assertIn('id="kaip-veikia"', html)
-        self.assertIn("https://www.youtube.com/shorts/2WZqJ18XkEI", html)
+        self.assertNotIn("youtube.com", html)
+        self.assertNotIn("how-it-works__video", html)
+        self.assertNotIn("Video, kaip veikia QR kodas", html)
         self.assertIn("QR kodas ant paminklo", html)
         self.assertIn("Nuskenuojama telefonu", html)
         self.assertIn("Atsiveria atminimo puslapis", html)

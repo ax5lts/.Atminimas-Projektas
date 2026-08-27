@@ -20,6 +20,8 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('id="preorder-form"', self.page)
         self.assertIn('name="product_type"', self.page)
         self.assertIn('name="customer_email"', self.page)
+        self.assertNotIn('name="quantity"', self.page)
+        self.assertNotIn(">Kiekis", self.page)
         self.assertIn('name="consent" value="yes" required', self.page)
         self.assertIn('name="website"', self.page)
         self.assertIn("šio PREORDER suma yra 0 EUR", self.page)
@@ -35,6 +37,8 @@ class PreorderFlowTests(unittest.TestCase):
 
     def test_client_uses_edge_function_and_thank_you_receipt(self):
         self.assertIn('"/functions/v1/preorder"', self.client)
+        self.assertIn("quantity: 1", self.client)
+        self.assertNotIn("values.quantity", self.client)
         self.assertIn('type: "preorder"', self.client)
         self.assertIn('window.location.assign("aciu.html?"', self.client)
         thank_you = (ROOT / "assets" / "thank-you.js").read_text(encoding="utf-8")
@@ -51,6 +55,8 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('(count || 0) >= 3', self.edge)
         self.assertIn('.from("preorder_requests").insert(', self.edge)
         self.assertIn("payment_taken: false", self.edge)
+        self.assertIn("const quantity = 1;", self.edge)
+        self.assertNotIn("Number(body.quantity)", self.edge)
 
     def test_database_is_private_except_for_admin_reads_and_updates(self):
         self.assertIn("alter table public.preorder_requests enable row level security", self.migration)

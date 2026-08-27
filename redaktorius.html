@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/atminimas-candle.jpg" type="image/jpeg">
 <title>Atminimo puslapio redaktorius</title>
-<link rel="stylesheet" href="css/styles.css?v=20260826-1">
+<link rel="stylesheet" href="css/styles.css?v=20260827-1">
 </head>
 <body class="editor-page" data-loading>
 <div class="editor-shell">
@@ -419,13 +419,23 @@
       </div>
     </aside>
   </main>
+
+  <dialog class="editor-success-dialog" id="editor-success-dialog" aria-labelledby="editor-success-title" aria-describedby="editor-success-message">
+    <div class="editor-success-dialog__content">
+      <span class="editor-success-dialog__icon" aria-hidden="true">✓</span>
+      <p class="eyebrow">Išsaugota</p>
+      <h2 id="editor-success-title">Ačiū! Viskas pavyko</h2>
+      <p id="editor-success-message">Atminimo puslapis sėkmingai išsaugotas.</p>
+      <button class="button" type="button" data-editor-success-close>Gerai</button>
+    </div>
+  </dialog>
 </div>
 
 <script src="assets/supabase-config.js?v=20260618"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260826-1"></script>
-<script src="assets/redaktorius.js?v=20260825-4"></script>
+<script src="assets/redaktorius.js?v=20260827-1"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
 <script src="assets/site-ui.js?v=20260825-1"></script>
 </body>

@@ -111,10 +111,7 @@ Deno.serve(async (request: Request) => {
     if (!PRODUCT_NAMES[productType]) {
       throw new RequestError("Pasirinkite lentelės variantą");
     }
-    const quantity = Number(body.quantity);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
-      throw new RequestError("Pasirinkite kiekį nuo 1 iki 10");
-    }
+    const quantity = 1;
 
     const customerEmail = email(body.customer_email);
     const customerPhone = text(body.customer_phone, 40) || null;

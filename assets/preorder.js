@@ -94,7 +94,7 @@
     var values = Object.fromEntries(new FormData(form).entries());
     var payload = {
       product_type: safeProduct(values.product_type),
-      quantity: Number(values.quantity),
+      quantity: 1,
       customer_name: String(values.customer_name || "").trim(),
       customer_email: String(values.customer_email || "").trim(),
       customer_phone: String(values.customer_phone || "").trim() || null,

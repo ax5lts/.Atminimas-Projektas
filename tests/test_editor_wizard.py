@@ -120,6 +120,15 @@ class EditorWizardTests(unittest.TestCase):
             r"[^}]*\}",
         )
 
+    def test_successful_save_shows_a_clear_thank_you_dialog(self):
+        self.assertIn('id="editor-success-dialog"', self.page)
+        self.assertIn('id="editor-success-title">Ačiū! Viskas pavyko</h2>', self.page)
+        self.assertIn('data-editor-success-close', self.page)
+        self.assertIn("function showSaveSuccess(statusMessage, dialogMessage)", self.script)
+        self.assertIn('statusEl.dataset.state = "success";', self.script)
+        self.assertEqual(self.script.count("showSaveSuccess("), 4)
+        self.assertIn(".editor-success-dialog::backdrop", self.styles)
+
     def test_legal_confirmations_keep_linked_text_in_one_mobile_column(self):
         confirmations = re.search(
             r'<fieldset class="legal-confirmations">([\s\S]+?)</fieldset>',

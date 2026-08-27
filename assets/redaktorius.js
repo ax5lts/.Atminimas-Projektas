@@ -12,6 +12,9 @@
   var captionsInput = document.getElementById("editor-captions");
   var previewVideo = document.getElementById("editor-preview-video");
   var resultBox = document.getElementById("editor-result");
+  var successDialog = document.getElementById("editor-success-dialog");
+  var successDialogMessage = document.getElementById("editor-success-message");
+  var successDialogClose = document.querySelector("[data-editor-success-close]");
   var openLink = document.getElementById("editor-open-link");
   var preorderLink = document.getElementById("editor-preorder-link");
   var clientLink = document.getElementById("editor-client-link");
@@ -268,6 +271,26 @@
     draftStateEl.textContent = message;
     draftStateEl.dataset.state = state || "";
   }
+
+  function closeSaveSuccess() {
+    if (!successDialog || !successDialog.open) return;
+    if (typeof successDialog.close === "function") successDialog.close();
+    else successDialog.removeAttribute("open");
+  }
+
+  function showSaveSuccess(statusMessage, dialogMessage) {
+    statusEl.textContent = statusMessage;
+    statusEl.dataset.state = "success";
+    if (!successDialog) return;
+    if (successDialogMessage) successDialogMessage.textContent = dialogMessage || statusMessage;
+    if (typeof successDialog.showModal === "function") {
+      if (!successDialog.open) successDialog.showModal();
+    } else {
+      successDialog.setAttribute("open", "");
+    }
+  }
+
+  if (successDialogClose) successDialogClose.addEventListener("click", closeSaveSuccess);
 
   function showSaveProgress(value, message) {
     if (!saveProgressEl) return;
@@ -3649,6 +3672,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    delete statusEl.dataset.state;
     if (!validateDatePickers(false)) {
       activateEditorStep("text", true, "replace");
       window.setTimeout(function () {
@@ -3769,7 +3793,6 @@
         editingMedia = result.media || editingMedia;
         await discardCurrentDraft();
         var editPageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(editId);
-        statusEl.textContent = "Pakeitimai išsaugoti.";
         previewCode.textContent = "puslapis: " + editId;
         openLink.href = editPageUrl;
         preorderLink.hidden = true;
@@ -3782,6 +3805,7 @@
         resultBox.hidden = false;
         showSaveProgress(100, "Pakeitimai išsaugoti.");
         setDraftState("Visi pakeitimai išsaugoti", "saved");
+        showSaveSuccess("Pakeitimai išsaugoti.", "Jūsų pakeitimai sėkmingai išsaugoti.");
         return;
       }
       if (isAdminPrototype) {
@@ -3789,7 +3813,6 @@
         var prototypePageUrl = prototype.page_url ||
           ("sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier));
         await discardCurrentDraft();
-        statusEl.textContent = "Viešas administratoriaus prototipas ir QR sukurti be mokėjimo.";
         previewCode.textContent = "Prototipas paskelbtas";
         openLink.href = prototypePageUrl;
         openLink.textContent = "Atidaryti viešą prototipą";
@@ -3806,13 +3829,17 @@
         resultBox.hidden = false;
         showSaveProgress(100, "Prototipas ir QR sukurti.");
         setDraftState("Prototipas paskelbtas", "saved");
+        showSaveSuccess(
+          "Viešas administratoriaus prototipas ir QR sukurti be mokėjimo.",
+          "Viešas prototipas ir QR kodas sėkmingai sukurti."
+        );
         return;
       }
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
       await discardCurrentDraft();
       var digitalOnly = productType === "digital";
-      statusEl.textContent = digitalOnly
+      var savedStatusMessage = digitalOnly
         ? "Puslapis išsaugotas kaip privatus. Kliento zonoje paskelbkite jį ir atsisiųskite QR kodą."
         : "Puslapis išsaugotas kaip privatus. Išankstinį užsakymą galite pateikti atskirai – mokėti nereikės.";
       previewCode.textContent = "Puslapis paruoštas";
@@ -3828,9 +3855,11 @@
       resultBox.hidden = false;
       showSaveProgress(100, "Puslapis išsaugotas.");
       setDraftState("Puslapis išsaugotas", "saved");
+      showSaveSuccess(savedStatusMessage, "Atminimo puslapis sėkmingai išsaugotas kaip privatus.");
     } catch (err) {
       console.error(err);
       statusEl.textContent = err.message || "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
+      statusEl.dataset.state = "error";
       if (saveProgressEl) saveProgressEl.value = 0;
       setDraftState("Išsaugoti nepavyko", "error");
     } finally {
