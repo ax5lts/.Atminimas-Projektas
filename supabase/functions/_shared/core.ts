@@ -310,7 +310,7 @@ export function constantTimeEqual(left: string, right: string) {
 
 export function publicSiteUrl() {
   return (env("PUBLIC_SITE_URL", false) ||
-    "https://ax5lts.github.io/.Atminimas-Projektas/").replace(/\/?$/, "/");
+    "https://atminimokodas.lt/").replace(/\/?$/, "/");
 }
 
 export function money(cents: number | null | undefined, currency = "EUR") {

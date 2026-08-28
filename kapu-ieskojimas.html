@@ -7,8 +7,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-mark.svg" type="image/svg+xml">
 <meta name="description" content="Kapavietės paieška pagal mirusiojo vardą ir pavardę.">
+<link rel="canonical" href="https://atminimokodas.lt/kapu-ieskojimas.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Atminimas">
+<meta property="og:locale" content="lt_LT">
+<meta property="og:title" content="Kapų paieška – Atminimas">
+<meta property="og:description" content="Raskite artimojo kapavietę pagal vardą, pavardę ir papildomus vietos duomenis.">
+<meta property="og:url" content="https://atminimokodas.lt/kapu-ieskojimas.html">
+<meta property="og:image" content="https://atminimokodas.lt/assets/qr-plienas.webp">
+<meta property="og:image:alt" content="Atminimas QR atminimo lentelė">
+<meta name="twitter:card" content="summary_large_image">
 <title>Kapų ieškojimas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260825-5">
+<link rel="stylesheet" href="css/styles.css?v=20260828-1">
 </head>
 <body>
 <div class="site-shell">
@@ -23,7 +33,7 @@
     <section class="grave-search-hero" aria-labelledby="grave-title">
       <p class="eyebrow">Kapaviečių duomenys</p>
       <h1 id="grave-title">Raskite artimojo kapavietę</h1>
-      <p>Įveskite vardą ir pavardę. Galite rašyti ir be lietuviškų raidžių.</p>
+      <p>Įrašykite vardą ir pavardę. Lietuviškos raidės nebūtinos.</p>
       <form class="grave-search-form" data-grave-search-form data-map-preview>
         <label class="visually-hidden" for="grave-query">Vardas ir pavardė</label>
         <input id="grave-query" name="q" type="search" minlength="2" maxlength="220" autocomplete="off" placeholder="Pvz., Jonas Jonaitis" required>
@@ -39,7 +49,7 @@
         </details>
         <div class="grave-search-tools">
           <button class="button button--ghost" type="button" data-use-location>Naudoti mano vietą</button>
-          <span data-location-status>Vieta naudojama tik atstumui ir maršrutui parodyti.</span>
+          <span data-location-status>Vieta naudojama tik atstumui ir maršrutui.</span>
         </div>
       </form>
       <p class="form-status" data-grave-status data-state="info" role="status" aria-live="polite">Paieškai įveskite bent 2 raides.</p>
@@ -86,10 +96,10 @@
 
   <footer class="site-footer"><div class="site-footer__inner"><span>Atminimas</span><span class="site-footer__support">Pastebėjote netikslumą? Praneškite mums.</span><nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="privatumas.html">Privatumas</a><a href="pranesti.html">Pranešti apie turinį</a></nav></div></footer>
 </div>
-<script src="assets/supabase-config.js?v=20260707-1"></script>
+<script src="assets/supabase-config.js?v=20260828-1"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
-<script src="assets/official-grave-search.js?v=20260825-3"></script>
+<script src="assets/official-grave-search.js?v=20260828-1"></script>
 <script src="assets/site-ui.js?v=20260811-2"></script>
 </body>
 </html>

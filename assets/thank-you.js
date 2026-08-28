@@ -19,8 +19,8 @@
     title.textContent = "Išankstinį užsakymą gavome";
     message.textContent = "Ačiū. Išankstinis užsakymas priimtas, o mokėtina suma yra 0 EUR. Kortelės duomenų nerinkome.";
     note.textContent = reference
-      ? "Rezervacijos numeris: " + reference + ". Įprastai atsakome per 1 darbo dieną."
-      : "Įprastai atsakome per 1 darbo dieną.";
+      ? "Rezervacijos numeris: " + reference + ". Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolimesnių veiksmų."
+      : "Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolimesnių veiksmų.";
     primary.textContent = "Pradėti kurti atminimo puslapį";
     primary.href = "redaktorius.html?product=" + encodeURIComponent(product);
   } else if (type === "payment") {

@@ -1,7 +1,7 @@
 (function () {
   var userLocation = null;
   var savedKey = "atminimas.saved-graves.v1";
-  var officialSearchTimeoutMs = 22000;
+  var officialSearchTimeoutMs = 12000;
   var photoDialog = document.getElementById("grave-photo-dialog");
   var photoForm = document.getElementById("grave-photo-form");
   var photoContext = null;
@@ -549,6 +549,9 @@
       var submit = form.querySelector("button[type='submit']");
       status.dataset.state = "loading";
       status.textContent = "Ieškoma…";
+      var slowNotice = window.setTimeout(function () {
+        if (status.dataset.state === "loading") status.textContent = "Paieška dar tikrinama…";
+      }, 4000);
       results.setAttribute("aria-busy", "true");
       if (submit) {
         submit.disabled = true;
@@ -583,6 +586,7 @@
         status.textContent = error.message;
         results.innerHTML = "";
       } finally {
+        window.clearTimeout(slowNotice);
         results.setAttribute("aria-busy", "false");
         if (submit) {
           submit.disabled = false;

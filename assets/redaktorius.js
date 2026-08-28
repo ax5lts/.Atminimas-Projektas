@@ -160,7 +160,7 @@
       image: "assets/qr-plienas-480.webp",
       alt: "Pasirinkta plieno QR atminimo lentelė",
       name: "graviruota plieno QR atminimo lentelė",
-      priceNote: ". Kaina – 59,00 EUR."
+      priceNote: ". Kaina – 50,00 EUR."
     },
     asa: {
       image: "assets/qr-asa-480.webp",

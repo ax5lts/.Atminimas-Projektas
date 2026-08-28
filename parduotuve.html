@@ -7,8 +7,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-mark.svg" type="image/svg+xml">
 <meta name="description" content="Pasirinkite fizinę QR atminimo lentelę ir pateikite neįpareigojantį PREORDER be mokėjimo.">
+<link rel="canonical" href="https://atminimokodas.lt/parduotuve.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Atminimas">
+<meta property="og:locale" content="lt_LT">
+<meta property="og:title" content="QR atminimo lentelės – Atminimas">
+<meta property="og:description" content="Pasirinkite plieninę arba 3D spausdintą QR atminimo lentelę ir rezervuokite ją be mokėjimo.">
+<meta property="og:url" content="https://atminimokodas.lt/parduotuve.html">
+<meta property="og:image" content="https://atminimokodas.lt/assets/qr-plienas.webp">
+<meta property="og:image:alt" content="Graviruota plieno QR atminimo lentelė">
+<meta name="twitter:card" content="summary_large_image">
 <title>QR atminimo lentelės – parduotuvė</title>
-<link rel="stylesheet" href="css/styles.css?v=20260825-4">
+<link rel="stylesheet" href="css/styles.css?v=20260828-1">
 <link rel="stylesheet" href="css/shop-ux.css?v=20260819-1">
 </head>
 <body data-loading>
@@ -39,7 +49,7 @@
       <p id="shop-heading-copy">Pasirinkite plieninę arba 3D spausdintą lentelę. Pateikę PREORDER iškart galėsite kurti atminimo puslapį.</p>
     </header>
 
-    <aside class="legal-notice shop-legal-notice preorder-notice"><strong>Fizinės lentelės PREORDER</strong><p>Dabar mokėsite 0 EUR. Galutinę kainą ir pristatymo terminą patvirtinsime susisiekę, o jūs galėsite iškart pradėti kurti puslapį.</p></aside>
+    <aside class="legal-notice shop-legal-notice preorder-notice"><strong>Fizinės lentelės PREORDER iki 2026 m. spalio 31 d.</strong><p>Dabar mokėsite 0 EUR. Iki šios datos papildomų naujienų nesiųsime; nuo lapkričio 1 d. susisieksime dėl galutinės kainos, gamybos termino ir pristatymo.</p><p>Preliminari gamyba trunka 1–2 savaites po galutinio maketo patvirtinimo, o pristatymas – 1–3 darbo dienas po pagaminimo.</p></aside>
 
     <p class="shop-flow-label">Fizinės QR lentelės eiga</p>
 
@@ -56,7 +66,7 @@
         <span class="product-recommendation">Rekomenduojama</span>
         <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
         <span class="product-choice__content">
-          <span><strong>Plieninė QR lentelė</strong><small>5 × 5 cm · klijuojama · siunčiame</small></span>
+          <span><strong>Plieninė QR lentelė</strong><small>5 × 5 cm · klijuojama · Siunčiame</small></span>
           <span class="product-choice__price" data-metal-price>–</span>
         </span>
       </label>
@@ -65,7 +75,7 @@
         <span class="product-availability product-availability--available" data-product-availability="asa">PREORDER</span>
         <span class="product-choice__image"><img src="assets/qr-asa-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="ASA 3D spausdinta QR atminimo lentelė"></span>
         <span class="product-choice__content">
-          <span><strong>3D spausdinta QR lentelė</strong><small data-asa-description>5 × 5 cm · ASA plastikas · klijuojama · siunčiame</small></span>
+          <span><strong>3D spausdinta QR lentelė</strong><small data-asa-description>5 × 5 cm · ASA plastikas · klijuojama · Siunčiame</small></span>
           <span class="product-choice__price product-choice__price--status" data-asa-price>Kaina tikslinama</span>
         </span>
       </label>
@@ -92,13 +102,14 @@
             <li><span>Matmenys</span><strong id="product-dimensions">5 × 5 cm</strong></li>
             <li><span>Medžiaga</span><strong id="product-material">Plienas</strong></li>
             <li><span>Tvirtinimas</span><strong id="product-mounting">Klijais</strong></li>
-            <li><span>Pristatymas</span><strong>Siunčiame</strong></li>
+            <li><span>Gamyba</span><strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong></li>
+            <li><span>Pristatymas</span><strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong></li>
           </ul>
           <p class="product-copy" id="product-copy">QR kodas atidaro asmeninį atminimo puslapį.</p>
 
           <div class="product-order-summary" aria-label="Kas bus toliau">
             <div><span>Mokėjimas dabar</span><strong>0 EUR</strong></div>
-            <div><span>Atsakymas</span><strong data-business="responseTime">Per 1 darbo dieną</strong></div>
+            <div><span>Kitas kontaktas</span><strong>Nuo 2026 m. lapkričio 1 d.</strong></div>
           </div>
           <div class="actions">
             <a class="button" id="product-create-link" href="isankstinis-uzsakymas.html?product=metal">Pateikti PREORDER · 0 € dabar</a>
@@ -177,7 +188,7 @@
     <section class="info-grid info-grid--single" aria-label="Papildoma informacija">
       <div class="info-box">
         <h2>Užsakymo informacija</h2>
-        <p>Išankstinis užsakymas: <strong>0 EUR, be mokėjimo duomenų</strong>. Galimą siuntimą, pagaminimo terminą ir galutinę kainą patvirtinsime susisiekę. Talpinimas: <span data-business="hostingPeriod"></span>.</p><p><a href="taisykles.html">Išankstinio užsakymo ir naudojimo sąlygos</a></p>
+        <p>Išankstinis užsakymas: <strong>0 EUR, be mokėjimo duomenų</strong>. Preliminari gamyba – <strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong>, pristatymas – <strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong>. Pristatymo teritorija: <span data-business="shippingTerritory">Lietuva</span>. Pristatymo kaina ir galutinė suma patvirtinamos prieš mokėjimą. Talpinimas: <span data-business="hostingPeriod">kol paslauga aktyvi; tikslų laikotarpį patvirtinsime prieš užsakymą</span>.</p><p><a href="taisykles.html">Išankstinio užsakymo ir naudojimo sąlygos</a></p>
       </div>
     </section>
   </main>
@@ -191,8 +202,8 @@
   </footer>
 </div>
 
-<script src="assets/supabase-config.js?v=20260618"></script>
-<script src="assets/business-config.js?v=20260826-1"></script>
+<script src="assets/supabase-config.js?v=20260828-1"></script>
+<script src="assets/business-config.js?v=20260828-1"></script>
 <script src="assets/business-details.js?v=20260826-1"></script>
 <script src="assets/product-catalog.js?v=20260811-3"></script>
 <script src="assets/shop.js?v=20260825-2"></script>
