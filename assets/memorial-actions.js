@@ -55,6 +55,10 @@
     if (!button) return;
     var saved = savedIndex() >= 0;
     button.classList.toggle("is-active", saved);
+    button.setAttribute("aria-pressed", String(saved));
+    button.setAttribute("aria-label", saved
+      ? "Pašalinti " + profileName() + " iš išsaugotų atminimų"
+      : "Išsaugoti " + profileName() + " šiame įrenginyje");
     button.innerHTML = '<span aria-hidden="true">' + (saved ? "♥" : "♡") + "</span>" + (saved ? "Išsaugota" : "Išsaugoti");
   }
 
@@ -71,7 +75,7 @@
         url: pageUrl(),
         death_date: profile.mirties_data || null
       });
-      toast("Atminimas išsaugotas šiame telefone.");
+      toast("Atminimas išsaugotas. Jį rasite skiltyje „Išsaugoti atminimai“.");
     }
     localStorage.setItem(savedKey, JSON.stringify(saved.slice(0, 100)));
     updateSaveButton();

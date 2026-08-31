@@ -2,7 +2,7 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com https://tile.openstreetmap.org; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; frame-src https://www.openstreetmap.org">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-mark.svg" type="image/svg+xml">
@@ -17,8 +17,8 @@
 <meta property="og:image" content="https://atminimokodas.lt/assets/qr-plienas.webp">
 <meta property="og:image:alt" content="Atminimas QR atminimo lentelė">
 <meta name="twitter:card" content="summary_large_image">
-<title>Kapų ieškojimas – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260828-1">
+<title>Kapų paieška – Atminimas</title>
+<link rel="stylesheet" href="css/styles.css?v=20260828-2">
 </head>
 <body>
 <div class="site-shell">
@@ -65,7 +65,7 @@
       <div class="grave-results__heading"><h2 id="results-title">Paieškos rezultatai</h2><span data-grave-count></span></div>
       <div class="grave-result-grid" data-grave-results aria-busy="false" aria-label="Kapaviečių paieškos rezultatai"></div>
       <nav class="grave-pagination" data-grave-pagination hidden aria-label="Paieškos puslapiai"><button class="button button--ghost" type="button" data-page-prev>Ankstesnis</button><span data-page-label></span><button class="button button--ghost" type="button" data-page-next>Kitas</button></nav>
-      <p class="muted grave-source">Kapaviečių paieškos šaltiniai: vieša <a href="https://www.cemety.lt/public/deceaseds" target="_blank" rel="noopener">CEMETY velionių paieška</a> ir atsarginis <a href="https://data.gov.lt/datasets/2779/" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, kurio duomenims taikoma <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a> licencija. Įrašą galima patikrinti jo šaltinio puslapyje. Kapaviečių nuotraukas atskirai pateikia teisę turintys naudotojai, o prieš viešinimą jos patikrinamos.</p>
+      <p class="muted grave-source">Kapaviečių paieškos šaltiniai: vieša <a href="https://www.cemety.lt/public/deceaseds" target="_blank" rel="noopener">CEMETY velionių paieška</a> ir atsarginis <a href="https://data.gov.lt/datasets/2779/" target="_blank" rel="noopener">Lietuvos atvirų duomenų portalas</a>, kurio duomenims taikoma <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener">CC BY 4.0</a> licencija. Įrašą galima patikrinti jo šaltinio puslapyje. Kapaviečių nuotraukas gali pateikti teisę jas naudoti turintys naudotojai, o prieš viešinimą jos patikrinamos.</p>
     </section>
   </main>
 
@@ -99,7 +99,7 @@
 <script src="assets/supabase-config.js?v=20260828-1"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
-<script src="assets/official-grave-search.js?v=20260828-1"></script>
+<script src="assets/official-grave-search.js?v=20260828-2"></script>
 <script src="assets/site-ui.js?v=20260811-2"></script>
 </body>
 </html>

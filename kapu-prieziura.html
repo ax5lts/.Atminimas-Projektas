@@ -12,7 +12,7 @@
 <meta property="og:site_name" content="Atminimas">
 <meta property="og:locale" content="lt_LT">
 <meta property="og:title" content="Kapavietės priežiūra – Atminimas">
-<meta property="og:description" content="Užsakykite kapavietės priežiūros pasiūlymą: žvakių uždegimą, gėlių padėjimą arba sutvarkymą.">
+<meta property="og:description" content="Užsakykite kapavietės priežiūros pasiūlymą: žvakių uždegimą, gėlių padėjimą arba kapavietės sutvarkymą.">
 <meta property="og:url" content="https://atminimokodas.lt/kapu-prieziura.html">
 <meta property="og:image" content="https://atminimokodas.lt/assets/qr-plienas.webp">
 <meta property="og:image:alt" content="Atminimas QR atminimo lentelė">
@@ -86,7 +86,7 @@
             <label class="service-choice">
               <input type="checkbox" name="services" value="kapu_tvarkymas">
               <span class="service-choice__check" aria-hidden="true"></span><span class="service-choice__number">03</span>
-              <span class="service-choice__body"><strong>Kapo sutvarkymas</strong><small>Bazinis kapavietės sutvarkymas pagal susitarimą.</small></span>
+              <span class="service-choice__body"><strong>Kapavietės sutvarkymas</strong><small>Bazinis kapavietės sutvarkymas pagal susitarimą.</small></span>
               <span class="service-choice__price"><small>Kaina nuo</small><strong data-service-price-group="kapu_tvarkymas">–</strong></span>
             </label>
           </fieldset>
@@ -102,7 +102,7 @@
               <label>Kapinių pavadinimas<input type="text" name="cemetery_name" autocomplete="off" maxlength="200" required placeholder="Pvz., Antakalnio kapinės"></label>
               <label>Miestas arba savivaldybė<input type="text" name="municipality" autocomplete="address-level2" maxlength="160" required placeholder="Pvz., Klaipėdos r. savivaldybė"></label>
             </div>
-            <label>Tiksli kapo vieta<textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea></label>
+            <label>Tiksli kapavietės vieta<textarea name="grave_location" rows="3" maxlength="1000" required placeholder="Miestas, kvartalas, eilė, kapo numeris arba aiškus vietos aprašymas"></textarea></label>
             <input type="hidden" name="destination_latitude"><input type="hidden" name="destination_longitude"><input type="hidden" name="location_source" value="manual">
             <p class="editor-note" id="service-location-status">Tikslias koordinates galite pasirinkti <a href="kapu-ieskojimas.html">kapų paieškoje</a>. Jei įrašysite tik miestą ar rajoną, kelionės kainą įvertinsime rankiniu būdu.</p>
             <div class="service-step-actions"><button class="button button--ghost" type="button" data-service-back>Atgal</button><button class="button" type="button" data-service-next>Toliau: pasirinkimai</button></div>
@@ -116,7 +116,7 @@
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_3" data-service-required><span><strong>3 gėlės</strong><small data-service-price="flower_3">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_5" data-service-required><span><strong>5 gėlės</strong><small data-service-price="flower_5">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_bouquet" data-service-required><span><strong>Puokštė</strong><small data-service-price="flower_bouquet">–</small></span></label>
-                <label class="service-variant"><input type="radio" name="flower_package" value="flower_other" data-service-required><span><strong>Kitas kiekis</strong><small data-service-price="flower_other">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="flower_package" value="flower_other" data-service-required><span><strong>Kitas gėlių kiekis</strong><small data-service-price="flower_other">–</small></span></label>
               </div></fieldset>
               <label>Gėlių rūšis ir kiti pageidavimai <span class="optional">(nebūtina)</span><textarea name="flowers_details" rows="3" maxlength="900" placeholder="Gėlių rūšis, spalva, puokštės stilius ar kiti pageidavimai"></textarea></label>
             </div>
@@ -125,19 +125,19 @@
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_1" data-service-required><span><strong>1 žvakė</strong><small data-service-price="candle_1">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_2" data-service-required><span><strong>2 žvakės</strong><small data-service-price="candle_2">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_5" data-service-required><span><strong>5 žvakės</strong><small data-service-price="candle_5">–</small></span></label>
-                <label class="service-variant"><input type="radio" name="candle_package" value="candle_other" data-service-required><span><strong>Kitas kiekis</strong><small data-service-price="candle_other">–</small></span></label>
+                <label class="service-variant"><input type="radio" name="candle_package" value="candle_other" data-service-required><span><strong>Kitas žvakių kiekis</strong><small data-service-price="candle_other">–</small></span></label>
               </div></fieldset>
               <label>Žvakių rūšis ir kiti pageidavimai <span class="optional">(nebūtina)</span><textarea name="candles_details" rows="3" maxlength="900" placeholder="Spalva, dydis, žvakidės tipas ar kiti pageidavimai"></textarea></label>
             </div>
             <div class="service-extra" data-service-details="kapu_tvarkymas" hidden>
-              <fieldset class="service-variant-group"><legend>Pasirinkite tvarkymo darbus <span class="optional">(galima kelis)</span></legend><div class="service-variant-grid service-variant-grid--cleaning">
-                <label class="service-variant service-variant--wide"><input type="checkbox" name="cleaning_tasks" value="cleaning_full" data-cleaning-full><span><strong>Pilnas sutvarkymas</strong><small data-service-price="cleaning_full">–</small></span></label>
+              <fieldset class="service-variant-group"><legend>Pasirinkite kapavietės priežiūros darbus <span class="optional">(galima pasirinkti kelis)</span></legend><div class="service-variant-grid service-variant-grid--cleaning">
+                <label class="service-variant service-variant--wide"><input type="checkbox" name="cleaning_tasks" value="cleaning_full" data-cleaning-full><span><strong>Pilnas kapavietės sutvarkymas</strong><small data-service-price="cleaning_full">–</small></span></label>
                 <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_grooves"><span><strong>Griovelių išvalymas</strong><small data-service-price="cleaning_grooves">–</small></span></label>
-                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_surface"><span><strong>Viršaus nušlavimas</strong><small data-service-price="cleaning_surface">–</small></span></label>
+                <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_surface"><span><strong>Kapavietės viršaus nušlavimas</strong><small data-service-price="cleaning_surface">–</small></span></label>
                 <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_monument"><span><strong>Paminklo nuvalymas</strong><small data-service-price="cleaning_monument">–</small></span></label>
                 <label class="service-variant"><input type="checkbox" name="cleaning_tasks" value="cleaning_leaves"><span><strong>Lapų ir šiukšlių surinkimas</strong><small data-service-price="cleaning_leaves">–</small></span></label>
               </div></fieldset>
-              <label>Kiti tvarkymo pageidavimai <span class="optional">(nebūtina)</span><textarea name="cleaning_details" rows="3" maxlength="1100" placeholder="Augalai, paminklo būklė ar kita svarbi informacija"></textarea></label>
+              <label>Kiti kapavietės priežiūros pageidavimai <span class="optional">(nebūtina)</span><textarea name="cleaning_details" rows="3" maxlength="1100" placeholder="Augalai, paminklo būklė ar kita svarbi informacija"></textarea></label>
             </div>
             <div class="service-estimate" aria-live="polite">
               <span>Pasirinktos paslaugos</span><strong id="service-estimate-services">–</strong>

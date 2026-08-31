@@ -2264,6 +2264,53 @@ video {
   gap: 14px;
 }
 
+.saved-memorials {
+  margin-top: 22px;
+  background: linear-gradient(135deg, rgba(222, 242, 234, 0.92), rgba(247, 241, 226, 0.92));
+}
+
+.saved-memorials__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.saved-memorial-card,
+.saved-memorials__empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid rgba(35, 60, 51, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.saved-memorial-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.saved-memorial-card h3,
+.saved-memorial-card p {
+  margin: 0;
+}
+
+.saved-memorial-card p,
+.saved-memorials__empty {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.saved-memorial-card .actions {
+  align-self: end;
+  margin-top: 4px;
+}
+
+.saved-memorial-card .button {
+  min-height: 42px;
+}
+
 .user-card-heading {
   display: flex;
   gap: 12px;
@@ -2931,7 +2978,9 @@ video {
   top: 0;
   z-index: 30;
   display: flex;
-  justify-content: center;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.7rem 1rem;
   background-color: var(--memorial-page-background, #f2ede4);
   border-bottom: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.2));
@@ -3113,6 +3162,31 @@ video {
   font-weight: 500;
   line-height: 0.9;
   letter-spacing: -0.06em;
+}
+
+.memorial-saved-link {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--memorial-page-border, rgba(61, 83, 72, 0.28));
+  border-radius: 999px;
+  color: var(--memorial-site-ink, #233c33);
+  background: rgba(255, 255, 255, 0.42);
+  font: 700 0.75rem/1.2 Arial, sans-serif;
+  text-decoration: none;
+}
+
+.memorial-saved-link:hover,
+.memorial-saved-link:focus-visible {
+  color: var(--memorial-site-hover, #0f6d55);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.memorial-saved-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 .landing-wordmark span {
@@ -5209,6 +5283,11 @@ figure.memorial-story-block--photo,
 
   .memorial-site-link__hint {
     font-size: 0.7rem;
+  }
+
+  .memorial-saved-link {
+    padding-inline: 0.55rem;
+    font-size: 0.68rem;
   }
 }
 
@@ -8198,6 +8277,7 @@ img[data-story-photo-preview],
 }
 
 .grave-map-preview {
+  position: relative;
   grid-column: 1 / -1;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -8205,11 +8285,96 @@ img[data-story-photo-preview],
   background: #fff;
 }
 
-.grave-map-preview iframe {
+.grave-map-viewport {
+  position: relative;
   display: block;
   width: 100%;
   height: 260px;
-  border: 0;
+  overflow: hidden;
+  background: #dce9e5;
+}
+
+.grave-map-tiles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.grave-map-tiles img {
+  position: absolute;
+  display: block;
+  width: 256px;
+  max-width: none;
+  height: 256px;
+}
+
+.grave-map-marker {
+  position: absolute;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: #76b93f;
+  box-shadow: 0 3px 7px rgba(25, 42, 30, 0.35);
+  pointer-events: none;
+  transform: translate(-50%, -100%) rotate(-45deg);
+}
+
+.grave-map-marker::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.grave-map-controls {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.grave-map-control {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(26, 58, 58, 0.2);
+  border-radius: 8px;
+  color: var(--teal);
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 2px 8px rgba(25, 42, 30, 0.16);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.grave-map-control:hover,
+.grave-map-control:focus-visible {
+  background: #fff;
+}
+
+.grave-map-status {
+  margin: 0;
+  padding: 9px 11px;
+  color: var(--muted);
+  background: #f7f5ef;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.grave-map-status[hidden] {
+  display: none;
 }
 
 .grave-map-preview small {
@@ -8290,7 +8455,7 @@ img[data-story-photo-preview],
     width: 100%;
   }
 
-  .grave-map-preview iframe {
+  .grave-map-viewport {
     height: 220px;
   }
 

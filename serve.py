@@ -13,7 +13,7 @@ SECURITY_HEADERS = {
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
         "form-action 'self'; script-src 'self'; script-src-elem 'self' https://www.googletagmanager.com; "
         "script-src-attr 'none'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com; "
+        "img-src 'self' data: blob: https://*.supabase.co https://www.google-analytics.com https://tile.openstreetmap.org; "
         "media-src 'self' blob: https://*.supabase.co; "
         "connect-src 'self' https://*.supabase.co https://www.google-analytics.com "
         "https://analytics.google.com https://region1.google-analytics.com; "

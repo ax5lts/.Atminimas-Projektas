@@ -355,7 +355,7 @@ function optionSelection(body: Record<string, unknown>, services: string[]) {
     throw new HttpError("Pasirinkite gėlių variantą");
   }
   if (services.includes("kapu_tvarkymas") && !cleaning.length) {
-    throw new HttpError("Pasirinkite tvarkymo darbus");
+    throw new HttpError("Pasirinkite kapavietės priežiūros darbus");
   }
   return {
     candle_keys: services.includes("zvakes") ? candles : [],
@@ -452,7 +452,7 @@ async function createAction(request: Request, body: Record<string, unknown>) {
       160,
       "miestas arba savivaldybė",
     ),
-    kapo_vieta: requiredText(body.grave_location, 3, 1000, "kapo vieta"),
+    kapo_vieta: requiredText(body.grave_location, 3, 1000, "kapavietės vieta"),
     geliu_pageidavimai: services.includes("geles")
       ? text(body.flower_details, 1200) || null
       : null,

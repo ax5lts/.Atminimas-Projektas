@@ -17,10 +17,10 @@
     primary.href = "kapu-prieziura.html";
   } else if (type === "preorder") {
     title.textContent = "Išankstinį užsakymą gavome";
-    message.textContent = "Ačiū. Išankstinis užsakymas priimtas, o mokėtina suma yra 0 EUR. Kortelės duomenų nerinkome.";
+    message.textContent = "Ačiū. Išankstinis užsakymas priimtas, o mokėtina suma yra 0 EUR. Mokėjimo kortelės duomenų nerinkome.";
     note.textContent = reference
-      ? "Rezervacijos numeris: " + reference + ". Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolimesnių veiksmų."
-      : "Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolimesnių veiksmų.";
+      ? "Rezervacijos numeris: " + reference + ". Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolesnių veiksmų."
+      : "Iki 2026 m. spalio 31 d. papildomų žinučių nesiųsime; nuo lapkričio 1 d. susisieksime dėl tolesnių veiksmų.";
     primary.textContent = "Pradėti kurti atminimo puslapį";
     primary.href = "redaktorius.html?product=" + encodeURIComponent(product);
   } else if (type === "payment") {

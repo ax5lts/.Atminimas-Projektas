@@ -623,8 +623,9 @@ Deno.serve(async (request: Request) => {
   }
 
   // CEMETY vieša paieška turi vardui skirtą indeksą ir atsako gerokai greičiau
-  // nei neindeksuotas visų savivaldybių data.gov.lt filtravimas. Išsamų
-  // data.gov.lt kelią paliekame kaip atsarginį, jei vieša paieška neatsakytų.
+  // nei neindeksuotas visų savivaldybių data.gov.lt filtravimas. Jei CEMETY
+  // atsako be rezultatų, vis tiek tikriname atvirą registrą: šaltiniai nėra
+  // visiškai sinchronizuoti ir viename iš jų gali būti naujesnis įrašas.
   try {
     const result = await searchCemety({
       query,
@@ -635,7 +636,8 @@ Deno.serve(async (request: Request) => {
       municipality,
       cemetery,
     }, page, pageSize);
-    return jsonResponse(result);
+    if (result.items.length > 0) return jsonResponse(result);
+    console.warn("cemety.lt paieška rezultatų nerado, naudojamas data.gov.lt");
   } catch (error) {
     console.warn("cemety.lt paieška neatsakė, naudojamas data.gov.lt", error);
   }

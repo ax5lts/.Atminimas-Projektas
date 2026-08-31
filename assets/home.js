@@ -65,7 +65,7 @@
     flower_5: "5 gėlės",
     flower_bouquet: "Puokštė",
     flower_other: "Kitas gėlių kiekis",
-    cleaning_full: "Pilnas sutvarkymas",
+    cleaning_full: "Pilnas kapavietės sutvarkymas",
     cleaning_grooves: "Griovelių išvalymas",
     cleaning_surface: "Kapavietės viršaus nušlavimas",
     cleaning_monument: "Paminklo nuvalymas",
@@ -262,7 +262,7 @@
       return false;
     }
     if (number === 3 && selectedServices().indexOf("kapu_tvarkymas") !== -1 && !selectedNamedValues("cleaning_tasks").length) {
-      stepStatusEl.textContent = "Pasirinkite bent vieną tvarkymo darbą.";
+      stepStatusEl.textContent = "Pasirinkite bent vieną kapavietės priežiūros darbą.";
       return false;
     }
     var step = serviceSteps.find(function (item) { return Number(item.dataset.serviceStep) === number; });
@@ -454,7 +454,7 @@
     }
     if (services.indexOf("kapu_tvarkymas") !== -1 && !selectedNamedValues("cleaning_tasks").length) {
       activateServiceStep(3, true);
-      stepStatusEl.textContent = "Pasirinkite bent vieną tvarkymo darbą.";
+      stepStatusEl.textContent = "Pasirinkite bent vieną kapavietės priežiūros darbą.";
       return;
     }
 
@@ -480,7 +480,7 @@
       cleaning_keys: cleaningKeys,
       flower_details: services.indexOf("geles") !== -1 ? optionDetails(flowerKeys, (values.flowers_details || "").trim(), "Pasirinkimas") : null,
       candle_details: services.indexOf("zvakes") !== -1 ? optionDetails(candleKeys, (values.candles_details || "").trim(), "Pasirinkimas") : null,
-      cleaning_details: services.indexOf("kapu_tvarkymas") !== -1 ? optionDetails(cleaningKeys, (values.cleaning_details || "").trim(), "Darbai") : null,
+      cleaning_details: services.indexOf("kapu_tvarkymas") !== -1 ? optionDetails(cleaningKeys, (values.cleaning_details || "").trim(), "Priežiūros darbai") : null,
       extra_information: (values.extra_information || "").trim() || null
     };
 

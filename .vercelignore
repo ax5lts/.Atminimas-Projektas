@@ -1,0 +1,21 @@
+.git
+.vercel
+.codex-remote-attachments/
+.codex-qa/
+.cursor/
+.vscode/
+.net bankas/
+__pycache__/
+data-imports/
+tmp/
+tests/
+supabase/
+*.py
+*.pyc
+*.env
+*.env.*
+assets/supabase-config.example.js
+DEPLOYMENT.md
+SECURITY.md
+BACKUP.md
+IMPORT_CHECKPOINT.md

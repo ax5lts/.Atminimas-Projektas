@@ -152,6 +152,7 @@ class CemeteryImportTests(unittest.TestCase):
         self.assertIn('source_model: "cemety"', edge)
         self.assertIn("Patikrinti šaltinio įrašą", frontend)
         self.assertIn("https://get.data.gov.lt/datasets/gov/kapines/registras", edge)
+        self.assertIn("if (result.items.length > 0)", edge)
         self.assertNotIn("DATA_GOV_API_TOKEN", edge)
         self.assertNotIn("Authorization", edge)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", edge)

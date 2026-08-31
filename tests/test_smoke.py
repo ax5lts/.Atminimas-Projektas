@@ -634,7 +634,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         admin = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
         self.assertIn('id="admin-service-pricing"', page)
-        self.assertIn("Gėlių, žvakių ir tvarkymo kainos", page)
+        self.assertIn("Gėlių, žvakių ir kapavietės priežiūros kainos", page)
         self.assertEqual(page.count('id="service-pricing-form"'), 1)
         for field in (
             "price_candle_1",
@@ -1242,7 +1242,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("activateServiceStep", home_js)
         self.assertIn("setupSavedGraves", home_js)
         self.assertIn("graveName", grave_js)
-        self.assertIn("Užsakyti priežiūrą", grave_js)
+        self.assertIn("Užsakyti kapavietės priežiūrą", grave_js)
 
         self.assertNotIn("Supabase Auth klaida", auth)
         self.assertNotIn("Supabase Storage:", api)
@@ -1257,7 +1257,9 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("data-saved-graves", page)
         self.assertIn("navigator.geolocation.getCurrentPosition", script)
         self.assertIn("distanceKm", script)
-        self.assertIn("www.openstreetmap.org/export/embed.html", script)
+        self.assertIn("tile.openstreetmap.org", script)
+        self.assertIn("data-map-zoom-in", script)
+        self.assertNotIn("www.openstreetmap.org/export/embed.html", script)
         self.assertIn("www.google.com/maps/dir/", script)
         self.assertIn("navigator.share", script)
         self.assertIn("atminimas.saved-graves.v1", script)
@@ -1296,7 +1298,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         accessibility = (ROOT / "prieinamumas.html").read_text(encoding="utf-8")
         self.assertIn("atminimas.saved-memorials.v1", privacy)
         self.assertIn("atminimas.saved-graves.v1", privacy)
-        self.assertIn("Vieta, virtualios žvakės ir prisiminimai", privacy)
+        self.assertIn("Vietos duomenys, virtualios žvakės, prisiminimai", privacy)
         self.assertIn("Virtualios žvakės ir lankytojų prisiminimai", terms)
         self.assertIn("mažesnio judesio režimas", accessibility)
         self.assertIn("nuotraukų eiliškumą", accessibility)

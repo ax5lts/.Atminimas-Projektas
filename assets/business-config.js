@@ -5,7 +5,7 @@ window.ATMINIMAS_BUSINESS = Object.freeze({
   registrationCode: "Individualios veiklos pažymos Nr. 1466688",
   registry: "Valstybinės mokesčių inspekcijos Mokesčių mokėtojų registras",
   address: "Parko g. 55, Panevėžys, Lietuva",
-  email: "kaikajusk@gmail.com",
+  email: "atminimokodas@gmail.com",
   phone: "+370 645 69101",
   vatStatus: "Ne PVM mokėtojas",
   price: "50,00 EUR",

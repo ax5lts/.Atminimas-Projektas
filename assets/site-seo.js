@@ -50,6 +50,18 @@
     addJsonLd("atminimas-business-schema", payload);
   }
 
+  function addWebSiteSchema() {
+    if (page !== "index.html") return;
+    addJsonLd("atminimas-website-schema", {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Atminimas",
+      alternateName: "Atminimo kodas",
+      url: baseUrl,
+      inLanguage: "lt-LT"
+    });
+  }
+
   function addBreadcrumbSchema() {
     var breadcrumbs = document.querySelector(".breadcrumbs");
     if (!breadcrumbs) return;
@@ -72,6 +84,7 @@
     });
   }
 
+  addWebSiteSchema();
   addBusinessSchema();
   addBreadcrumbSchema();
 })();

@@ -144,7 +144,7 @@
   }
 
   function serviceName(value) {
-    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapo sutvarkymas" }[value] || value;
+    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapavietės sutvarkymas" }[value] || value;
   }
 
   function serviceQuoteStatus(value) {

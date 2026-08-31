@@ -48,10 +48,28 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         sitemap = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
         server = (ROOT / "serve.py").read_text(encoding="utf-8")
         self.assertIn("User-agent: *", robots)
-        self.assertIn("Sitemap:", robots)
+        self.assertIn("Sitemap: https://atminimokodas.lt/sitemap.xml", robots)
+        self.assertNotIn("github.io", robots)
         self.assertIn("<urlset", sitemap)
         self.assertIn('".txt"', server)
         self.assertIn('".xml"', server)
+
+    def test_homepage_uses_clear_search_titles(self):
+        title = "QR atminimo lentelė ir atminimo puslapis | Atminimas"
+        description = (
+            "Sukurkite artimojo atminimo puslapį su nuotraukomis ir gyvenimo istorija. "
+            "Patvari QR atminimo lentelė kapavietei leis jį lengvai pasiekti telefonu."
+        )
+        self.assertIn("<title>{0}</title>".format(title), self.home)
+        self.assertIn('property="og:title" content="{0}"'.format(title), self.home)
+        self.assertIn('name="twitter:title" content="{0}"'.format(title), self.home)
+        self.assertIn('name="description" content="{0}"'.format(description), self.home)
+        self.assertIn(
+            '<h1 class="landing-title" id="landing-title">'
+            "QR atminimo lentelė artimojo istorijai išsaugoti</h1>",
+            self.home,
+        )
+        self.assertIn('"@type": "WebSite"', self.seo)
 
     def test_local_business_schema_uses_real_config_only(self):
         self.assertIn('"LocalBusiness"', self.seo)

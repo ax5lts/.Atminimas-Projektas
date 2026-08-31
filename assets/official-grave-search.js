@@ -1,7 +1,9 @@
 (function () {
   var userLocation = null;
   var savedKey = "atminimas.saved-graves.v1";
-  var officialSearchTimeoutMs = 12000;
+  var officialSearchTimeoutMs = 22000;
+  var mapTileSize = 256;
+  var mapDefaultZoom = 16;
   var photoDialog = document.getElementById("grave-photo-dialog");
   var photoForm = document.getElementById("grave-photo-form");
   var photoContext = null;
@@ -123,14 +125,97 @@
     if (longitude != null && longitude !== "") params.set("graveLng", longitude);
     return "kapu-prieziura.html?" + params.toString() + "#uzklausa";
   }
-  function mapEmbed(row) {
+  function mapOpenStreetMapUrl(row, zoom) {
     var latitude = number(row.latitude);
     var longitude = number(row.longitude);
     if (latitude === null || longitude === null) return "";
-    var delta = 0.0032;
-    var bbox = [longitude - delta, latitude - delta, longitude + delta, latitude + delta].join(",");
-    return "https://www.openstreetmap.org/export/embed.html?bbox=" + encodeURIComponent(bbox) +
-      "&layer=mapnik&marker=" + encodeURIComponent(latitude + "," + longitude);
+    var level = Math.min(19, Math.max(3, Math.round(Number(zoom) || mapDefaultZoom)));
+    return "https://www.openstreetmap.org/?mlat=" + encodeURIComponent(latitude) +
+      "&mlon=" + encodeURIComponent(longitude) + "#map=" + level + "/" + latitude + "/" + longitude;
+  }
+  function mapPreview(row, rawName) {
+    var latitude = number(row.latitude);
+    var longitude = number(row.longitude);
+    if (latitude === null || longitude === null) return "";
+    var externalUrl = mapOpenStreetMapUrl(row, mapDefaultZoom);
+    return "<div class='grave-map-preview' data-grave-map data-map-lat='" + html(latitude) + "' data-map-lng='" + html(longitude) + "' data-map-zoom='" + mapDefaultZoom + "'>" +
+      "<div class='grave-map-viewport' data-map-viewport role='img' aria-label='Žemėlapis: " + html(rawName || "kapavietė") + "'><div class='grave-map-tiles' data-map-tiles aria-hidden='true'></div><span class='grave-map-marker' data-map-marker aria-hidden='true'></span></div>" +
+      "<div class='grave-map-controls' aria-label='Žemėlapio mastelis'><button class='grave-map-control' type='button' data-map-zoom-in aria-label='Priartinti žemėlapį'>+</button><button class='grave-map-control' type='button' data-map-zoom-out aria-label='Atitolinti žemėlapį'>−</button></div>" +
+      "<p class='grave-map-status' data-map-status hidden role='status'>Nepavyko įkelti žemėlapio plytelių. <a target='_blank' rel='noopener' href='" + html(externalUrl) + "'>Atidaryti OpenStreetMap</a></p>" +
+      "<small>Žemėlapis: © <a target='_blank' rel='noopener' href='https://www.openstreetmap.org/copyright'>OpenStreetMap bendruomenė</a></small></div>";
+  }
+  function mapPixelPoint(latitude, longitude, zoom) {
+    var world = Math.pow(2, zoom);
+    var safeLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude));
+    var radians = safeLatitude * Math.PI / 180;
+    return {
+      x: (longitude + 180) / 360 * world * mapTileSize,
+      y: (1 - Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) / 2 * world * mapTileSize
+    };
+  }
+  function wrappedTileX(value, world) {
+    return ((value % world) + world) % world;
+  }
+  function renderMap(block) {
+    var viewport = block.querySelector("[data-map-viewport]");
+    var tiles = block.querySelector("[data-map-tiles]");
+    var marker = block.querySelector("[data-map-marker]");
+    if (!viewport || !tiles || !marker) return;
+    var latitude = number(block.dataset.mapLat);
+    var longitude = number(block.dataset.mapLng);
+    if (latitude === null || longitude === null) return;
+    var zoom = Math.min(19, Math.max(3, Math.round(Number(block.dataset.mapZoom) || mapDefaultZoom)));
+    block.dataset.mapZoom = zoom;
+    var width = viewport.clientWidth || 320;
+    var height = viewport.clientHeight || 220;
+    var center = mapPixelPoint(latitude, longitude, zoom);
+    var left = center.x - width / 2;
+    var top = center.y - height / 2;
+    var worldTiles = Math.pow(2, zoom);
+    var firstX = Math.floor(left / mapTileSize) - 1;
+    var lastX = Math.floor((left + width) / mapTileSize) + 1;
+    var firstY = Math.floor(top / mapTileSize) - 1;
+    var lastY = Math.floor((top + height) / mapTileSize) + 1;
+    var tileCount = 0;
+    var loaded = 0;
+    var failed = 0;
+    var status = block.querySelector("[data-map-status]");
+    var statusLink = status && status.querySelector("a");
+    var renderId = String(Number(block.dataset.mapRenderId || 0) + 1);
+    block.dataset.mapRenderId = renderId;
+    if (status) status.hidden = true;
+    if (statusLink) statusLink.href = mapOpenStreetMapUrl({ latitude: latitude, longitude: longitude }, zoom);
+    tiles.innerHTML = "";
+    tiles.style.width = width + "px";
+    tiles.style.height = height + "px";
+    function finishTile(success) {
+      if (block.dataset.mapRenderId !== renderId) return;
+      if (success) loaded += 1;
+      else failed += 1;
+      if (status && tileCount && loaded + failed >= tileCount && !loaded) status.hidden = false;
+    }
+    for (var x = firstX; x <= lastX; x += 1) {
+      for (var y = firstY; y <= lastY; y += 1) {
+        if (y < 0 || y >= worldTiles) continue;
+        tileCount += 1;
+        var image = document.createElement("img");
+        image.alt = "";
+        image.setAttribute("aria-hidden", "true");
+        image.width = mapTileSize;
+        image.height = mapTileSize;
+        image.loading = "eager";
+        image.decoding = "async";
+        image.style.left = Math.round(x * mapTileSize - left) + "px";
+        image.style.top = Math.round(y * mapTileSize - top) + "px";
+        image.addEventListener("load", function () { finishTile(true); }, { once: true });
+        image.addEventListener("error", function () { finishTile(false); }, { once: true });
+        image.src = "https://tile.openstreetmap.org/" + zoom + "/" + wrappedTileX(x, worldTiles) + "/" + y + ".png";
+        tiles.appendChild(image);
+      }
+    }
+    marker.style.left = Math.round(center.x - left) + "px";
+    marker.style.top = Math.round(center.y - top) + "px";
+    if (status && !tileCount) status.hidden = false;
   }
   function savedGraves() {
     try {
@@ -171,7 +256,7 @@
       "<figcaption data-photo-caption hidden><span>" + (known ? "Patikrinta kapavietės nuotrauka." : "Naudotojo pateikta ir administratoriaus patvirtinta nuotrauka.") + "</span>" +
       "<button class='button button--ghost' type='button' data-add-grave-photo>Pateikti naujesnę nuotrauką</button></figcaption>" +
       "<div class='grave-photo__empty' data-photo-empty hidden><strong>Kapavietės nuotraukos dar neturime</strong>" +
-      "<span>Galite pateikti tikrą kapo nuotrauką. Viešai ją parodysime tik patikrinę.</span>" +
+      "<span>Galite pateikti tikrą kapavietės nuotrauką. Viešai ją parodysime tik patikrinę.</span>" +
       "<button class='button button--ghost' type='button' data-add-grave-photo>Pridėti kapavietės nuotrauką</button></div>" +
       "</figure>";
   }
@@ -188,7 +273,7 @@
     var map = mapLocation(row);
     var sourceUrl = row.source_url || "";
     var distance = distanceText(row);
-    var embeddedMap = rich ? mapEmbed(row) : "";
+    var mapPreviewHtml = rich ? mapPreview(row, rawName) : "";
     var saved = isSaved(row);
     var actionData = " data-grave-name='" + html(rawName) + "' data-grave-place='" + html(rawPlace) +
       "' data-grave-cemetery='" + html(row.cemetery || "") + "' data-grave-municipality='" + html(row.municipality || "") +
@@ -208,7 +293,7 @@
       (coordinates ? "<p><span>Koordinatės</span><strong>" + html(coordinates) + "</strong></p>" : "") +
       (grave ? "<p class='grave-list-item__location'>" + grave + "</p>" : "") +
       photoBlock(row, rawName, rich) +
-      (rich && embeddedMap ? "<div class='grave-map-preview'><iframe title='Kapavietės vieta žemėlapyje' loading='lazy' referrerpolicy='no-referrer' src='" + html(embeddedMap) + "'></iframe><small>Žemėlapis: © OpenStreetMap bendruomenė</small></div>" : "") +
+      mapPreviewHtml +
       (map || sourceUrl ? "<div class='grave-result-actions'" + actionData + ">" +
         (map ? "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą<span class='visually-hidden'> naujame skirtuke</span></a>" :
           "<a class='button' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Atidaryti kapavietės įrašą<span class='visually-hidden'> naujame skirtuke</span></a>") +
@@ -217,7 +302,7 @@
         (map && sourceUrl ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Patikrinti šaltinio įrašą<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
-        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti priežiūrą</a>" : "") +
+        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti kapavietės priežiūrą</a>" : "") +
         "</div></details>" +
         "</div>" : "") +
       "</div></details>";
@@ -397,7 +482,7 @@
         var serviceUrl = careUrl(item.name, item.place, item.latitude, item.longitude, item.cemetery, item.municipality);
         return "<article data-saved-grave-key='" + html(item.key) + "'><div><strong>" + html(item.name) + "</strong><span>" +
           html(item.place || "Vieta nenurodyta") + "</span></div><div class='actions'><a class='button button--ghost' target='_blank' rel='noopener' href='" +
-          html(url) + "'>Atidaryti</a><a class='button button--ghost' href='" + html(serviceUrl) + "'>Užsakyti priežiūrą</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
+          html(url) + "'>Atidaryti</a><a class='button button--ghost' href='" + html(serviceUrl) + "'>Užsakyti kapavietės priežiūrą</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
       }).join("");
     }
 
@@ -445,11 +530,31 @@
       });
     }
 
+    function wireMapBlocks() {
+      results.querySelectorAll("[data-grave-map]").forEach(function (block) {
+        var details = block.closest("details");
+        var zoomIn = block.querySelector("[data-map-zoom-in]");
+        var zoomOut = block.querySelector("[data-map-zoom-out]");
+        function changeZoom(delta) {
+          var current = Number(block.dataset.mapZoom) || mapDefaultZoom;
+          block.dataset.mapZoom = Math.min(19, Math.max(3, current + delta));
+          renderMap(block);
+        }
+        if (details) {
+          details.addEventListener("toggle", function () { if (details.open) renderMap(block); });
+        }
+        if (zoomIn) zoomIn.addEventListener("click", function () { changeZoom(1); });
+        if (zoomOut) zoomOut.addEventListener("click", function () { changeZoom(-1); });
+        if (!details || details.open) renderMap(block);
+      });
+    }
+
     function renderRows(rows) {
       lastRows = rows;
       results.innerHTML = rows.map(function (row) { return render(row, rich); }).join("") ||
         "<div class='grave-empty'><h3>Atitikmenų nerasta</h3><p>Patikrinkite rašybą arba įveskite tik dalį pavardės.</p></div>";
       wirePhotoBlocks();
+      wireMapBlocks();
     }
 
     function renderSearchHelp() {

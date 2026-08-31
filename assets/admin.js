@@ -696,7 +696,7 @@
   }
 
   function serviceName(value) {
-    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapo sutvarkymas" }[value] || value;
+    return { zvakes: "Žvakių uždegimas", geles: "Gėlių padėjimas", kapu_tvarkymas: "Kapavietės sutvarkymas" }[value] || value;
   }
 
   function cents(value) {
@@ -768,7 +768,7 @@
       var details = [
         row.geliu_pageidavimai ? "Gėlės: " + row.geliu_pageidavimai : "",
         row.zvakiu_pageidavimai ? "Žvakės: " + row.zvakiu_pageidavimai : "",
-        row.tvarkymo_pageidavimai ? "Tvarkymas: " + row.tvarkymo_pageidavimai : "",
+        row.tvarkymo_pageidavimai ? "Priežiūros darbai: " + row.tvarkymo_pageidavimai : "",
         row.papildoma_informacija ? "Papildomai: " + row.papildoma_informacija : ""
       ].filter(Boolean).join("\n");
       var quoteInfo = "Būsena: " + quoteStatusName(row.quote_status) +
