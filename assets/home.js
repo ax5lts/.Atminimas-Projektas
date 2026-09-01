@@ -46,6 +46,7 @@
   var serviceStepProgress = document.getElementById("service-step-progress");
   var savedGraveWrap = document.getElementById("service-saved-grave-wrap");
   var savedGraveSelect = document.getElementById("service-saved-grave");
+  var productCatalogVisual = form.querySelector("[data-service-product-catalog]");
   var currentServiceStep = 1;
   var draftKey = "atminimas.service-request.draft.v1";
   var savedGravesKey = "atminimas.saved-graves.v1";
@@ -56,6 +57,9 @@
   var estimateRequestNumber = 0;
   var isFillingLocation = false;
   var optionLabels = {
+    candle_style_clear: "Skaidraus stiklo žvakė",
+    candle_style_amber: "Gintarinio stiklo žvakė",
+    candle_style_long_burn: "Ilgai deganti žvakė",
     candle_1: "1 žvakė",
     candle_2: "2 žvakės",
     candle_5: "5 žvakės",
@@ -65,6 +69,9 @@
     flower_5: "5 gėlės",
     flower_bouquet: "Puokštė",
     flower_other: "Kitas gėlių kiekis",
+    flower_style_white: "Baltos chrizantemos",
+    flower_style_burgundy: "Bordo rožės",
+    flower_style_seasonal: "Sezoninė puokštė",
     cleaning_full: "Pilnas kapavietės sutvarkymas",
     cleaning_grooves: "Griovelių išvalymas",
     cleaning_surface: "Kapavietės viršaus nušlavimas",
@@ -223,6 +230,9 @@
   function updateServiceFields() {
     var selected = selectedServices();
     details.hidden = selected.length === 0 || currentServiceStep === 1;
+    if (productCatalogVisual) {
+      productCatalogVisual.hidden = selected.indexOf("geles") === -1 && selected.indexOf("zvakes") === -1;
+    }
     if (!selected.length && currentServiceStep > 1) activateServiceStep(1, false);
     form.querySelectorAll("[data-service-details]").forEach(function (section) {
       var enabled = selected.indexOf(section.dataset.serviceDetails) !== -1;
@@ -331,10 +341,22 @@
         longitude: (params.get("graveLng") || "").trim(),
         source: "registry"
       });
-      var care = form.querySelector("input[name='services'][value='kapu_tvarkymas']");
-      if (care) care.checked = true;
+      var hasRequestedService = params.has("service");
+      var requestedService = (params.get("service") || "").trim();
+      var selectedService = allowedServices.indexOf(requestedService) !== -1
+        ? requestedService
+        : (hasRequestedService ? "" : "kapu_tvarkymas");
+      var chosenService = selectedService
+        ? form.querySelector("input[name='services'][value='" + selectedService + "']")
+        : null;
+      serviceInputs.forEach(function (input) {
+        input.checked = Boolean(chosenService && input === chosenService);
+      });
       updateServiceFields();
-      activateServiceStep(2, false);
+      var locationReady = ["deceased_name", "cemetery_name", "municipality", "grave_location"].every(function (fieldName) {
+        return String(form.elements[fieldName].value || "").trim().length > 1;
+      });
+      activateServiceStep(chosenService ? (locationReady ? 3 : 2) : 1, false);
       window.setTimeout(function () {
         form.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
@@ -385,6 +407,14 @@
   function optionDetails(keys, freeText, noun) {
     var lines = [];
     if (keys.length) lines.push(noun + ": " + keys.map(function (key) { return optionLabels[key] || key; }).join(", "));
+    if (freeText) lines.push("Pageidavimai: " + freeText);
+    return lines.join("\n");
+  }
+
+  function productDetails(styleKeys, packageKeys, freeText) {
+    var lines = [];
+    if (styleKeys.length) lines.push("Rūšis: " + styleKeys.map(function (key) { return optionLabels[key] || key; }).join(", "));
+    if (packageKeys.length) lines.push("Kiekis: " + packageKeys.map(function (key) { return optionLabels[key] || key; }).join(", "));
     if (freeText) lines.push("Pageidavimai: " + freeText);
     return lines.join("\n");
   }
@@ -461,6 +491,8 @@
     var values = Object.fromEntries(new FormData(form).entries());
     var candleKeys = selectedNamedValues("candle_package");
     var flowerKeys = selectedNamedValues("flower_package");
+    var candleStyleKeys = selectedNamedValues("candle_style");
+    var flowerStyleKeys = selectedNamedValues("flower_style");
     var cleaningKeys = selectedNamedValues("cleaning_tasks");
     var payload = {
       action: "create",
@@ -478,8 +510,8 @@
       candle_keys: candleKeys,
       flower_keys: flowerKeys,
       cleaning_keys: cleaningKeys,
-      flower_details: services.indexOf("geles") !== -1 ? optionDetails(flowerKeys, (values.flowers_details || "").trim(), "Pasirinkimas") : null,
-      candle_details: services.indexOf("zvakes") !== -1 ? optionDetails(candleKeys, (values.candles_details || "").trim(), "Pasirinkimas") : null,
+      flower_details: services.indexOf("geles") !== -1 ? productDetails(flowerStyleKeys, flowerKeys, (values.flowers_details || "").trim()) : null,
+      candle_details: services.indexOf("zvakes") !== -1 ? productDetails(candleStyleKeys, candleKeys, (values.candles_details || "").trim()) : null,
       cleaning_details: services.indexOf("kapu_tvarkymas") !== -1 ? optionDetails(cleaningKeys, (values.cleaning_details || "").trim(), "Priežiūros darbai") : null,
       extra_information: (values.extra_information || "").trim() || null
     };

@@ -1,9 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /admin.html
-Disallow: /apmokejimas.html
-Disallow: /redaktorius.html
-Disallow: /slaptazodis.html
-Disallow: /vartotojas.html
 
 Sitemap: https://atminimokodas.lt/sitemap.xml

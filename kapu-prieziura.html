@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="Atminimas QR atminimo lentelė">
 <meta name="twitter:card" content="summary_large_image">
 <title>Kapavietės priežiūros užklausa – Atminimas</title>
-<link rel="stylesheet" href="css/styles.css?v=20260828-1">
+<link rel="stylesheet" href="css/styles.css?v=20260901-1">
 </head>
 <body class="service-page" data-loading>
 <div class="site-shell">
@@ -109,9 +109,18 @@
           </section>
 
           <section class="service-step" data-service-step="3" aria-labelledby="service-step-3-title" hidden>
-            <header class="service-step__header"><span>3 žingsnis iš 4</span><h3 id="service-step-3-title">Ko konkrečiai reikia?</h3><p>Rodomi tik jūsų pasirinktoms paslaugoms reikalingi laukai.</p></header>
+            <header class="service-step__header"><span>3 žingsnis iš 4</span><h3 id="service-step-3-title">Ko konkrečiai reikia?</h3><p>Pasirinkite gėlių ar žvakių rūšį, kiekį ir kitus pageidaujamus priežiūros darbus.</p></header>
+            <figure class="service-catalog-visual" data-service-product-catalog hidden>
+              <img src="assets/kapu-prieziuros-geles-zvakes.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="Baltų chrizantemų, bordo rožių ir stiklinių atminimo žvakių kompozicija prie kapavietės">
+              <figcaption><span class="eyebrow">Gėlių ir žvakių katalogas</span><strong>Pasirinkite taip, kaip norėtumėte palikti patys</strong><small>Nuotrauka iliustracinė. Prieš vykdami patvirtinsime gėlių šviežumą, atspalvį ir žvakės tipą.</small></figcaption>
+            </figure>
             <div class="service-extra" data-service-details="geles" hidden>
-              <fieldset class="service-variant-group"><legend>Pasirinkite gėlių variantą</legend><div class="service-variant-grid">
+              <fieldset class="service-variant-group"><legend>1. Pasirinkite gėlių rūšį</legend><div class="service-product-grid">
+                <label class="service-product" data-product-tone="ivory"><input type="radio" name="flower_style" value="flower_style_white" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Baltos chrizantemos</strong><small>Šviesi ir ilgaamžė klasika.</small></span></label>
+                <label class="service-product" data-product-tone="burgundy"><input type="radio" name="flower_style" value="flower_style_burgundy" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Bordo rožės</strong><small>Santūri, išraiškinga kompozicija.</small></span></label>
+                <label class="service-product" data-product-tone="seasonal"><input type="radio" name="flower_style" value="flower_style_seasonal" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Sezoninė puokštė</strong><small>Šviežiausi tos savaitės žiedai.</small></span></label>
+              </div></fieldset>
+              <fieldset class="service-variant-group"><legend>2. Pasirinkite kiekį arba komplektą</legend><div class="service-variant-grid">
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_1" data-service-required><span><strong>1 gėlė</strong><small data-service-price="flower_1">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_3" data-service-required><span><strong>3 gėlės</strong><small data-service-price="flower_3">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="flower_package" value="flower_5" data-service-required><span><strong>5 gėlės</strong><small data-service-price="flower_5">–</small></span></label>
@@ -121,7 +130,12 @@
               <label>Gėlių rūšis ir kiti pageidavimai <span class="optional">(nebūtina)</span><textarea name="flowers_details" rows="3" maxlength="900" placeholder="Gėlių rūšis, spalva, puokštės stilius ar kiti pageidavimai"></textarea></label>
             </div>
             <div class="service-extra" data-service-details="zvakes" hidden>
-              <fieldset class="service-variant-group"><legend>Pasirinkite žvakių kiekį</legend><div class="service-variant-grid">
+              <fieldset class="service-variant-group"><legend>1. Pasirinkite žvakės tipą</legend><div class="service-product-grid">
+                <label class="service-product" data-product-tone="clear"><input type="radio" name="candle_style" value="candle_style_clear" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Skaidraus stiklo</strong><small>Klasikinė balta atminimo žvakė.</small></span></label>
+                <label class="service-product" data-product-tone="amber"><input type="radio" name="candle_style" value="candle_style_amber" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Gintarinio stiklo</strong><small>Šilta, jauki šviesa.</small></span></label>
+                <label class="service-product" data-product-tone="forest"><input type="radio" name="candle_style" value="candle_style_long_burn" data-service-required><span class="service-product__swatch" aria-hidden="true"></span><span class="service-product__body"><strong>Ilgai deganti</strong><small>Ilgesniam degimui lauke.</small></span></label>
+              </div></fieldset>
+              <fieldset class="service-variant-group"><legend>2. Pasirinkite žvakių kiekį</legend><div class="service-variant-grid">
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_1" data-service-required><span><strong>1 žvakė</strong><small data-service-price="candle_1">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_2" data-service-required><span><strong>2 žvakės</strong><small data-service-price="candle_2">–</small></span></label>
                 <label class="service-variant"><input type="radio" name="candle_package" value="candle_5" data-service-required><span><strong>5 žvakės</strong><small data-service-price="candle_5">–</small></span></label>
@@ -174,7 +188,7 @@
 <script src="assets/business-details.js?v=20260826-1"></script>
 <script src="assets/auth.js?v=20260724-3"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
-<script src="assets/home.js?v=20260825-2"></script>
+<script src="assets/home.js?v=20260901-1"></script>
 <script src="assets/site-ui.js?v=20260825-1"></script>
 </body>
 </html>

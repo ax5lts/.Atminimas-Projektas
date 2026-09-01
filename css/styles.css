@@ -5921,6 +5921,56 @@ html {
   background: var(--accent-soft);
 }
 
+.service-catalog-visual {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(250px, 0.75fr);
+  min-height: 280px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #f1ede3;
+}
+
+.service-catalog-visual[hidden] {
+  display: none;
+}
+
+.service-catalog-visual img {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  object-fit: cover;
+}
+
+.service-catalog-visual figcaption {
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  padding: clamp(22px, 4vw, 38px);
+  background:
+    radial-gradient(circle at 95% 5%, rgba(164, 212, 197, 0.35), transparent 38%),
+    #fffdf8;
+}
+
+.service-catalog-visual figcaption > * {
+  margin: 0;
+}
+
+.service-catalog-visual figcaption strong {
+  color: var(--ink);
+  font-family: var(--display-font);
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.service-catalog-visual figcaption small {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .service-variant-group {
   min-width: 0;
   margin: 0;
@@ -5933,6 +5983,108 @@ html {
   color: #35322d;
   font-size: 0.94rem;
   font-weight: 700;
+}
+
+.service-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.service-details .service-product {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  min-width: 0;
+  min-height: 144px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.service-details .service-product:hover {
+  transform: translateY(-2px);
+  border-color: rgba(142, 109, 50, 0.55);
+}
+
+.service-details .service-product:has(input:checked) {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(142, 109, 50, 0.13), 0 12px 28px rgba(59, 46, 27, 0.08);
+}
+
+.service-details .service-product:has(input:focus-visible) {
+  outline: 3px solid rgba(26, 109, 98, 0.24);
+  outline-offset: 3px;
+}
+
+.service-product input {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.service-product__swatch {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(49, 39, 25, 0.14);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.55);
+}
+
+.service-product[data-product-tone="ivory"] .service-product__swatch {
+  background: radial-gradient(circle at 35% 35%, #fffef7 0 18%, #e7e0ca 48%, #f8f5e9 75%);
+}
+
+.service-product[data-product-tone="burgundy"] .service-product__swatch {
+  background: radial-gradient(circle at 35% 35%, #b54455, #6e172a 58%, #3f111d);
+}
+
+.service-product[data-product-tone="seasonal"] .service-product__swatch {
+  background: conic-gradient(from 35deg, #efe0a9, #9c5362, #8d9c70, #e8c6ae, #efe0a9);
+}
+
+.service-product[data-product-tone="clear"] .service-product__swatch {
+  background: linear-gradient(135deg, #ffffff 8%, #d8ded8 48%, #fff8df 52%, #f3e6b8 82%);
+}
+
+.service-product[data-product-tone="amber"] .service-product__swatch {
+  background: radial-gradient(circle at 38% 34%, #ffe6a3, #c78122 55%, #80511d);
+}
+
+.service-product[data-product-tone="forest"] .service-product__swatch {
+  background: radial-gradient(circle at 38% 34%, #739075, #315c50 58%, #173b36);
+}
+
+.service-product__body {
+  align-self: end;
+  padding-right: 18px;
+}
+
+.service-product__body strong,
+.service-product__body small {
+  display: block;
+}
+
+.service-product__body strong {
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.service-product__body small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .service-variant-grid {
@@ -6097,6 +6249,20 @@ html {
   .service-step-actions .button,
   .service-submit .button {
     width: 100%;
+  }
+
+  .service-catalog-visual,
+  .service-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-catalog-visual img {
+    min-height: 220px;
+    max-height: 320px;
+  }
+
+  .service-details .service-product {
+    min-height: 118px;
   }
 }
 
@@ -8397,6 +8563,33 @@ img[data-story-photo-preview],
   border-color: var(--teal-bright);
   color: var(--teal-dark);
   background: rgba(164, 212, 197, 0.34);
+}
+
+.grave-care-shortcuts {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid rgba(142, 109, 50, 0.18);
+  border-radius: 13px;
+  background: rgba(246, 239, 221, 0.58);
+}
+
+.grave-care-shortcuts > span {
+  flex-basis: 100%;
+  color: var(--accent-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grave-care-shortcuts .button {
+  min-height: 40px;
+  padding: 9px 13px;
 }
 
 .saved-graves {

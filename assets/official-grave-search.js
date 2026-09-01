@@ -115,7 +115,7 @@
       decoded.close();
     }
   }
-  function careUrl(name, place, latitude, longitude, cemetery, municipality) {
+  function careUrl(name, place, latitude, longitude, cemetery, municipality, service) {
     var params = new URLSearchParams();
     if (name) params.set("graveName", name);
     if (place) params.set("gravePlace", place);
@@ -123,7 +123,20 @@
     if (municipality) params.set("graveMunicipality", municipality);
     if (latitude != null && latitude !== "") params.set("graveLat", latitude);
     if (longitude != null && longitude !== "") params.set("graveLng", longitude);
+    if (["zvakes", "geles", "kapu_tvarkymas"].indexOf(service) !== -1) params.set("service", service);
     return "kapu-prieziura.html?" + params.toString() + "#uzklausa";
+  }
+  function careShortcuts(name, place, latitude, longitude, cemetery, municipality) {
+    var choices = [
+      ["geles", "Padėti gėlių"],
+      ["zvakes", "Uždegti žvakę"],
+      ["kapu_tvarkymas", "Sutvarkyti"]
+    ];
+    return "<div class='grave-care-shortcuts' role='group' aria-label='Kapavietės priežiūros pasirinkimai'>" +
+      "<span>Pasirūpinti šia kapaviete</span>" + choices.map(function (choice) {
+        var accessibleName = name ? "<span class='visually-hidden'> – " + html(name) + "</span>" : "";
+        return "<a class='button button--ghost' href='" + html(careUrl(name, place, latitude, longitude, cemetery, municipality, choice[0])) + "'>" + choice[1] + accessibleName + "</a>";
+      }).join("") + "</div>";
   }
   function mapOpenStreetMapUrl(row, zoom) {
     var latitude = number(row.latitude);
@@ -302,7 +315,7 @@
         (map && sourceUrl ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Patikrinti šaltinio įrašą<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
-        "<a class='button button--ghost' href='" + html(careUrl(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality)) + "'>Užsakyti kapavietės priežiūrą</a>" : "") +
+        careShortcuts(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality) : "") +
         "</div></details>" +
         "</div>" : "") +
       "</div></details>";
@@ -479,10 +492,10 @@
       savedList.innerHTML = saved.map(function (item) {
         var location = item.latitude && item.longitude ? item.latitude + "," + item.longitude : item.place;
         var url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(location || item.name);
-        var serviceUrl = careUrl(item.name, item.place, item.latitude, item.longitude, item.cemetery, item.municipality);
         return "<article data-saved-grave-key='" + html(item.key) + "'><div><strong>" + html(item.name) + "</strong><span>" +
           html(item.place || "Vieta nenurodyta") + "</span></div><div class='actions'><a class='button button--ghost' target='_blank' rel='noopener' href='" +
-          html(url) + "'>Atidaryti</a><a class='button button--ghost' href='" + html(serviceUrl) + "'>Užsakyti kapavietės priežiūrą</a><button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
+          html(url) + "'>Atidaryti</a>" + careShortcuts(item.name, item.place, item.latitude, item.longitude, item.cemetery, item.municipality) +
+          "<button class='button button--ghost' type='button' data-remove-saved-grave>Pašalinti</button></div></article>";
       }).join("");
     }
 

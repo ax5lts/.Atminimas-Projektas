@@ -458,9 +458,20 @@ class AtminimasSmokeTests(unittest.TestCase):
         for value in ("candle_1", "candle_2", "candle_5", "flower_1", "flower_bouquet"):
             self.assertIn('value="{0}"'.format(value), html)
             self.assertIn("{0}: null".format(value), prices)
+        for name, values in (
+            ("flower_style", ("flower_style_white", "flower_style_burgundy", "flower_style_seasonal")),
+            ("candle_style", ("candle_style_clear", "candle_style_amber", "candle_style_long_burn")),
+        ):
+            for value in values:
+                self.assertIn('name="{0}" value="{1}" data-service-required'.format(name, value), html)
+                self.assertIn('{0}: "'.format(value), home)
         for value in ("cleaning_full", "cleaning_grooves", "cleaning_surface", "cleaning_monument", "cleaning_leaves"):
             self.assertIn('name="cleaning_tasks" value="{0}"'.format(value), html)
             self.assertIn("{0}: null".format(value), prices)
+        self.assertIn('src="assets/kapu-prieziuros-geles-zvakes.webp"', html)
+        self.assertIn("function productDetails(styleKeys, packageKeys, freeText)", home)
+        self.assertIn('selectedNamedValues("candle_style")', home)
+        self.assertIn('selectedNamedValues("flower_style")', home)
         self.assertIn('id="service-estimate-price"', html)
         self.assertIn('selectedNamedValues("cleaning_tasks")', home)
         self.assertIn('functionUrl("service-flow")', home)
@@ -1242,7 +1253,13 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("activateServiceStep", home_js)
         self.assertIn("setupSavedGraves", home_js)
         self.assertIn("graveName", grave_js)
-        self.assertIn("Užsakyti kapavietės priežiūrą", grave_js)
+        self.assertIn('params.set("service", service)', grave_js)
+        for action in ("Padėti gėlių", "Uždegti žvakę", "Sutvarkyti"):
+            self.assertIn(action, grave_js)
+        self.assertIn("serviceInputs.forEach(function (input)", home_js)
+        self.assertIn('(hasRequestedService ? "" : "kapu_tvarkymas")', home_js)
+        self.assertIn("class='visually-hidden'> – ", grave_js)
+        self.assertIn("activateServiceStep(chosenService ? (locationReady ? 3 : 2) : 1", home_js)
 
         self.assertNotIn("Supabase Auth klaida", auth)
         self.assertNotIn("Supabase Storage:", api)
