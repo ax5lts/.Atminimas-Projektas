@@ -2,6 +2,7 @@ import functools
 import json
 import os
 import re
+import struct
 import sys
 import threading
 import unittest
@@ -831,16 +832,55 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("buildStoryGallery", public_page)
         self.assertIn("builder-photo-caption", public_page)
 
-    def test_svg_brand_and_favicon_are_used_everywhere(self):
-        icon = ROOT / "assets" / "atminimas-mark.svg"
-        image = icon.read_text(encoding="utf-8")
-        self.assertIn('<svg xmlns="http://www.w3.org/2000/svg"', image)
-        self.assertIn('viewBox="0 0 512 512"', image)
-        self.assertNotIn("candle", image.lower())
+    def test_brand_and_favicon_are_used_everywhere(self):
+        icon = ROOT / "assets" / "atminimas-icon.png"
+        icon_bytes = icon.read_bytes()
+        self.assertEqual(icon_bytes[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", icon_bytes[16:24]), (512, 512))
+        self.assertTrue((ROOT / "assets" / "apple-touch-icon.png").is_file())
+        self.assertTrue((ROOT / "favicon.ico").is_file())
+        deployment = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        self.assertIn("cp -- *.html favicon.ico robots.txt sitemap.xml _site/", deployment)
         for page in ROOT.glob("*.html"):
             html = page.read_text(encoding="utf-8")
-            self.assertIn('rel="icon" href="assets/atminimas-mark.svg" type="image/svg+xml"', html, page.name)
+            self.assertIn(
+                'rel="icon" href="assets/atminimas-icon.png" type="image/png" sizes="512x512"',
+                html,
+                page.name,
+            )
+            self.assertIn(
+                'rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180"',
+                html,
+                page.name,
+            )
+            self.assertNotIn("assets/atminimas-mark.svg", html, page.name)
             self.assertNotIn('<span class="brand__mark">A</span>', html, page.name)
+
+    def test_social_cards_use_the_campaign_preview(self):
+        preview = ROOT / "assets" / "atminimo-kodas-preview.jpg"
+        self.assertTrue(preview.is_file())
+        self.assertEqual(preview.read_bytes()[:2], b"\xff\xd8")
+        preview_url = "https://atminimokodas.lt/assets/atminimo-kodas-preview.jpg"
+        pages_with_cards = 0
+        for page in ROOT.glob("*.html"):
+            html = page.read_text(encoding="utf-8")
+            if 'property="og:image"' not in html:
+                continue
+            pages_with_cards += 1
+            self.assertIn(f'property="og:image" content="{preview_url}"', html, page.name)
+            self.assertIn('property="og:image:type" content="image/jpeg"', html, page.name)
+            self.assertIn('property="og:image:width" content="1280"', html, page.name)
+            self.assertIn('property="og:image:height" content="670"', html, page.name)
+            self.assertIn(f'name="twitter:image" content="{preview_url}"', html, page.name)
+            self.assertIn(
+                'name="twitter:image:alt" content="Atminimo kodas – prisiminimai, kurie išlieka"',
+                html,
+                page.name,
+            )
+        self.assertEqual(pages_with_cards, 11)
+        schema = (ROOT / "assets" / "site-seo.js").read_text(encoding="utf-8")
+        self.assertIn('logo: new URL("assets/atminimas-icon.png", baseUrl).href', schema)
+        self.assertIn('image: new URL("assets/atminimo-kodas-preview.jpg", baseUrl).href', schema)
 
     def test_public_memorial_has_home_link_and_frame(self):
         html = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
