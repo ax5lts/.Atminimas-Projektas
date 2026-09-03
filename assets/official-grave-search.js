@@ -15,8 +15,20 @@
     });
   }
   function shownDate(date, year, text) { return date || year || text || "?"; }
+  function number(value) {
+    if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) return null;
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function mapCoordinates(row) {
+    var latitude = number(row.latitude);
+    var longitude = number(row.longitude);
+    if (latitude === null || longitude === null || (latitude === 0 && longitude === 0) || latitude < -85.05112878 || latitude > 85.05112878 || longitude < -180 || longitude > 180) return null;
+    return { latitude: latitude, longitude: longitude };
+  }
   function mapLocation(row) {
-    if (row.latitude != null && row.longitude != null) return row.latitude + "," + row.longitude;
+    var point = mapCoordinates(row);
+    if (point) return point.latitude + "," + point.longitude;
     return [row.cemetery, row.municipality].filter(Boolean).join(", ");
   }
   function mapUrl(row) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(mapLocation(row)); }
@@ -26,14 +38,11 @@
     if (userLocation) url += "&origin=" + encodeURIComponent(userLocation.latitude + "," + userLocation.longitude);
     return url;
   }
-  function number(value) {
-    var parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
   function distanceKm(row) {
-    var latitude = number(row.latitude);
-    var longitude = number(row.longitude);
-    if (!userLocation || latitude === null || longitude === null) return null;
+    var point = mapCoordinates(row);
+    if (!userLocation || !point) return null;
+    var latitude = point.latitude;
+    var longitude = point.longitude;
     var radius = 6371;
     var toRadians = function (value) { return value * Math.PI / 180; };
     var dLat = toRadians(latitude - userLocation.latitude);
@@ -139,20 +148,25 @@
       }).join("") + "</div>";
   }
   function mapOpenStreetMapUrl(row, zoom) {
-    var latitude = number(row.latitude);
-    var longitude = number(row.longitude);
-    if (latitude === null || longitude === null) return "";
+    var point = mapCoordinates(row);
+    if (!point) return "";
+    var latitude = point.latitude;
+    var longitude = point.longitude;
     var level = Math.min(19, Math.max(3, Math.round(Number(zoom) || mapDefaultZoom)));
     return "https://www.openstreetmap.org/?mlat=" + encodeURIComponent(latitude) +
       "&mlon=" + encodeURIComponent(longitude) + "#map=" + level + "/" + latitude + "/" + longitude;
   }
   function mapPreview(row, rawName) {
-    var latitude = number(row.latitude);
-    var longitude = number(row.longitude);
-    if (latitude === null || longitude === null) return "";
+    var point = mapCoordinates(row);
+    if (!point) {
+      return "<div class='grave-map-unavailable' role='note'><span class='grave-map-unavailable__mark' aria-hidden='true'>i</span><span><strong>Tiksli kapavietės vieta žemėlapyje nenurodyta</strong>" +
+        "<span>Maršrutas gali nuvesti iki kapinių. Kapavietę jose padės rasti sektoriaus, eilės ar vietos numeris, jei jis pateiktas.</span></span></div>";
+    }
+    var latitude = point.latitude;
+    var longitude = point.longitude;
     var externalUrl = mapOpenStreetMapUrl(row, mapDefaultZoom);
     return "<div class='grave-map-preview' data-grave-map data-map-lat='" + html(latitude) + "' data-map-lng='" + html(longitude) + "' data-map-zoom='" + mapDefaultZoom + "'>" +
-      "<div class='grave-map-viewport' data-map-viewport role='img' aria-label='Žemėlapis: " + html(rawName || "kapavietė") + "'><div class='grave-map-tiles' data-map-tiles aria-hidden='true'></div><span class='grave-map-marker' data-map-marker aria-hidden='true'></span></div>" +
+      "<div class='grave-map-viewport' data-map-viewport role='img' aria-label='Žemėlapis: " + html(rawName || "kapavietė") + "'><div class='grave-map-tiles' data-map-tiles aria-hidden='true'></div><span class='grave-map-marker' data-map-marker aria-hidden='true'></span><span class='grave-map-marker-label' data-map-marker-label aria-hidden='true'>Kapavietė</span></div>" +
       "<div class='grave-map-controls' aria-label='Žemėlapio mastelis'><button class='grave-map-control' type='button' data-map-zoom-in aria-label='Priartinti žemėlapį'>+</button><button class='grave-map-control' type='button' data-map-zoom-out aria-label='Atitolinti žemėlapį'>−</button></div>" +
       "<p class='grave-map-status' data-map-status hidden role='status'>Nepavyko įkelti žemėlapio plytelių. <a target='_blank' rel='noopener' href='" + html(externalUrl) + "'>Atidaryti OpenStreetMap</a></p>" +
       "<small>Žemėlapis: © <a target='_blank' rel='noopener' href='https://www.openstreetmap.org/copyright'>OpenStreetMap bendruomenė</a></small></div>";
@@ -173,10 +187,12 @@
     var viewport = block.querySelector("[data-map-viewport]");
     var tiles = block.querySelector("[data-map-tiles]");
     var marker = block.querySelector("[data-map-marker]");
+    var markerLabel = block.querySelector("[data-map-marker-label]");
     if (!viewport || !tiles || !marker) return;
-    var latitude = number(block.dataset.mapLat);
-    var longitude = number(block.dataset.mapLng);
-    if (latitude === null || longitude === null) return;
+    var point = mapCoordinates({ latitude: block.dataset.mapLat, longitude: block.dataset.mapLng });
+    if (!point) return;
+    var latitude = point.latitude;
+    var longitude = point.longitude;
     var zoom = Math.min(19, Math.max(3, Math.round(Number(block.dataset.mapZoom) || mapDefaultZoom)));
     block.dataset.mapZoom = zoom;
     var width = viewport.clientWidth || 320;
@@ -228,6 +244,10 @@
     }
     marker.style.left = Math.round(center.x - left) + "px";
     marker.style.top = Math.round(center.y - top) + "px";
+    if (markerLabel) {
+      markerLabel.style.left = Math.round(center.x - left) + "px";
+      markerLabel.style.top = Math.round(center.y - top) + "px";
+    }
     if (status && !tileCount) status.hidden = false;
   }
   function savedGraves() {
@@ -282,7 +302,8 @@
     var place = html(rawPlace);
     var grave = [["sektorius", row.section], ["eilė", row.row_name], ["vieta", row.place_number]].filter(function (x) { return x[1]; }).map(function (x) { return x[0] + " " + html(x[1]); }).join(" · ");
     var burial = row.burial_date || row.burial_year ? html(shownDate(row.burial_date, row.burial_year, row.burial_date_text)) : "";
-    var coordinates = row.latitude != null && row.longitude != null ? Number(row.latitude).toFixed(6) + ", " + Number(row.longitude).toFixed(6) : "";
+    var point = mapCoordinates(row);
+    var coordinates = point ? point.latitude.toFixed(6) + ", " + point.longitude.toFixed(6) : "";
     var map = mapLocation(row);
     var sourceUrl = row.source_url || "";
     var distance = distanceText(row);
@@ -290,8 +311,8 @@
     var saved = isSaved(row);
     var actionData = " data-grave-name='" + html(rawName) + "' data-grave-place='" + html(rawPlace) +
       "' data-grave-cemetery='" + html(row.cemetery || "") + "' data-grave-municipality='" + html(row.municipality || "") +
-      "' data-grave-key='" + html(graveKey(row)) + "' data-grave-lat='" + html(row.latitude == null ? "" : row.latitude) +
-      "' data-grave-lng='" + html(row.longitude == null ? "" : row.longitude) + "'";
+      "' data-grave-key='" + html(graveKey(row)) + "' data-grave-lat='" + html(point ? point.latitude : "") +
+      "' data-grave-lng='" + html(point ? point.longitude : "") + "'";
     return "<details class='grave-list-item'><summary class='grave-list-item__summary'>" +
       "<span class='grave-list-item__person'><span class='eyebrow'>" + dates + "</span><strong>" + name + "</strong>" +
       (place ? "<span>" + place + "</span>" : "") + (distance ? "<span class='grave-list-item__distance'>" + html(distance) + "</span>" : "") +
@@ -308,14 +329,14 @@
       photoBlock(row, rawName, rich) +
       mapPreviewHtml +
       (map || sourceUrl ? "<div class='grave-result-actions'" + actionData + ">" +
-        (map ? "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>Rodyti maršrutą<span class='visually-hidden'> naujame skirtuke</span></a>" :
+        (map ? "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>" + (point ? "Rodyti maršrutą" : "Rodyti maršrutą į kapines") + "<span class='visually-hidden'> naujame skirtuke</span></a>" :
           "<a class='button' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Atidaryti kapavietės įrašą<span class='visually-hidden'> naujame skirtuke</span></a>") +
         "<details class='grave-result-more'><summary class='button button--ghost'>Kiti veiksmai</summary><div class='actions'>" +
-        (map ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>Atidaryti „Google Maps“<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
+        (map ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(mapUrl(row)) + "'>" + (point ? "Atidaryti „Google Maps“" : "Rasti kapines „Google Maps“") + "<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
         (map && sourceUrl ? "<a class='button button--ghost' target='_blank' rel='noopener' href='" + html(sourceUrl) + "'>Patikrinti šaltinio įrašą<span class='visually-hidden'> naujame skirtuke</span></a>" : "") +
         (rich ? "<button class='button button--ghost' type='button' data-share-grave>Pasidalinti</button>" +
         "<button class='button button--ghost" + (saved ? " is-saved" : "") + "' type='button' data-save-grave>" + (saved ? "Išsaugota" : "Išsaugoti") + "</button>" +
-        careShortcuts(rawName, carePlace, row.latitude, row.longitude, row.cemetery, row.municipality) : "") +
+        careShortcuts(rawName, carePlace, point ? point.latitude : null, point ? point.longitude : null, row.cemetery, row.municipality) : "") +
         "</div></details>" +
         "</div>" : "") +
       "</div></details>";

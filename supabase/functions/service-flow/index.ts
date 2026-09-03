@@ -24,11 +24,17 @@ const PRICE_GROUPS = {
   ],
 } as const;
 const ALL_PRICE_KEYS: string[] = Object.values(PRICE_GROUPS).flat() as string[];
+const MANUAL_PRICE_KEYS = new Set([
+  "candle_other",
+  "flower_bouquet",
+  "flower_other",
+]);
+const CUSTOM_QUANTITY_KEYS = new Set(["candle_other", "flower_other"]);
 const MAX_CENTS = 100_000_000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type Settings = {
+export type Settings = {
   id: string;
   base_label: string;
   base_latitude: number | string;
@@ -120,7 +126,7 @@ function priceCatalog(settings: Settings) {
   }));
 }
 
-function calculateEstimate(
+export function calculateEstimate(
   settings: Settings,
   keys: string[],
   latitude: number | null,
@@ -133,13 +139,22 @@ function calculateEstimate(
   const missingPriceKeys = uniqueKeys.filter((key) =>
     !Number.isInteger(catalog[key])
   );
+  const missingConfiguredPriceKeys = missingPriceKeys.filter((key) =>
+    !MANUAL_PRICE_KEYS.has(key)
+  );
+  const missingManualPriceKeys = missingPriceKeys.filter((key) =>
+    MANUAL_PRICE_KEYS.has(key)
+  );
   const serviceCents = missingPriceKeys.length
     ? null
     : uniqueKeys.reduce((sum, key) => sum + Number(catalog[key]), 0);
   const reasons: string[] = [];
   if (!uniqueKeys.length) reasons.push("services_missing");
-  if (missingPriceKeys.length) reasons.push("prices_missing");
-  if (uniqueKeys.some((key) => key.endsWith("_other"))) {
+  if (missingConfiguredPriceKeys.length) reasons.push("prices_missing");
+  if (
+    missingManualPriceKeys.length ||
+    uniqueKeys.some((key) => CUSTOM_QUANTITY_KEYS.has(key))
+  ) {
     reasons.push("custom_option");
   }
 
@@ -226,6 +241,15 @@ function calculateEstimate(
     reasons,
     missing_price_keys: missingPriceKeys,
     base_label: settings.base_label,
+    included_round_trip_km: Number(settings.included_round_trip_km),
+    travel_rate_cents_per_km: Number.isInteger(
+        settings.travel_rate_cents_per_km,
+      )
+      ? Number(settings.travel_rate_cents_per_km)
+      : null,
+    manual_review_over_one_way_km: Number(
+      settings.manual_review_over_one_way_km,
+    ),
     price_catalog_cents: catalog,
     straight_distance_km: straightKm === null
       ? null
@@ -341,7 +365,10 @@ async function consumeRequestRateLimit(
   throw error;
 }
 
-function optionSelection(body: Record<string, unknown>, services: string[]) {
+export function optionSelection(
+  body: Record<string, unknown>,
+  services: string[],
+) {
   const candles = cleanPriceKeys(body.candle_keys, PRICE_GROUPS.zvakes);
   const flowers = cleanPriceKeys(body.flower_keys, PRICE_GROUPS.geles);
   const cleaning = cleanPriceKeys(
@@ -356,6 +383,11 @@ function optionSelection(body: Record<string, unknown>, services: string[]) {
   }
   if (services.includes("kapu_tvarkymas") && !cleaning.length) {
     throw new HttpError("Pasirinkite kapavietės priežiūros darbus");
+  }
+  if (cleaning.includes("cleaning_full") && cleaning.length > 1) {
+    throw new HttpError(
+      "Pilnas kapavietės sutvarkymas negali būti derinamas su atskirais darbais",
+    );
   }
   return {
     candle_keys: services.includes("zvakes") ? candles : [],
@@ -372,6 +404,18 @@ function optionSelection(body: Record<string, unknown>, services: string[]) {
 async function estimateAction(body: Record<string, unknown>) {
   const settings = await loadSettings();
   const keys = cleanPriceKeys(body.price_keys, ALL_PRICE_KEYS);
+  if (
+    keys.includes("cleaning_full") &&
+    keys.some((key) =>
+      PRICE_GROUPS.kapu_tvarkymas.includes(
+        key as typeof PRICE_GROUPS.kapu_tvarkymas[number],
+      ) && key !== "cleaning_full"
+    )
+  ) {
+    throw new HttpError(
+      "Pilnas kapavietės sutvarkymas negali būti derinamas su atskirais darbais",
+    );
+  }
   const latitude = finite(body.destination_latitude);
   const longitude = finite(body.destination_longitude);
   return calculateEstimate(settings, keys, latitude, longitude);
@@ -950,44 +994,46 @@ async function startPaymentAction(
   };
 }
 
-Deno.serve(async (request: Request) => {
-  const options = handleOptions(request);
-  if (options) return options;
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
-  }
-  try {
-    const body = await bodyOf(request);
-    const action = String(body.action || "estimate");
-    if (action === "estimate") return json(await estimateAction(body));
-    if (action === "create") {
-      return json(await createAction(request, body), 201);
+if (import.meta.main) {
+  Deno.serve(async (request: Request) => {
+    const options = handleOptions(request);
+    if (options) return options;
+    if (request.method !== "POST") {
+      return json({ error: "Method not allowed" }, 405);
     }
-    if (action === "claim") return json(await claimAction(request, body));
-    if (action === "get_settings") {
-      return json(await getSettingsAction(request));
+    try {
+      const body = await bodyOf(request);
+      const action = String(body.action || "estimate");
+      if (action === "estimate") return json(await estimateAction(body));
+      if (action === "create") {
+        return json(await createAction(request, body), 201);
+      }
+      if (action === "claim") return json(await claimAction(request, body));
+      if (action === "get_settings") {
+        return json(await getSettingsAction(request));
+      }
+      if (action === "save_settings") {
+        return json(await saveSettingsAction(request, body));
+      }
+      if (action === "send_quote") {
+        return json(await sendQuoteAction(request, body));
+      }
+      if (action === "start_payment") {
+        return json(await startPaymentAction(request, body));
+      }
+      throw new HttpError("Nežinomas veiksmas");
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Paslaugos veiksmas nepavyko";
+      if (error instanceof HttpError || error instanceof RequestError) {
+        return json({ error: message }, error.status);
+      }
+      if (/^(Authentication required|Invalid session)$/i.test(message)) {
+        return json({ error: "Prisijungimo sesija nebegalioja" }, 401);
+      }
+      console.error("service-flow failed", error);
+      return json({ error: "Paslaugos veiksmas nepavyko" }, 500);
     }
-    if (action === "save_settings") {
-      return json(await saveSettingsAction(request, body));
-    }
-    if (action === "send_quote") {
-      return json(await sendQuoteAction(request, body));
-    }
-    if (action === "start_payment") {
-      return json(await startPaymentAction(request, body));
-    }
-    throw new HttpError("Nežinomas veiksmas");
-  } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "Paslaugos veiksmas nepavyko";
-    if (error instanceof HttpError || error instanceof RequestError) {
-      return json({ error: message }, error.status);
-    }
-    if (/^(Authentication required|Invalid session)$/i.test(message)) {
-      return json({ error: "Prisijungimo sesija nebegalioja" }, 401);
-    }
-    console.error("service-flow failed", error);
-    return json({ error: "Paslaugos veiksmas nepavyko" }, 500);
-  }
-});
+  });
+}

@@ -5916,20 +5916,74 @@ html {
 .service-extra {
   display: grid;
   gap: 18px;
-  padding: 18px;
-  border-radius: 14px;
+  padding: clamp(18px, 2.5vw, 24px);
+  border: 1px solid rgba(142, 109, 50, 0.12);
+  border-radius: 18px;
   background: var(--accent-soft);
 }
 
-.service-catalog-visual {
+.service-configurator {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(250px, 0.75fr);
-  min-height: 280px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 342px);
+  gap: clamp(18px, 2.5vw, 28px);
+  align-items: start;
+}
+
+.service-configurator__options {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.service-selection-summary {
+  --selection-accent: #84652e;
+  position: sticky;
+  top: 92px;
+  align-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(72, 60, 39, 0.2);
+  border-radius: 20px;
+  background: #fffdf8;
+  box-shadow: 0 18px 48px rgba(53, 43, 29, 0.1);
+}
+
+.service-selection-summary::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: var(--selection-accent);
+  transition: background-color 180ms ease;
+}
+
+.service-selection-summary[data-selection-accent="flower_style_burgundy"] {
+  --selection-accent: #7b2438;
+}
+
+.service-selection-summary[data-selection-accent="flower_style_seasonal"] {
+  --selection-accent: #788560;
+}
+
+.service-selection-summary[data-selection-accent="candle_style_clear"] {
+  --selection-accent: #b79d62;
+}
+
+.service-selection-summary[data-selection-accent="candle_style_amber"] {
+  --selection-accent: #b26c1d;
+}
+
+.service-selection-summary[data-selection-accent="candle_style_long_burn"],
+.service-selection-summary[data-selection-accent="cleaning"] {
+  --selection-accent: var(--teal);
+}
+
+.service-catalog-visual {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
   margin: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #f1ede3;
+  background: #ddd5c6;
 }
 
 .service-catalog-visual[hidden] {
@@ -5939,36 +5993,126 @@ html {
 .service-catalog-visual img {
   width: 100%;
   height: 100%;
-  min-height: 280px;
   object-fit: cover;
 }
 
 .service-catalog-visual figcaption {
-  display: grid;
-  align-content: center;
-  gap: 9px;
-  padding: clamp(22px, 4vw, 38px);
-  background:
-    radial-gradient(circle at 95% 5%, rgba(164, 212, 197, 0.35), transparent 38%),
-    #fffdf8;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  justify-content: space-between;
+  padding: 34px 15px 13px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(20, 18, 14, 0.78));
 }
 
 .service-catalog-visual figcaption > * {
   margin: 0;
 }
 
-.service-catalog-visual figcaption strong {
-  color: var(--ink);
-  font-family: var(--display-font);
-  font-size: clamp(1.55rem, 3vw, 2.35rem);
-  font-weight: 500;
-  line-height: 1.08;
+.service-catalog-visual figcaption span {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .service-catalog-visual figcaption small {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.service-selection-summary__body {
+  display: grid;
+  gap: 16px;
+  padding: 19px;
+}
+
+.service-selection-summary__header {
+  display: grid;
+  gap: 4px;
+}
+
+.service-selection-summary__header > * {
+  margin: 0;
+}
+
+.service-selection-summary__header h4 {
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.service-selection-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-selection-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid rgba(72, 60, 39, 0.12);
+  border-left: 3px solid var(--selection-accent);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.service-selection-list__item > span,
+.service-selection-list__item small,
+.service-selection-list__item strong {
+  display: block;
+  min-width: 0;
+}
+
+.service-selection-list__item small {
+  margin-bottom: 3px;
   color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.service-selection-list__item strong {
   font-size: 0.88rem;
-  line-height: 1.55;
+  line-height: 1.35;
+}
+
+.service-selection-list__item b {
+  color: var(--accent-dark);
+  font-size: 0.86rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.service-selection-list__item.is-incomplete {
+  border-left-color: #c8bda8;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.service-selection-list__item.is-incomplete b {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.service-selection-list__empty {
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .service-variant-group {
@@ -6093,8 +6237,12 @@ html {
   gap: 10px;
 }
 
+.service-variant-grid--quantity {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .service-variant-grid--cleaning {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .service-details .service-variant {
@@ -6180,6 +6328,25 @@ html {
   line-height: 1.4;
 }
 
+.service-selection-summary .service-estimate {
+  padding: 14px;
+  background: #f8f5ed;
+}
+
+.service-travel-policy {
+  margin: 0;
+  padding: 12px 13px;
+  border-radius: 12px;
+  color: #4d4941;
+  background: rgba(199, 224, 214, 0.42);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.service-travel-policy strong {
+  color: var(--accent-dark);
+}
+
 .service-honeypot {
   position: absolute !important;
   left: -10000px !important;
@@ -6226,6 +6393,20 @@ html {
   line-height: 1.5;
 }
 
+@media (max-width: 980px) {
+  .service-configurator {
+    grid-template-columns: 1fr;
+  }
+
+  .service-selection-summary {
+    position: static;
+  }
+
+  .service-catalog-visual {
+    aspect-ratio: 2.35 / 1;
+  }
+}
+
 @media (max-width: 760px) {
   .service-stepper {
     grid-template-columns: repeat(4, minmax(64px, 1fr));
@@ -6251,14 +6432,8 @@ html {
     width: 100%;
   }
 
-  .service-catalog-visual,
   .service-product-grid {
     grid-template-columns: 1fr;
-  }
-
-  .service-catalog-visual img {
-    min-height: 220px;
-    max-height: 320px;
   }
 
   .service-details .service-product {
@@ -6378,8 +6553,20 @@ html {
     padding: 22px 16px;
   }
 
-  .service-variant-grid {
+  .service-variant-grid:not(.service-variant-grid--quantity) {
     grid-template-columns: 1fr;
+  }
+
+  .service-variant-grid--quantity {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-catalog-visual {
+    aspect-ratio: 1.85 / 1;
+  }
+
+  .service-selection-summary__body {
+    padding: 16px;
   }
 }
 
@@ -8451,6 +8638,45 @@ img[data-story-photo-preview],
   background: #fff;
 }
 
+.grave-map-unavailable {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px dashed rgba(26, 58, 58, 0.34);
+  border-radius: 14px;
+  color: var(--teal-dark);
+  background: rgba(220, 233, 229, 0.45);
+}
+
+.grave-map-unavailable__mark {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--teal);
+  font-weight: 900;
+}
+
+.grave-map-unavailable > span:last-child {
+  display: grid;
+  gap: 4px;
+  line-height: 1.45;
+}
+
+.grave-map-unavailable strong {
+  font-size: 0.96rem;
+}
+
+.grave-map-unavailable strong + span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .grave-map-viewport {
   position: relative;
   display: block;
@@ -8497,6 +8723,22 @@ img[data-story-photo-preview],
   background: #fff;
   content: "";
   transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.grave-map-marker-label {
+  position: absolute;
+  z-index: 2;
+  padding: 6px 9px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--teal-dark);
+  box-shadow: 0 3px 9px rgba(25, 42, 30, 0.3);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(17px, -42px);
 }
 
 .grave-map-controls {

@@ -47,19 +47,47 @@
   var savedGraveWrap = document.getElementById("service-saved-grave-wrap");
   var savedGraveSelect = document.getElementById("service-saved-grave");
   var productCatalogVisual = form.querySelector("[data-service-product-catalog]");
+  var selectionSummary = form.querySelector(".service-selection-summary");
+  var selectionItemsEl = document.getElementById("service-selection-items");
+  var selectionStatusEl = document.getElementById("service-selection-status");
+  var travelPolicyEl = document.getElementById("service-travel-policy");
   var currentServiceStep = 1;
   var draftKey = "atminimas.service-request.draft.v1";
   var savedGravesKey = "atminimas.saved-graves.v1";
   var allowedServices = ["zvakes", "geles", "kapu_tvarkymas"];
-  var prices = {};
+  // Matomos iškart, o skaitinis serverio katalogas jas pakeičia, kai tik yra pasiekiamas.
+  var defaultServicePrices = {
+    candle_1: 300,
+    candle_2: 500,
+    candle_5: 2000,
+    candle_other: null,
+    flower_1: 500,
+    flower_3: 1500,
+    flower_5: 2500,
+    flower_bouquet: null,
+    flower_other: null,
+    cleaning_full: 12000,
+    cleaning_grooves: 2000,
+    cleaning_surface: 1500,
+    cleaning_monument: 3000,
+    cleaning_leaves: 5000
+  };
+  var prices = Object.assign({}, defaultServicePrices);
+  var travelSettings = {
+    base_label: "Panevėžys",
+    included_round_trip_km: 20,
+    travel_rate_cents_per_km: 35,
+    manual_review_over_one_way_km: 200
+  };
   var estimateSnapshot = null;
   var estimateTimer = null;
   var estimateRequestNumber = 0;
+  var priceCatalogLoaded = true;
   var isFillingLocation = false;
   var optionLabels = {
-    candle_style_clear: "Skaidraus stiklo žvakė",
-    candle_style_amber: "Gintarinio stiklo žvakė",
-    candle_style_long_burn: "Ilgai deganti žvakė",
+    candle_style_clear: "Skaidraus stiklo",
+    candle_style_amber: "Gintarinio stiklo",
+    candle_style_long_burn: "Ilgai deganti",
     candle_1: "1 žvakė",
     candle_2: "2 žvakės",
     candle_5: "5 žvakės",
@@ -71,7 +99,7 @@
     flower_other: "Kitas gėlių kiekis",
     flower_style_white: "Baltos chrizantemos",
     flower_style_burgundy: "Bordo rožės",
-    flower_style_seasonal: "Sezoninė puokštė",
+    flower_style_seasonal: "Sezoninės gėlės",
     cleaning_full: "Pilnas kapavietės sutvarkymas",
     cleaning_grooves: "Griovelių išvalymas",
     cleaning_surface: "Kapavietės viršaus nušlavimas",
@@ -83,6 +111,7 @@
     geles: ["flower_1", "flower_3", "flower_5", "flower_bouquet"],
     kapu_tvarkymas: ["cleaning_full", "cleaning_grooves", "cleaning_surface", "cleaning_monument", "cleaning_leaves"]
   };
+  var manualPriceKeys = ["candle_other", "flower_bouquet", "flower_other"];
 
   function config() {
     return window.ATMINIMAS_CONFIG;
@@ -112,6 +141,124 @@
     var values = keys.map(priceValue);
     if (values.some(function (value) { return value === null; })) return "derinama";
     return formatCents(values.reduce(function (sum, value) { return sum + value; }, 0));
+  }
+
+  function selectedValue(name) {
+    var values = selectedNamedValues(name);
+    return values.length ? values[0] : "";
+  }
+
+  function optionPriceText(key) {
+    if (!key) return "Pasirinkite";
+    var value = priceValue(key);
+    if (value !== null) return formatCents(value);
+    if (!priceCatalogLoaded) return "Skaičiuojama…";
+    return manualPriceKeys.indexOf(key) !== -1 ? "Derinama individualiai" : "Kaina derinama";
+  }
+
+  function selectionItem(group, description, priceKey, incomplete) {
+    var item = document.createElement("li");
+    item.className = "service-selection-list__item" + (incomplete ? " is-incomplete" : "");
+    var copy = document.createElement("span");
+    var label = document.createElement("small");
+    var value = document.createElement("strong");
+    var price = document.createElement("b");
+    label.textContent = group;
+    value.textContent = description;
+    price.textContent = optionPriceText(priceKey);
+    copy.appendChild(label);
+    copy.appendChild(value);
+    item.appendChild(copy);
+    item.appendChild(price);
+    return item;
+  }
+
+  function renderSelectionSummary(announce) {
+    if (!selectionItemsEl) return;
+    var services = selectedServices();
+    var items = [];
+    var statusParts = [];
+    var flowerStyle = selectedValue("flower_style");
+    var flowerPackage = selectedValue("flower_package");
+    var candleStyle = selectedValue("candle_style");
+    var candlePackage = selectedValue("candle_package");
+    var cleaningTasks = selectedNamedValues("cleaning_tasks");
+
+    if (services.indexOf("geles") !== -1) {
+      var flowerReady = Boolean(flowerStyle && flowerPackage);
+      var flowerDescription = flowerReady
+        ? optionLabels[flowerStyle] + " · " + optionLabels[flowerPackage]
+        : flowerStyle
+        ? optionLabels[flowerStyle] + " · pasirinkite kiekį"
+        : flowerPackage
+        ? "Pasirinkite rūšį · " + optionLabels[flowerPackage]
+        : "Pasirinkite rūšį ir kiekį";
+      items.push(selectionItem("Gėlės", flowerDescription, flowerPackage, !flowerReady));
+      if (flowerReady) statusParts.push(flowerDescription + " – " + optionPriceText(flowerPackage));
+    }
+
+    if (services.indexOf("zvakes") !== -1) {
+      var candleReady = Boolean(candleStyle && candlePackage);
+      var candleDescription = candleReady
+        ? optionLabels[candleStyle] + " · " + optionLabels[candlePackage]
+        : candleStyle
+        ? optionLabels[candleStyle] + " · pasirinkite kiekį"
+        : candlePackage
+        ? "Pasirinkite tipą · " + optionLabels[candlePackage]
+        : "Pasirinkite tipą ir kiekį";
+      items.push(selectionItem("Žvakės", candleDescription, candlePackage, !candleReady));
+      if (candleReady) statusParts.push(candleDescription + " – " + optionPriceText(candlePackage));
+    }
+
+    if (services.indexOf("kapu_tvarkymas") !== -1) {
+      if (cleaningTasks.length) {
+        cleaningTasks.forEach(function (key) {
+          items.push(selectionItem("Tvarkymas", optionLabels[key], key, false));
+          statusParts.push(optionLabels[key] + " – " + optionPriceText(key));
+        });
+      } else {
+        items.push(selectionItem("Tvarkymas", "Pasirinkite bent vieną darbą", "", true));
+      }
+    }
+
+    selectionItemsEl.replaceChildren();
+    if (items.length) {
+      items.forEach(function (item) { selectionItemsEl.appendChild(item); });
+    } else {
+      var empty = document.createElement("li");
+      empty.className = "service-selection-list__empty";
+      empty.dataset.serviceSelectionEmpty = "";
+      empty.textContent = "Pasirinkite variantus kairėje — čia iškart matysite jų kainą.";
+      selectionItemsEl.appendChild(empty);
+    }
+
+    if (selectionSummary) {
+      var accent = flowerStyle || candleStyle || (cleaningTasks.length ? "cleaning" : "neutral");
+      selectionSummary.dataset.selectionAccent = accent;
+    }
+    if (announce && selectionStatusEl) {
+      selectionStatusEl.textContent = statusParts.length
+        ? "Pasirinkimas atnaujintas: " + statusParts.join("; ") + "."
+        : "Pasirinkimas atnaujintas. Dar pasirinkite konkrečius variantus.";
+    }
+  }
+
+  function renderTravelPolicy(result) {
+    if (result && Number.isInteger(result.travel_rate_cents_per_km) && result.travel_rate_cents_per_km >= 0) {
+      if (result.base_label) travelSettings.base_label = result.base_label;
+      if (Number.isFinite(Number(result.included_round_trip_km))) {
+        travelSettings.included_round_trip_km = Number(result.included_round_trip_km);
+      }
+      travelSettings.travel_rate_cents_per_km = result.travel_rate_cents_per_km;
+      if (Number.isFinite(Number(result.manual_review_over_one_way_km))) {
+        travelSettings.manual_review_over_one_way_km = Number(result.manual_review_over_one_way_km);
+      }
+    }
+    if (!travelPolicyEl) return;
+    var heading = document.createElement("strong");
+    heading.textContent = "Išvykimo vieta – " + travelSettings.base_label + ". ";
+    var rule = "pirmi " + travelSettings.included_round_trip_km + " km pirmyn ir atgal įskaičiuoti, toliau – " + formatCents(travelSettings.travel_rate_cents_per_km) + "/km. Virš " + travelSettings.manual_review_over_one_way_km + " km viena kryptimi kainą patvirtinsime individualiai.";
+    travelPolicyEl.replaceChildren(heading, document.createTextNode(rule));
   }
 
   function selectedPriceKeys() {
@@ -163,26 +310,77 @@
   function renderEstimate(result) {
     estimateSnapshot = result || null;
     if (result && result.price_catalog_cents) {
-      prices = result.price_catalog_cents;
+      Object.keys(defaultServicePrices).forEach(function (key) {
+        var value = result.price_catalog_cents[key];
+        if (Number.isInteger(value) && value >= 0) prices[key] = value;
+      });
+      priceCatalogLoaded = true;
       renderPrices();
     }
-    var servicesMissing = result && Array.isArray(result.reasons) && result.reasons.indexOf("services_missing") !== -1;
+    renderTravelPolicy(result);
+    var reasons = result && Array.isArray(result.reasons) ? result.reasons : [];
+    var servicesMissing = reasons.indexOf("services_missing") !== -1;
+    var selectedKeys = selectedPriceKeys();
+    var hasCurrentTravelContract = Boolean(result && Number.isInteger(result.travel_rate_cents_per_km));
+    var customOption = reasons.indexOf("custom_option") !== -1 || selectedKeys.some(function (key) {
+      return key.endsWith("_other") || (manualPriceKeys.indexOf(key) !== -1 && priceValue(key) === null);
+    });
+    var distanceLimit = hasCurrentTravelContract
+      ? reasons.indexOf("distance_limit") !== -1
+      : Boolean(result && Number(result.estimated_one_way_max_km) > travelSettings.manual_review_over_one_way_km);
+    var localServiceValues = selectedKeys.map(priceValue);
+    var localServiceCents = selectedKeys.length && localServiceValues.every(function (value) { return value !== null; })
+      ? localServiceValues.reduce(function (sum, value) { return sum + value; }, 0)
+      : null;
+    var serviceCents = result && !servicesMissing && Number.isInteger(result.estimated_service_cents)
+      ? result.estimated_service_cents
+      : localServiceCents;
     estimateServicesEl.textContent = result && !servicesMissing && Number.isInteger(result.estimated_service_cents)
-      ? formatCents(result.estimated_service_cents)
+      ? formatCents(serviceCents)
+      : customOption
+      ? "Derinama"
+      : Number.isInteger(serviceCents)
+      ? formatCents(serviceCents)
       : "–";
     var distance = result && Number.isFinite(result.estimated_round_trip_min_km) && Number.isFinite(result.estimated_round_trip_max_km)
       ? (result.estimated_round_trip_min_km === result.estimated_round_trip_max_km
         ? result.estimated_round_trip_min_km + " km"
         : result.estimated_round_trip_min_km + "–" + result.estimated_round_trip_max_km + " km")
       : "";
+    var travelMinCents = result && Number.isInteger(result.estimated_travel_min_cents)
+      ? result.estimated_travel_min_cents
+      : !hasCurrentTravelContract && result && Number.isFinite(result.estimated_round_trip_min_km)
+      ? Math.round(Math.max(0, result.estimated_round_trip_min_km - travelSettings.included_round_trip_km) * travelSettings.travel_rate_cents_per_km)
+      : null;
+    var travelMaxCents = result && Number.isInteger(result.estimated_travel_max_cents)
+      ? result.estimated_travel_max_cents
+      : !hasCurrentTravelContract && result && Number.isFinite(result.estimated_round_trip_max_km)
+      ? Math.round(Math.max(0, result.estimated_round_trip_max_km - travelSettings.included_round_trip_km) * travelSettings.travel_rate_cents_per_km)
+      : null;
     estimateTravelEl.textContent = result
-      ? priceRange(result.estimated_travel_min_cents, result.estimated_travel_max_cents) + (distance ? " · " + distance : "")
+      ? priceRange(travelMinCents, travelMaxCents) + (distance ? " · " + distance : "")
       : "–";
-    estimateEl.textContent = result ? priceRange(result.estimated_total_min_cents, result.estimated_total_max_cents) : "–";
-    if (result && result.estimate_status === "calculated") {
-      estimateNoteEl.textContent = "Rodoma preliminari kaina pagal pasirinktus darbus ir apytikslį kelionės atstumą nuo " + result.base_label + ". Kelionė skaičiuojama pirmyn ir atgal. Galutinę kainą patvirtinsime atskiru pasiūlymu.";
-    } else if (result && result.reasons && result.reasons.indexOf("coordinates_missing") !== -1) {
+    var totalMinCents = result && Number.isInteger(result.estimated_total_min_cents)
+      ? result.estimated_total_min_cents
+      : !distanceLimit && !customOption && Number.isInteger(serviceCents) && Number.isInteger(travelMinCents)
+      ? serviceCents + travelMinCents
+      : null;
+    var totalMaxCents = result && Number.isInteger(result.estimated_total_max_cents)
+      ? result.estimated_total_max_cents
+      : !distanceLimit && !customOption && Number.isInteger(serviceCents) && Number.isInteger(travelMaxCents)
+      ? serviceCents + travelMaxCents
+      : null;
+    estimateEl.textContent = result ? priceRange(totalMinCents, totalMaxCents) : "–";
+    var locallyCalculated = !servicesMissing && !customOption && !distanceLimit && Number.isInteger(totalMinCents) && Number.isInteger(totalMaxCents);
+    if (selectionSummary) selectionSummary.dataset.estimateState = locallyCalculated ? "calculated" : result ? result.estimate_status : "loading";
+    if (distanceLimit) {
+      estimateNoteEl.textContent = "Tai tolima išvyka. Kelionės intervalas orientacinis; prieš priimdami užklausą individualiai patvirtinsime atvykimo ir bendrą kainą.";
+    } else if (reasons.indexOf("coordinates_missing") !== -1) {
       estimateNoteEl.textContent = "Vietos automatiškai įvertinti nepavyko. Pateikite užklausą – kelionę ir galutinę kainą nustatysime rankiniu būdu.";
+    } else if (customOption) {
+      estimateNoteEl.textContent = "Pasirinkto individualaus kiekio ar puokštės kainą patvirtinsime pagal jūsų pageidavimus. Kelionė skaičiuojama atskirai pirmyn ir atgal.";
+    } else if (locallyCalculated || result && result.estimate_status === "calculated") {
+      estimateNoteEl.textContent = "Rodoma preliminari kaina pagal pasirinktus darbus ir apytikslį kelionės atstumą nuo išvykimo vietos (" + (result.base_label || travelSettings.base_label) + "). Kelionė skaičiuojama pirmyn ir atgal. Galutinę kainą patvirtinsime atskiru pasiūlymu.";
     } else if (result && result.estimate_status === "unconfigured") {
       estimateNoteEl.textContent = "Dalis kainodaros dar nenustatyta. Pateikite užklausą – galutinį pasiūlymą paruošime rankiniu būdu.";
     } else {
@@ -217,7 +415,13 @@
   function renderPrices() {
     form.querySelectorAll("[data-service-price]").forEach(function (element) {
       var value = priceValue(element.dataset.servicePrice);
-      element.textContent = value === null ? "Kaina –" : formatCents(value);
+      element.textContent = value === null
+        ? priceCatalogLoaded && manualPriceKeys.indexOf(element.dataset.servicePrice) !== -1
+          ? "Derinama individualiai"
+          : priceCatalogLoaded
+          ? "Kaina derinama"
+          : "Skaičiuojama…"
+        : formatCents(value);
     });
     form.querySelectorAll("[data-service-price-group]").forEach(function (element) {
       var values = (priceGroups[element.dataset.servicePriceGroup] || [])
@@ -225,6 +429,7 @@
         .filter(function (value) { return value !== null; });
       element.textContent = values.length ? formatCents(Math.min.apply(Math, values)) : "–";
     });
+    renderSelectionSummary(false);
   }
 
   function updateServiceFields() {
@@ -242,6 +447,7 @@
         if (field.hasAttribute("data-service-required")) field.required = enabled;
       });
     });
+    renderSelectionSummary(false);
     updateEstimate();
   }
 
@@ -378,6 +584,14 @@
     sessionStorage.setItem(draftKey, JSON.stringify({ services: selectedServices(), fields: fields }));
   }
 
+  function normalizeCleaningSelection() {
+    var full = form.querySelector("[data-cleaning-full]");
+    if (!full || !full.checked) return;
+    cleaningInputs.forEach(function (input) {
+      if (input !== full) input.checked = false;
+    });
+  }
+
   function restoreDraft() {
     var raw = sessionStorage.getItem(draftKey);
     if (!raw) return;
@@ -397,6 +611,7 @@
       serviceInputs.forEach(function (input) {
         input.checked = Array.isArray(draft.services) && draft.services.indexOf(input.value) !== -1;
       });
+      normalizeCleaningSelection();
       updateServiceFields();
       updateLocationStatus();
     } catch (_error) {
@@ -434,7 +649,10 @@
   });
 
   serviceInputs.forEach(function (input) {
-    input.addEventListener("change", updateServiceFields);
+    input.addEventListener("change", function () {
+      updateServiceFields();
+      renderSelectionSummary(true);
+    });
   });
 
   form.querySelectorAll("[data-service-next]").forEach(function (button) {
@@ -458,8 +676,11 @@
     });
   });
 
-  form.querySelectorAll("input[name='candle_package'], input[name='flower_package']").forEach(function (input) {
-    input.addEventListener("change", updateEstimate);
+  form.querySelectorAll("input[name='candle_style'], input[name='candle_package'], input[name='flower_style'], input[name='flower_package']").forEach(function (input) {
+    input.addEventListener("change", function () {
+      renderSelectionSummary(true);
+      updateEstimate();
+    });
   });
 
   cleaningInputs.forEach(function (input) {
@@ -470,6 +691,7 @@
       } else if (input.checked && full) {
         full.checked = false;
       }
+      renderSelectionSummary(true);
       updateEstimate();
     });
   });
@@ -537,6 +759,7 @@
   });
 
   renderPrices();
+  renderTravelPolicy(null);
   restoreDraft();
   updateServiceFields();
   setupSavedGraves();

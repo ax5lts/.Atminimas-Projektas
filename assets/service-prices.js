@@ -1,5 +1,5 @@
 (function () {
-  // Įrašykite kainas eurais vietoje null. Pavyzdys: candle_1: 5.
+  // Palikta tik senų puslapių suderinamumui. Viešas kainas pateikia service-flow iš service_quote_settings.
   window.ATMINIMAS_SERVICE_PRICES = Object.freeze({
     candle_1: null,
     candle_2: null,

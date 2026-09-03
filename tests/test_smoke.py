@@ -483,6 +483,52 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn("Math.min.apply(Math, values)", home)
         self.assertNotIn('assets/service-prices.js', html)
 
+    def test_service_catalog_has_live_summary_and_configured_prices(self):
+        html = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
+        home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        styles = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
+        service_flow = (ROOT / "supabase" / "functions" / "service-flow" / "index.ts").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase" / "migrations" / "20260902211216_configure_grave_service_prices.sql").read_text(encoding="utf-8")
+
+        expected_prices = {
+            "candle_1": 300,
+            "candle_2": 500,
+            "candle_5": 2000,
+            "flower_1": 500,
+            "flower_3": 1500,
+            "flower_5": 2500,
+            "cleaning_full": 12000,
+            "cleaning_grooves": 2000,
+            "cleaning_surface": 1500,
+            "cleaning_monument": 3000,
+            "cleaning_leaves": 5000,
+        }
+        for key, cents in expected_prices.items():
+            self.assertRegex(migration, r'"{0}"\s*:\s*{1}\b'.format(key, cents))
+            self.assertRegex(home, r"{0}:\s*{1}\b".format(key, cents))
+
+        self.assertIn("travel_rate_cents_per_km = 35", migration)
+        self.assertIn("included_round_trip_km = 20", migration)
+        self.assertIn("manual_review_over_one_way_km = 200", migration)
+        self.assertIn('class="service-configurator"', html)
+        self.assertIn('class="service-selection-summary"', html)
+        self.assertIn('id="service-selection-items"', html)
+        self.assertIn('id="service-selection-status" role="status"', html)
+        self.assertIn('id="service-travel-policy"', html)
+        self.assertIn("function renderSelectionSummary(announce)", home)
+        self.assertIn("function renderTravelPolicy(result)", home)
+        for name in ("candle_style", "candle_package", "flower_style", "flower_package"):
+            self.assertIn("input[name='{0}']".format(name), home)
+        self.assertIn("distance_limit", home)
+        self.assertIn("Tai tolima išvyka", home)
+        self.assertIn(".service-configurator", styles)
+        self.assertIn("position: sticky", styles)
+        self.assertIn('"flower_bouquet"', service_flow)
+        self.assertIn("MANUAL_PRICE_KEYS", service_flow)
+        self.assertIn('cleaning.includes("cleaning_full") && cleaning.length > 1', service_flow)
+        self.assertIn("included_round_trip_km", service_flow)
+        self.assertIn("travel_rate_cents_per_km", service_flow)
+
     def test_service_request_flow_is_guest_first_and_claimed_before_payment(self):
         page = (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8")
         home = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
@@ -1269,11 +1315,22 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_grave_search_has_location_routes_sharing_and_map_preview(self):
         page = (ROOT / "kapu-ieskojimas.html").read_text(encoding="utf-8")
         script = (ROOT / "assets" / "official-grave-search.js").read_text(encoding="utf-8")
+        number_guard = script[
+            script.index("function number(value)"):
+            script.index("function mapCoordinates(row)")
+        ]
         self.assertIn("data-use-location", page)
         self.assertIn("data-map-preview", page)
         self.assertIn("data-saved-graves", page)
         self.assertIn("navigator.geolocation.getCurrentPosition", script)
         self.assertIn("distanceKm", script)
+        self.assertIn("value === null", number_guard)
+        self.assertIn("value === undefined", number_guard)
+        self.assertIn('value.trim() === ""', number_guard)
+        self.assertLess(number_guard.index("value === null"), number_guard.index("Number(value)"))
+        self.assertIn("latitude === 0 && longitude === 0", script)
+        self.assertIn("Tiksli kapavietės vieta žemėlapyje nenurodyta", script)
+        self.assertIn("data-map-marker-label", script)
         self.assertIn("tile.openstreetmap.org", script)
         self.assertIn("data-map-zoom-in", script)
         self.assertNotIn("www.openstreetmap.org/export/embed.html", script)
