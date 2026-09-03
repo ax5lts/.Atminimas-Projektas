@@ -52,6 +52,18 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         self.assertIn("Sitemap: https://atminimokodas.lt/sitemap.xml", robots)
         self.assertNotIn("github.io", robots)
         self.assertIn("<urlset", sitemap)
+        self.assertIn(
+            'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"',
+            sitemap,
+        )
+        self.assertIn(
+            "<image:loc>https://atminimokodas.lt/assets/qr-plienas.webp</image:loc>",
+            sitemap,
+        )
+        self.assertIn(
+            "<image:loc>https://atminimokodas.lt/assets/qr-plienas-480.webp</image:loc>",
+            sitemap,
+        )
         self.assertIn('".txt"', server)
         self.assertIn('".xml"', server)
         for private_page in (

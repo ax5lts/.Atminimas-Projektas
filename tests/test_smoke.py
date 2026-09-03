@@ -294,7 +294,19 @@ class AtminimasSmokeTests(unittest.TestCase):
         ):
             self.assertNotIn(private_field, edge)
         self.assertIn('/functions/v1/business-profile', details)
-        self.assertIn('headers: { apikey: publishableKey', details)
+        self.assertIn('function hasRemotePublicFields()', details)
+        self.assertIn('return PUBLIC_KEYS.some(function (key)', details)
+        self.assertIn('if (hasRemotePublicFields()) loadRemote();', details)
+        self.assertIn('headers: { Accept: "application/json" }', details)
+        self.assertNotIn('SUPABASE_ANON_KEY', details)
+        self.assertNotIn('apikey', details)
+        public_keys_match = re.search(r"var PUBLIC_KEYS = (\[[\s\S]*?\]);", details)
+        self.assertIsNotNone(public_keys_match)
+        public_keys = set(json.loads(public_keys_match.group(1)))
+        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
+        homepage_keys = set(re.findall(r'data-business="([^"]+)"', homepage))
+        self.assertEqual(homepage_keys, {"responseTime"})
+        self.assertTrue(homepage_keys.isdisjoint(public_keys))
         self.assertRegex(
             config,
             r"(?s)\[functions\.business-profile\]\s*verify_jwt\s*=\s*false",

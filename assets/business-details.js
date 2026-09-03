@@ -10,6 +10,12 @@
     "vatStatus"
   ];
 
+  function hasRemotePublicFields() {
+    return PUBLIC_KEYS.some(function (key) {
+      return document.querySelector('[data-business="' + key + '"]');
+    });
+  }
+
   function refresh() {
     var details = window.ATMINIMAS_BUSINESS || {};
     document.querySelectorAll("[data-business]").forEach(function (element) {
@@ -35,13 +41,12 @@
   async function loadRemote() {
     var app = window.ATMINIMAS_CONFIG || {};
     var baseUrl = String(app.SUPABASE_URL || "").replace(/\/$/, "");
-    var publishableKey = String(app.SUPABASE_ANON_KEY || "").trim();
-    if (!baseUrl || !publishableKey) return;
+    if (!baseUrl) return;
 
     try {
       var response = await fetch(baseUrl + "/functions/v1/business-profile", {
         method: "GET",
-        headers: { apikey: publishableKey, Accept: "application/json" }
+        headers: { Accept: "application/json" }
       });
       if (!response.ok) return;
       var payload = await response.json();
@@ -62,5 +67,5 @@
 
   window.AtminimasBusinessDetails = { refresh: refresh, loadRemote: loadRemote };
   refresh();
-  loadRemote();
+  if (hasRemotePublicFields()) loadRemote();
 })();
