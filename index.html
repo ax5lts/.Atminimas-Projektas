@@ -36,6 +36,37 @@
       "name": "Atminimas",
       "alternateName": "Atminimo kodas",
       "url": "https://atminimokodas.lt/",
+      "inLanguage": "lt-LT",
+      "publisher": {
+        "@id": "https://atminimokodas.lt/#business"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://atminimokodas.lt/#webpage",
+      "url": "https://atminimokodas.lt/",
+      "name": "Atminimo kodas – QR lentelė ir atminimo puslapis",
+      "description": "Atminimo kodas – QR lentelė, kuri telefone atveria artimojo atminimo puslapį su gyvenimo istorija ir nuotraukomis.",
+      "isPartOf": {
+        "@id": "https://atminimokodas.lt/#website"
+      },
+      "about": {
+        "@id": "https://atminimokodas.lt/#business"
+      },
+      "primaryImageOfPage": {
+        "@id": "https://atminimokodas.lt/#primaryimage"
+      },
+      "inLanguage": "lt-LT"
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://atminimokodas.lt/#primaryimage",
+      "url": "https://atminimokodas.lt/assets/qr-plienas.webp",
+      "contentUrl": "https://atminimokodas.lt/assets/qr-plienas.webp",
+      "thumbnailUrl": "https://atminimokodas.lt/assets/qr-plienas-480.webp",
+      "width": 1086,
+      "height": 1448,
+      "caption": "Graviruota plieno QR atminimo lentelė, atverianti artimojo atminimo puslapį",
       "inLanguage": "lt-LT"
     },
     {
@@ -47,7 +78,12 @@
       "description": "Atminimo kodas, QR atminimo lentelės, skaitmeniniai atminimo puslapiai ir kapaviečių priežiūros paslaugos.",
       "url": "https://atminimokodas.lt/",
       "logo": "https://atminimokodas.lt/assets/atminimas-icon.png",
-      "image": "https://atminimokodas.lt/assets/atminimo-kodas-preview.jpg",
+      "image": {
+        "@id": "https://atminimokodas.lt/#primaryimage"
+      },
+      "mainEntityOfPage": {
+        "@id": "https://atminimokodas.lt/#webpage"
+      },
       "email": "atminimokodas@gmail.com",
       "telephone": "+370 645 69101",
       "address": {
@@ -94,8 +130,8 @@
     <section class="landing-intro" id="pradzia" aria-labelledby="landing-title">
       <div class="landing-intro__glow" aria-hidden="true"></div>
       <picture class="landing-intro__product">
-        <source media="(max-width: 560px)" srcset="assets/qr-plienas-480.webp">
-        <img src="assets/qr-plienas.webp" alt="QR atminimo lentelės pavyzdys" width="1086" height="1448" decoding="async" fetchpriority="high">
+        <source media="(max-width: 560px)" type="image/webp" srcset="assets/qr-plienas-480.webp">
+        <img src="assets/qr-plienas.webp" alt="Graviruota plieno QR atminimo lentelė artimojo atminimo puslapiui" width="1086" height="1448" loading="eager" decoding="async" fetchpriority="high">
       </picture>
       <div class="landing-intro__content">
         <p class="landing-wordmark" aria-label="Atminimas">

@@ -3,6 +3,7 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://atminimokodas.lt/</loc>
+    <lastmod>2026-09-04</lastmod>
     <image:image>
       <image:loc>https://atminimokodas.lt/assets/qr-plienas.webp</image:loc>
     </image:image>

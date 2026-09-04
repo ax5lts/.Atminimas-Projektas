@@ -60,6 +60,7 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
             "<image:loc>https://atminimokodas.lt/assets/qr-plienas.webp</image:loc>",
             sitemap,
         )
+        self.assertRegex(sitemap, r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>")
         self.assertNotIn(
             "<image:loc>https://atminimokodas.lt/assets/qr-plienas-480.webp</image:loc>",
             sitemap,
@@ -110,7 +111,22 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         schema = json.loads(schema_match.group(1))
         graph = {item["@type"]: item for item in schema["@graph"]}
         self.assertEqual(graph["WebSite"]["url"], "https://atminimokodas.lt/")
+        self.assertEqual(graph["WebPage"]["url"], "https://atminimokodas.lt/")
         self.assertEqual(graph["LocalBusiness"]["url"], "https://atminimokodas.lt/")
+        primary_image = graph["ImageObject"]
+        self.assertEqual(
+            graph["WebPage"]["primaryImageOfPage"]["@id"],
+            primary_image["@id"],
+        )
+        self.assertEqual(
+            graph["LocalBusiness"]["image"]["@id"],
+            primary_image["@id"],
+        )
+        self.assertEqual(
+            primary_image["contentUrl"],
+            "https://atminimokodas.lt/assets/qr-plienas.webp",
+        )
+        self.assertEqual((primary_image["width"], primary_image["height"]), (1086, 1448))
 
         business_source = (ROOT / "assets" / "business-config.js").read_text(encoding="utf-8")
         business = {
@@ -131,6 +147,18 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         )
         self.assertNotIn('src="assets/business-config.js', self.home)
         self.assertNotIn('src="assets/site-seo.js', self.home)
+
+    def test_homepage_primary_image_is_eager_and_descriptive(self):
+        self.assertIn(
+            '<source media="(max-width: 560px)" type="image/webp" '
+            'srcset="assets/qr-plienas-480.webp">',
+            self.home,
+        )
+        self.assertIn(
+            'alt="Graviruota plieno QR atminimo lentelė artimojo atminimo puslapiui"',
+            self.home,
+        )
+        self.assertIn('loading="eager" decoding="async" fetchpriority="high"', self.home)
 
     def test_local_business_schema_uses_real_config_only(self):
         self.assertIn('"LocalBusiness"', self.seo)
