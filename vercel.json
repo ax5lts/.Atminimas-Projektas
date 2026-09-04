@@ -1,6 +1,17 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "atminimokodas.vercel.app"
+        }
+      ],
+      "destination": "https://atminimokodas.lt/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [
         {

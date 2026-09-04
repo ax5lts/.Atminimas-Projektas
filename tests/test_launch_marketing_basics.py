@@ -124,6 +124,15 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
         self.assertIn(
             {
+                "source": "/",
+                "has": [{"type": "host", "value": "atminimokodas.vercel.app"}],
+                "destination": "https://atminimokodas.lt/",
+                "permanent": True,
+            },
+            config.get("redirects", []),
+        )
+        self.assertIn(
+            {
                 "source": "/:path*",
                 "has": [{"type": "host", "value": "atminimokodas.vercel.app"}],
                 "destination": "https://atminimokodas.lt/:path*",
