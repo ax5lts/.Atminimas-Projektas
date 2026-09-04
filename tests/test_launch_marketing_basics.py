@@ -60,7 +60,7 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
             "<image:loc>https://atminimokodas.lt/assets/qr-plienas.webp</image:loc>",
             sitemap,
         )
-        self.assertIn(
+        self.assertNotIn(
             "<image:loc>https://atminimokodas.lt/assets/qr-plienas-480.webp</image:loc>",
             sitemap,
         )
@@ -100,6 +100,37 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         self.assertIn("Atminimo kodas – tai ant kapavietės", self.home)
         self.assertIn('"@type": "WebSite"', self.seo)
         self.assertGreaterEqual(self.seo.count('alternateName: "Atminimo kodas"'), 2)
+
+    def test_homepage_schema_is_static_valid_and_matches_business_config(self):
+        schema_match = re.search(
+            r'<script type="application/ld\+json" data-site-module="site-seo">\s*([\s\S]*?)\s*</script>',
+            self.home,
+        )
+        self.assertIsNotNone(schema_match)
+        schema = json.loads(schema_match.group(1))
+        graph = {item["@type"]: item for item in schema["@graph"]}
+        self.assertEqual(graph["WebSite"]["url"], "https://atminimokodas.lt/")
+        self.assertEqual(graph["LocalBusiness"]["url"], "https://atminimokodas.lt/")
+
+        business_source = (ROOT / "assets" / "business-config.js").read_text(encoding="utf-8")
+        business = {
+            key: re.search(r'\b{0}:\s*"([^"]*)"'.format(key), business_source).group(1)
+            for key in ("legalName", "address", "email", "phone")
+        }
+        local_business = graph["LocalBusiness"]
+        self.assertEqual(local_business["legalName"], business["legalName"])
+        self.assertEqual(local_business["email"], business["email"])
+        self.assertEqual(local_business["telephone"], business["phone"])
+        schema_address = local_business["address"]
+        self.assertEqual(
+            business["address"],
+            "{0}, {1}, Lietuva".format(
+                schema_address["streetAddress"],
+                schema_address["addressLocality"],
+            ),
+        )
+        self.assertNotIn('src="assets/business-config.js', self.home)
+        self.assertNotIn('src="assets/site-seo.js', self.home)
 
     def test_local_business_schema_uses_real_config_only(self):
         self.assertIn('"LocalBusiness"', self.seo)

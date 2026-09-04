@@ -1,9 +1,12 @@
 import argparse
+import mimetypes
 import socket
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
+
+mimetypes.add_type("image/webp", ".webp")
 
 PUBLIC_DIRECTORIES = {"assets", "css"}
 PUBLIC_ROOT_SUFFIXES = {".html", ".ico", ".jpg", ".jpeg", ".png", ".webp", ".mp4", ".txt", ".xml"}
@@ -55,6 +58,9 @@ def is_public_path(raw_path):
 
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
+    extensions_map = SimpleHTTPRequestHandler.extensions_map.copy()
+    extensions_map[".webp"] = "image/webp"
+
     def send_error(self, code, message=None, explain=None):
         if code == 404:
             error_page = Path(self.directory or ".") / "404.html"

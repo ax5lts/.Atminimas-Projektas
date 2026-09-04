@@ -64,6 +64,32 @@
     });
   }
 
+  function renderAuthNavigation() {
+    var authenticated = Boolean(window.AtminimasAuth && window.AtminimasAuth.accessToken());
+    document.querySelectorAll("[data-auth-guest]").forEach(function (element) {
+      element.hidden = authenticated;
+    });
+    document.querySelectorAll("[data-auth-user]").forEach(function (element) {
+      element.hidden = !authenticated;
+    });
+  }
+
+  function setupAuthNavigation() {
+    var navigation = document.querySelector("[data-auth-navigation]");
+    if (!navigation || !window.AtminimasAuth) return;
+
+    var signOutButton = navigation.querySelector("[data-auth-signout]");
+    if (signOutButton) {
+      signOutButton.addEventListener("click", function () {
+        window.AtminimasAuth.signOut();
+        renderAuthNavigation();
+      });
+    }
+
+    window.addEventListener("storage", renderAuthNavigation);
+    renderAuthNavigation();
+  }
+
   function setupSkipLink() {
     if (!document.querySelector("main") || document.querySelector(".skip-link")) return;
     var main = document.querySelector("main");
@@ -209,13 +235,21 @@
   function setupSeoAndAnalytics() {
     var privatePages = ["admin.html", "redaktorius.html", "slaptazodis.html", "vartotojas.html"];
     if (privatePages.indexOf(page) !== -1) return;
-    var businessReady = window.ATMINIMAS_BUSINESS
-      ? Promise.resolve()
-      : loadScriptOnce("assets/business-config.js?v=20260826-1", "business-config");
-    businessReady.then(function () {
-      return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
-    }).catch(function () {});
+
+    var staticSeo = document.querySelector('script[type="application/ld+json"][data-site-module="site-seo"]');
+    if (!staticSeo) {
+      var businessReady = window.ATMINIMAS_BUSINESS
+        ? Promise.resolve()
+        : loadScriptOnce("assets/business-config.js?v=20260826-1", "business-config");
+      businessReady.then(function () {
+        return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
+      }).catch(function () {});
+    }
+
     loadScriptOnce("assets/analytics-config.js?v=20260811-1", "analytics-config").then(function () {
+      var analytics = window.ATMINIMAS_ANALYTICS || {};
+      var measurementId = String(analytics.GA_MEASUREMENT_ID || "").trim().toUpperCase();
+      if (!/^G-[A-Z0-9]+$/.test(measurementId)) return;
       return loadScriptOnce("assets/analytics.js?v=20260811-1", "analytics");
     }).catch(function () {});
   }
@@ -254,6 +288,7 @@
   setupBreadcrumbs();
   setupBackLinks();
   setupMobileDock();
+  setupAuthNavigation();
   setupHeaderMenu();
   setupRevealAnimations();
   setupSeoAndAnalytics();

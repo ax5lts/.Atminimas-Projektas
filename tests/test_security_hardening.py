@@ -8,7 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class SecurityHardeningTests(unittest.TestCase):
     def test_every_html_page_has_csp_and_no_inline_javascript(self):
-        inline_script = re.compile(r"<script(?![^>]*\bsrc\s*=)[^>]*>", re.I)
+        inline_script = re.compile(
+            r"<script(?![^>]*\bsrc\s*=)(?![^>]*\btype=[\"']application/ld\+json[\"'])[^>]*>",
+            re.I,
+        )
         event_attribute = re.compile(r"<[^>]+\son[a-z]+\s*=", re.I)
         for path in ROOT.glob("*.html"):
             html = path.read_text(encoding="utf-8")

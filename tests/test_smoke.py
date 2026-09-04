@@ -85,6 +85,31 @@ class AtminimasSmokeTests(unittest.TestCase):
                 with self.subTest(page=page.name, reference=reference):
                     self.assertTrue(target.exists(), "Nerastas vietinis failas: {0}".format(target))
 
+    def test_googlebot_home_resources_have_crawlable_mime_types(self):
+        resources = {
+            "/assets/atminimas-icon.png": "image/png",
+            "/assets/business-details.js?v=20260903-1": "application/javascript",
+            "/assets/qr-plienas-480.webp": "image/webp",
+            "/assets/qr-plienas.webp": "image/webp",
+            "/css/styles.css?v=20260903-3": "text/css",
+        }
+        user_agent = (
+            "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile "
+            "Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        )
+        for path, expected_type in resources.items():
+            request = urllib.request.Request(
+                self.base_url + path,
+                headers={"User-Agent": user_agent},
+            )
+            with self.subTest(path=path), urllib.request.urlopen(request, timeout=8) as response:
+                body = response.read()
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.headers.get_content_type(), expected_type)
+                self.assertTrue(body)
+                self.assertNotIn("text/html", response.headers.get("Content-Type", ""))
+
     def test_navigation_controls_do_not_use_placeholder_targets(self):
         button_without_type = re.compile(r"<button(?![^>]*\btype=)[^>]*>", re.I)
         javascript_href = re.compile(r'href=["\']javascript:', re.I)
@@ -123,14 +148,21 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_homepage_navigation_reflects_auth_session(self):
         homepage = (ROOT / "index.html").read_text(encoding="utf-8")
         home_js = (ROOT / "assets" / "home.js").read_text(encoding="utf-8")
+        site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
         self.assertIn("data-auth-navigation", homepage)
         self.assertEqual(homepage.count("data-auth-guest"), 2)
         self.assertEqual(homepage.count("data-auth-user"), 2)
         self.assertIn('href="vartotojas.html" data-auth-user', homepage)
         self.assertIn("data-auth-signout", homepage)
-        self.assertIn("AtminimasAuth.accessToken()", home_js)
-        self.assertIn("AtminimasAuth.signOut()", home_js)
-        self.assertIn('window.addEventListener("storage", renderAuthNavigation)', home_js)
+        self.assertIn("window.AtminimasAuth.accessToken()", site_ui)
+        self.assertIn("window.AtminimasAuth.signOut()", site_ui)
+        self.assertIn('window.addEventListener("storage", renderAuthNavigation)', site_ui)
+        self.assertNotIn("renderAuthNavigation", home_js)
+        self.assertNotIn('src="assets/home.js', homepage)
+        self.assertIn(
+            'src="assets/home.js?v=20260904-1"',
+            (ROOT / "kapu-prieziura.html").read_text(encoding="utf-8"),
+        )
 
     def test_supabase_sources_match_the_deployed_structure(self):
         migration_names = [path.name for path in (ROOT / "supabase" / "migrations").glob("*.sql")]
@@ -307,6 +339,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         homepage_keys = set(re.findall(r'data-business="([^"]+)"', homepage))
         self.assertEqual(homepage_keys, {"responseTime"})
         self.assertTrue(homepage_keys.isdisjoint(public_keys))
+        self.assertNotIn('src="assets/business-details.js', homepage)
         self.assertRegex(
             config,
             r"(?s)\[functions\.business-profile\]\s*verify_jwt\s*=\s*false",
@@ -1066,7 +1099,7 @@ class AtminimasSmokeTests(unittest.TestCase):
 
     def test_mobile_pages_use_lightweight_images_and_loader(self):
         core_pages = (
-            "index.html", "parduotuve.html", "vartotojas.html", "admin.html",
+            "parduotuve.html", "vartotojas.html", "admin.html",
             "apmokejimas.html", "redaktorius.html", "sablonas-viskas.html",
             "klientai.html", "prisijungti.html", "registruotis.html",
             "kapu-prieziura.html",
@@ -1076,6 +1109,11 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(page=name):
                 self.assertRegex(html, r"<body[^>]*\bdata-loading\b")
                 self.assertRegex(html, r'src="assets/loading\.js\?v=\d{8}-\d+"')
+        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertNotRegex(homepage, r"<body[^>]*\bdata-loading\b")
+        self.assertNotIn('src="assets/loading.js', homepage)
+        self.assertIn("data-critical-css", homepage)
+        self.assertIn("img{max-width:100%;height:auto}", homepage)
         for image in ("qr-atminimo-lentele.webp", "qr-atminimo-lentele-480.webp", "qr-plienas.webp", "qr-plienas-480.webp", "qr-asa.webp", "qr-asa-480.webp"):
             with self.subTest(image=image):
                 self.assertTrue((ROOT / "assets" / image).is_file())
