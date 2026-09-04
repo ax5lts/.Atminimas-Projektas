@@ -130,7 +130,7 @@
     var breadcrumbs = document.createElement("nav");
     breadcrumbs.className = "breadcrumbs breadcrumbs--generated";
     breadcrumbs.setAttribute("aria-label", "Kelias");
-    breadcrumbs.innerHTML = '<a href="index.html">Pradžia</a><span aria-current="page"></span>';
+    breadcrumbs.innerHTML = '<a href="/">Pradžia</a><span aria-current="page"></span>';
     breadcrumbs.querySelector("span").textContent = label;
     main.prepend(breadcrumbs);
   }
@@ -145,7 +145,7 @@
       button.textContent = "← Atgal";
       button.addEventListener("click", function () {
         if (window.history.length > 1) window.history.back();
-        else window.location.href = "index.html";
+        else window.location.href = "/";
       });
       breadcrumbs.prepend(button);
     });
@@ -155,7 +155,7 @@
     if (!document.querySelector(".site-shell") || document.body.classList.contains("editor-page") || document.body.classList.contains("memorial-page") || page === "admin.html") return;
     if (document.querySelector(".mobile-dock")) return;
     var items = [
-      { href: "index.html", label: "Pradžia", pages: ["index.html"], icon: "M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5H15v-6H9v6H3.5a.5.5 0 0 1-.5-.5z" },
+      { href: "/", label: "Pradžia", pages: ["index.html"], icon: "M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5H15v-6H9v6H3.5a.5.5 0 0 1-.5-.5z" },
       { href: "kapu-ieskojimas.html", label: "Kapų paieška", pages: ["kapu-ieskojimas.html"], icon: "M10.8 3a7.8 7.8 0 1 0 4.9 13.9L21 22l1-1-5.1-5.2A7.8 7.8 0 0 0 10.8 3m0 2a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0-11.6" },
       { href: "parduotuve.html", label: "Užsakyti", pages: ["redaktorius.html", "parduotuve.html", "isankstinis-uzsakymas.html", "kapu-prieziura.html", "apmokejimas.html"], icon: "M12 3a1 1 0 0 1 1 1v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4a1 1 0 0 1 1-1" },
       { href: "vartotojas.html", label: "Paskyra", pages: ["vartotojas.html", "prisijungti.html", "registruotis.html", "slaptazodis.html", "klientai.html"], icon: "M12 3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9m0 11c5 0 8 2.5 8 5.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5C4 16.5 7 14 12 14" }

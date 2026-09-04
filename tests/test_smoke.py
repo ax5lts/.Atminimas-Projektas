@@ -86,19 +86,44 @@ class AtminimasSmokeTests(unittest.TestCase):
                     self.assertTrue(target.exists(), "Nerastas vietinis failas: {0}".format(target))
 
     def test_googlebot_home_resources_have_crawlable_mime_types(self):
-        resources = {
-            "/assets/atminimas-icon.png": "image/png",
-            "/assets/business-details.js?v=20260903-1": "application/javascript",
-            "/assets/qr-plienas-480.webp": "image/webp",
-            "/assets/qr-plienas.webp": "image/webp",
-            "/css/styles.css?v=20260903-3": "text/css",
+        expected_types = {
+            ".css": {"text/css"},
+            ".ico": {"image/x-icon", "image/vnd.microsoft.icon"},
+            ".jpeg": {"image/jpeg"},
+            ".jpg": {"image/jpeg"},
+            ".js": {"application/javascript", "text/javascript"},
+            ".mp4": {"video/mp4"},
+            ".png": {"image/png"},
+            ".webp": {"image/webp"},
         }
+        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
+        resources = {}
+        tags = re.findall(r"<(?:img|link|script|source|video)\b[^>]*>", homepage, re.I)
+        for tag in tags:
+            for attribute, raw_value in re.findall(
+                r'\b(src|srcset|href|poster)\s*=\s*["\']([^"\']+)["\']',
+                tag,
+                re.I,
+            ):
+                candidates = raw_value.split(",") if attribute.lower() == "srcset" else [raw_value]
+                for candidate in candidates:
+                    candidate = candidate.strip().split()[0]
+                    parsed = urllib.parse.urlsplit(candidate)
+                    suffix = Path(parsed.path).suffix.lower()
+                    if parsed.scheme or parsed.netloc or suffix not in expected_types:
+                        continue
+                    request_path = "/" + parsed.path.lstrip("/")
+                    if parsed.query:
+                        request_path += "?" + parsed.query
+                    resources[request_path] = expected_types[suffix]
+
+        self.assertGreaterEqual(len(resources), 9)
         user_agent = (
             "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile "
             "Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
         )
-        for path, expected_type in resources.items():
+        for path, allowed_types in resources.items():
             request = urllib.request.Request(
                 self.base_url + path,
                 headers={"User-Agent": user_agent},
@@ -106,7 +131,7 @@ class AtminimasSmokeTests(unittest.TestCase):
             with self.subTest(path=path), urllib.request.urlopen(request, timeout=8) as response:
                 body = response.read()
                 self.assertEqual(response.status, 200)
-                self.assertEqual(response.headers.get_content_type(), expected_type)
+                self.assertIn(response.headers.get_content_type(), allowed_types)
                 self.assertTrue(body)
                 self.assertNotIn("text/html", response.headers.get("Content-Type", ""))
 
@@ -884,8 +909,6 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertEqual(struct.unpack(">II", icon_bytes[16:24]), (512, 512))
         self.assertTrue((ROOT / "assets" / "apple-touch-icon.png").is_file())
         self.assertTrue((ROOT / "favicon.ico").is_file())
-        deployment = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
-        self.assertIn("cp -- *.html favicon.ico robots.txt sitemap.xml _site/", deployment)
         for page in ROOT.glob("*.html"):
             html = page.read_text(encoding="utf-8")
             self.assertIn(
@@ -930,7 +953,7 @@ class AtminimasSmokeTests(unittest.TestCase):
     def test_public_memorial_has_home_link_and_frame(self):
         html = (ROOT / "sablonas-viskas.html").read_text(encoding="utf-8")
         css = (ROOT / "css" / "styles.css").read_text(encoding="utf-8")
-        self.assertIn('class="memorial-site-link" href="index.html"', html)
+        self.assertIn('class="memorial-site-link" href="/"', html)
         self.assertIn("Atminimas – atidaryti pagrindinę svetainę", html)
         self.assertIn("width: 98%;", css)
         self.assertIn("border-top: 1px solid", css)
@@ -1234,7 +1257,9 @@ class AtminimasSmokeTests(unittest.TestCase):
             script,
             r'Authorization:\s*"Bearer "\s*\+\s*(?:accessToken|recoveryToken)',
         )
-        self.assertIn('site_url = "https://ax5lts.github.io/.Atminimas-Projektas/"', config)
+        self.assertIn('site_url = "https://atminimokodas.lt/"', config)
+        self.assertIn('additional_redirect_urls = ["https://atminimokodas.lt/slaptazodis.html"]', config)
+        self.assertNotIn("github.io", config)
         self.assertNotIn('site_url = "http://127.0.0.1:3000"', config)
 
     def test_shared_mobile_navigation_and_reduced_loader_are_enabled(self):

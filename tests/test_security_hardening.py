@@ -325,22 +325,19 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertIn('return json({ error: "Paslaugos veiksmas nepavyko" }, 500)', service)
         self.assertIn('return json({ error: "Webhook processing failed" }, 500)', webhook)
 
-    def test_github_pages_auto_deploys_main_after_security_tests(self):
+    def test_github_actions_verifies_main_without_publishing_a_duplicate_site(self):
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
-        expected = (
-            "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
-            "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
-            "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b",
-            "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
-        )
-        for action in expected:
-            self.assertIn(action, workflow)
-        tests_at = workflow.index('python -m unittest discover -s tests -p "test_*.py" -v')
-        artifact_at = workflow.index("actions/upload-pages-artifact@")
-        self.assertLess(tests_at, artifact_at)
+        self.assertIn("actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803", workflow)
+        self.assertIn('python -m unittest discover -s tests -p "test_*.py" -v', workflow)
+        self.assertIn("find assets -maxdepth 1 -name '*.js'", workflow)
         self.assertRegex(workflow, r"(?m)^\s{2}push:\s*$")
         self.assertRegex(workflow, r"(?m)^\s{6}- main\s*$")
-        self.assertIn("github.event_name == 'push' || inputs.backend_ready", workflow)
+        self.assertIn("pull_request:", workflow)
+        self.assertNotIn("pages: write", workflow)
+        self.assertNotIn("id-token: write", workflow)
+        self.assertNotIn("actions/configure-pages@", workflow)
+        self.assertNotIn("actions/upload-pages-artifact@", workflow)
+        self.assertNotIn("actions/deploy-pages@", workflow)
         self.assertTrue((ROOT / ".github" / "dependabot.yml").is_file())
 
     def test_repository_does_not_contain_common_secret_value_patterns(self):

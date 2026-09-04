@@ -700,7 +700,7 @@
     var params = new URLSearchParams(window.location.search);
     var identifier = (params.get("id") || params.get("slug") || params.get("s") || "").trim();
     if (!identifier) {
-      window.location.replace("index.html");
+      window.location.replace("/");
       return;
     }
 

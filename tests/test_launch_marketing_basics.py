@@ -1,10 +1,13 @@
 import json
 import re
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CANONICAL_HOME = "https://atminimokodas.lt/"
+SEO_STABILITY_LASTMOD = "2026-09-04"
 
 
 class LaunchMarketingBasicsTests(unittest.TestCase):
@@ -67,6 +70,47 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         )
         self.assertIn('".txt"', server)
         self.assertIn('".xml"', server)
+
+        document = ET.fromstring(sitemap)
+        namespaces = {
+            "sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9",
+            "image": "http://www.google.com/schemas/sitemap-image/1.1",
+        }
+        entries = document.findall("sitemap:url", namespaces)
+        locations = [entry.findtext("sitemap:loc", namespaces=namespaces) for entry in entries]
+        self.assertEqual(len(locations), len(set(locations)))
+        self.assertEqual(locations.count(CANONICAL_HOME), 1)
+        self.assertEqual(
+            [node.text for node in document.findall(".//sitemap:lastmod", namespaces)],
+            [SEO_STABILITY_LASTMOD],
+        )
+        self.assertEqual(
+            [node.text for node in document.findall(".//image:loc", namespaces)],
+            [CANONICAL_HOME + "assets/qr-plienas.webp"],
+        )
+
+        for location in locations:
+            self.assertTrue(location.startswith(CANONICAL_HOME), location)
+            relative_path = location[len(CANONICAL_HOME):]
+            page_path = ROOT / (relative_path or "index.html")
+            self.assertTrue(page_path.is_file(), location)
+            page_html = page_path.read_text(encoding="utf-8")
+            canonicals = re.findall(
+                r'<link\s+[^>]*rel="canonical"[^>]*href="([^"]+)"[^>]*>',
+                page_html,
+                re.I,
+            )
+            self.assertEqual(canonicals, [location], page_path.name)
+            robots_values = re.findall(
+                r'<meta\s+[^>]*name="robots"[^>]*content="([^"]+)"[^>]*>',
+                page_html,
+                re.I,
+            )
+            self.assertFalse(
+                any("noindex" in value.lower() for value in robots_values),
+                page_path.name,
+            )
+
         for private_page in (
             "admin.html",
             "apmokejimas.html",
@@ -79,9 +123,43 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
     def test_production_redirects_duplicate_homepage_to_canonical_url(self):
         config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
         self.assertIn(
+            {
+                "source": "/:path*",
+                "has": [{"type": "host", "value": "atminimokodas.vercel.app"}],
+                "destination": "https://atminimokodas.lt/:path*",
+                "permanent": True,
+            },
+            config.get("redirects", []),
+        )
+        self.assertIn(
             {"source": "/index.html", "destination": "/", "permanent": True},
             config.get("redirects", []),
         )
+
+    def test_homepage_indexing_contract_is_unique_and_static(self):
+        title = "Atminimo kodas – QR lentelė ir atminimo puslapis | Atminimas"
+        h1 = "Atminimo kodas – QR lentelė artimojo istorijai išsaugoti"
+        self.assertEqual(
+            self.home.count('<link rel="canonical" href="https://atminimokodas.lt/">'),
+            1,
+        )
+        self.assertEqual(
+            re.findall(r'<meta name="robots" content="([^"]+)">', self.home),
+            ["index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"],
+        )
+        self.assertEqual(re.findall(r"<title>(.*?)</title>", self.home), [title])
+        headings = re.findall(r"<h1\b[^>]*>(.*?)</h1>", self.home, re.I | re.S)
+        self.assertEqual([re.sub(r"<[^>]+>", "", value).strip() for value in headings], [h1])
+
+    def test_internal_home_links_use_the_canonical_root(self):
+        for page in ROOT.glob("*.html"):
+            with self.subTest(page=page.name):
+                self.assertNotRegex(page.read_text(encoding="utf-8"), r'href="/?index\.html(?:[?#][^"]*)?"')
+        site_ui = (ROOT / "assets" / "site-ui.js").read_text(encoding="utf-8")
+        memorial = (ROOT / "assets" / "memorial-page.js").read_text(encoding="utf-8")
+        self.assertNotIn('href="index.html"', site_ui)
+        self.assertNotIn('window.location.href = "index.html"', site_ui)
+        self.assertNotIn('window.location.replace("index.html")', memorial)
 
     def test_homepage_uses_clear_search_titles(self):
         title = "Atminimo kodas – QR lentelė ir atminimo puslapis | Atminimas"
