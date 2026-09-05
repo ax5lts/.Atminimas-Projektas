@@ -7,6 +7,9 @@ project_id = "atminimas_Projektas"
 [functions.payment-webhook]
 verify_jwt = false
 
+[functions.paysera-webhook]
+verify_jwt = false
+
 [functions.payment-create]
 verify_jwt = true
 

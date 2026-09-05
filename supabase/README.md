@@ -16,3 +16,5 @@ Svarbiausi saugumo principai:
 - gavėjo ir siuntos duomenys keičiami tik per patikrintas funkcijas bei RLS taisykles.
 
 Po kiekvieno schemos pakeitimo paleiskite „Supabase Security Advisor“ ir testus.
+
+Kapavietės priežiūros pasiūlymų „Paysera“ integracijos konfigūracija ir patikros: [PAYSERA_SETUP.md](PAYSERA_SETUP.md).

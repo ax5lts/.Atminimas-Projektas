@@ -202,7 +202,13 @@
     });
     var result = await response.json().catch(function () { return {}; });
     if (!response.ok) throw new Error(result.error || "Mokėjimo pradėti nepavyko.");
-    if (!/^https:\/\//i.test(result.checkout_url || "")) throw new Error("Mokėjimo nuoroda negauta.");
+    var checkoutUrl;
+    try { checkoutUrl = new URL(result.checkout_url); } catch (_error) { throw new Error("Mokėjimo nuoroda negauta."); }
+    var trustedCheckout = checkoutUrl.protocol === "https:" && !checkoutUrl.username && !checkoutUrl.password &&
+      !checkoutUrl.port && ((checkoutUrl.hostname === "www.paysera.com" && checkoutUrl.pathname === "/pay/") ||
+      checkoutUrl.hostname === "checkout.stripe.com" || (checkoutUrl.hostname === "api.paysera.com" &&
+      /^\/checkout-payment-link\/payment-collection\/v1\/payment-links\/[A-Za-z0-9_-]+$/.test(checkoutUrl.pathname)));
+    if (!trustedCheckout) throw new Error("Mokėjimo nuoroda negauta.");
     window.location.href = result.checkout_url;
   }
 
@@ -231,7 +237,7 @@
       if (row.quote_status === "sent" && !expired) {
         actions = "<div class='actions'><button class='button' type='button' data-service-accept='" + html(row.id) + "' data-quote-revision='" + html(row.quote_revision) + "'>Priimti pasiūlymą</button><button class='button button--ghost' type='button' data-service-decline='" + html(row.id) + "' data-quote-revision='" + html(row.quote_revision) + "'>Atmesti</button></div>";
       } else if (row.quote_status === "accepted" && !expired && ["pending", "processing", "failed", "cancelled"].indexOf(row.payment_status) !== -1) {
-        actions = "<button class='button user-card-primary' type='button' data-service-payment='" + html(row.id) + "'>" + (row.payment_status === "processing" ? "Tęsti apmokėjimą" : "Apmokėti pasiūlymą") + "</button>";
+        actions = "<button class='button user-card-primary' type='button' data-service-payment='" + html(row.id) + "'>" + (row.payment_status === "processing" ? "Tęsti apmokėjimą" : "Apmokėti per „Paysera“") + "</button>";
       } else if (expired && row.payment_status !== "paid") {
         actions = "<p class='editor-note'>Pasiūlymo galiojimas baigėsi. Susisiekite su mumis arba palaukite naujo pasiūlymo.</p>";
       }
@@ -399,7 +405,7 @@
 
     await loadMyServiceRequests(me.id);
     if (new URLSearchParams(window.location.search).get("payment") === "success") {
-      setStatus("Mokėjimas priimtas. Laukiame saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.", "success");
+      setStatus("Grįžote iš mokėjimo puslapio. Tikriname mokėjimo būseną – apmokėjimas bus patvirtintas gavus mokėjimų teikėjo pranešimą.", "info");
     } else if (new URLSearchParams(window.location.search).get("payment") === "cancelled") {
       setStatus("Mokėjimas atšauktas. Pasiūlymas išsaugotas, galėsite bandyti dar kartą.", "warning");
     }

@@ -1,5 +1,7 @@
 # Paleidimo kontrolinis sąrašas
 
+Kapavietės priežiūros mokėjimams per „Paysera“ papildomai vykdykite [supabase/PAYSERA_SETUP.md](supabase/PAYSERA_SETUP.md). QR lentelių išankstinių užsakymų režimas lieka be mokėjimo.
+
 1. Užpildykite `assets/business-config.js` tikrais rekvizitais ir komercinėmis sąlygomis.
 2. Įrašykite produkcinį HTTPS adresą į `PUBLIC_SITE_URL` faile `assets/supabase-config.js`.
 3. Įrašykite tikrą GA4 matavimo ID (`G-...`) faile `assets/analytics-config.js`; analitika įsijungs tik lankytojui sutikus.

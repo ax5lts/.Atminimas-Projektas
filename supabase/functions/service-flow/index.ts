@@ -10,6 +10,7 @@ import {
   requireUser,
 } from "../_shared/core.ts";
 import { sendEmail } from "../_shared/email.ts";
+import { startModernServicePayment } from "../_shared/paysera-modern.ts";
 
 const ALLOWED_SERVICES = ["zvakes", "geles", "kapu_tvarkymas"] as const;
 const PRICE_GROUPS = {
@@ -710,6 +711,10 @@ async function sendQuoteAction(
       }&claim=1#paslaugos`,
       actionLabel: "Priimti pasiūlymą ir apmokėti",
       idempotencyKey: `service:${quote.id}:quote:${quote.quote_revision}`,
+      entityType: "service_request",
+      entityId: String(quote.id),
+      recipientKind: "customer",
+      category: "service.quote",
     });
     emailSent = true;
     const { error: emailUpdateError } = await client.from("paslaugu_uzklausos")
@@ -804,7 +809,7 @@ function finalStripeClientError(status: number, response: Record<string, any>) {
     type !== "idempotency_error";
 }
 
-async function startPaymentAction(
+async function startStripePaymentAction(
   request: Request,
   body: Record<string, unknown>,
 ) {
@@ -992,6 +997,14 @@ async function startPaymentAction(
     session_id: session.id,
     reused: false,
   };
+}
+
+export async function startPaymentAction(
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const result = await startModernServicePayment(request, body);
+  return result.legacy ? startStripePaymentAction(request, body) : result;
 }
 
 if (import.meta.main) {

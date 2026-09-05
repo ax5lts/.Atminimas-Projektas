@@ -1,4 +1,11 @@
 {
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/paysera-verify-0c92a4c0084e58746594a9df8face37c.txt",
+      "destination": "/public/paysera-verify-0c92a4c0084e58746594a9df8face37c.txt"
+    }
+  ],
   "redirects": [
     {
       "source": "/",

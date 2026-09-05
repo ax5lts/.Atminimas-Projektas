@@ -6,7 +6,7 @@ import {
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, apikey, content-type, x-automation-secret, stripe-signature",
+    "authorization, apikey, content-type, x-automation-secret, x-ops-monitor-secret, stripe-signature",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
