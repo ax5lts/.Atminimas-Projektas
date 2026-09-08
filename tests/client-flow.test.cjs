@@ -31,7 +31,7 @@ function page() {
     URL, URLSearchParams, console,
     document: { getElementById: get, querySelector: get, querySelectorAll: () => [] },
     sessionStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    location: { href: 'https://example.test/parduotuve.html', search: '', pathname: '/parduotuve.html', assign() {} },
+    location: { href: 'https://example.test/parduotuve.html', search: '', pathname: '/parduotuve.html', assign(url) { this.assigned = url; } },
     requestAnimationFrame: fn => fn(),
     FormData: class { constructor(form) { this.values = form.values || {}; } entries() { return Object.entries(this.values); } get(key) { return this.values[key]; } }
   };
@@ -117,6 +117,7 @@ test('editor saves again to the same profile without uploading unchanged media',
   assert.equal(p.updates[0].options.files.photos.length, 0);
   assert.equal(p.updates[0].options.existingMedia[0].path, 'saved-photo.jpg');
   assert.match(p.context.location.href, /edit=created-page/);
+  assert.equal(p.context.location.assigned, undefined);
   p.context.processedPhotos.push({ name: 'new.jpg' });
   await p.submit();
   assert.equal(p.updates[1].options.files.photos.length, 2);
@@ -153,13 +154,14 @@ test('prototype publish retry reuses created profile', async () => {
   assert.equal(p.updates.length, 1);
   assert.equal(publications, 2);
   assert.equal(p.context.prototypePublishPending, false);
+  assert.equal(p.context.location.assigned, undefined);
 });
 
 test('checkout script safely ignores pages without its form', () => {
   vm.runInNewContext(source('checkout.js'), { document: { getElementById: () => null } });
 });
 
-test('paid product creation retries on the same profile and links its order to checkout', async () => {
+test('paid product creation retries on the same profile and immediately redirects to checkout', async () => {
   const p = editor();
   p.context.productType = 'metal';
   let orders = 0;
@@ -171,11 +173,13 @@ test('paid product creation retries on the same profile and links its order to c
   };
   await p.submit();
   assert.equal(p.context.physicalOrderPending, true);
+  assert.equal(p.context.location.assigned, undefined);
   await p.submit();
   assert.equal(p.creates.length, 1);
   assert.equal(orders, 2);
   assert.equal(p.context.physicalOrderPending, false);
   assert.equal(p.context.preorderLink.href, 'apmokejimas.html?order=saved-order');
+  assert.equal(p.context.location.assigned, 'apmokejimas.html?order=saved-order');
   await p.submit();
   assert.equal(orders, 2);
 });
@@ -193,4 +197,5 @@ test('an existing digital page can receive a physical order without creating ano
   await p.submit();
   assert.equal(p.creates.length, 0);
   assert.equal(p.context.preorderLink.href, 'apmokejimas.html?order=asa-order');
+  assert.equal(p.context.location.assigned, 'apmokejimas.html?order=asa-order');
 });

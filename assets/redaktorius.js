@@ -3892,6 +3892,9 @@
       showSaveProgress(100, "Puslapis išsaugotas.");
       setDraftState("Puslapis išsaugotas", "saved");
       showSaveSuccess(savedStatusMessage, "Atminimo puslapis sėkmingai išsaugotas kaip privatus.");
+      if (physicalOrder) {
+        window.location.assign(preorderLink.href);
+      }
     } catch (err) {
       console.error(err);
       statusEl.textContent = err.message || "Nepavyko išsaugoti. Patikrink failų dydį, tipą arba DB teises.";
