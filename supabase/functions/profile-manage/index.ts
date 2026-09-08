@@ -281,12 +281,18 @@ Deno.serve(async (request: Request) => {
     if (action === "create_order") {
       if (!isOwner || user.is_anonymous) return json({ error: "Užsakymą gali sukurti tik prisijungęs puslapio savininkas" }, 403);
       const productType = String(body.product_type || "");
-      if (productType !== "metal" && productType !== "asa") return json({ error: "Neteisingas produkto tipas" }, 400);
+      if (productType !== "metal") return json({ error: "Neteisingas produkto tipas" }, 400);
+      const productColor = String(body.product_color || "gold");
+      const productPattern = String(body.product_pattern || "tree");
+      if (!["gold", "silver", "black"].includes(productColor) || !["tree", "heart", "wings", "plain"].includes(productPattern)) {
+        return json({ error: "Neteisinga lentelės spalva arba raštas" }, 400);
+      }
       const page = new URL("sablonas-viskas.html", publicSiteUrl());
       page.searchParams.set("slug", profileId);
       const qr = `${env("SUPABASE_URL").replace(/\/$/, "")}/functions/v1/qr-code?data=${encodeURIComponent(page.href)}&format=png`;
-      const { data: order, error: orderError } = await client.rpc("create_paid_product_order", {
+      const { data: order, error: orderError } = await client.rpc("create_designed_product_order", {
         p_profile_id: profileId, p_actor_id: user.id, p_product_type: productType, p_page_url: page.href, p_qr_url: qr,
+        p_product_color: productColor, p_product_pattern: productPattern,
       });
       if (orderError || !order) return json({ error: "Užsakymo sukurti nepavyko. Patikrinkite produkto prieinamumą." }, 409);
       return json(order, 201);

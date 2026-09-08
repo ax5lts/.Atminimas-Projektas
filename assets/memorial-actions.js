@@ -25,7 +25,9 @@
   }
 
   function pageUrl() {
-    return new URL(global.location.href).href;
+    var url = new URL("sablonas-viskas.html", global.location.href);
+    url.searchParams.set("slug", profile.id);
+    return url.href;
   }
 
   function toast(message) {
@@ -34,13 +36,14 @@
 
   function copyText(value) {
     if (global.AtminimasUi) return AtminimasUi.copyText(value);
-    return navigator.clipboard.writeText(value);
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(value);
+    return Promise.reject(new Error("Nuorodos nukopijuoti nepavyko."));
   }
 
   function savedItems() {
     try {
       var saved = JSON.parse(localStorage.getItem(savedKey) || "[]");
-      return Array.isArray(saved) ? saved : [];
+      return Array.isArray(saved) ? saved.filter(function (item) { return item && typeof item === "object" && item.id; }).slice(0, 100) : [];
     } catch (_error) {
       return [];
     }
@@ -67,7 +70,6 @@
     var index = saved.findIndex(function (item) { return item.id === profile.id; });
     if (index >= 0) {
       saved.splice(index, 1);
-      toast("Atminimas pašalintas iš išsaugotų.");
     } else {
       saved.unshift({
         id: profile.id,
@@ -75,10 +77,13 @@
         url: pageUrl(),
         death_date: profile.mirties_data || null
       });
-      toast("Atminimas išsaugotas. Jį rasite skiltyje „Išsaugoti atminimai“.");
     }
-    localStorage.setItem(savedKey, JSON.stringify(saved.slice(0, 100)));
+    try { localStorage.setItem(savedKey, JSON.stringify(saved.slice(0, 100))); } catch (_error) {
+      toast("Atminimo išsaugoti nepavyko. Patikrinkite naršyklės saugyklos leidimus.");
+      return;
+    }
     updateSaveButton();
+    toast(index >= 0 ? "Atminimas pašalintas iš išsaugotų." : "Atminimas išsaugotas. Jį rasite skiltyje „Išsaugoti atminimai“.");
   }
 
   async function sharePage() {
@@ -176,7 +181,7 @@
   function renderEngagement(data) {
     document.getElementById("memorial-candle-count").textContent = candleLabel(data.candle_count);
     var list = document.getElementById("memorial-memory-list");
-    var memories = Array.isArray(data.memories) ? data.memories : [];
+    var memories = Array.isArray(data.memories) ? data.memories.filter(function (memory) { return memory && typeof memory === "object"; }) : [];
     list.innerHTML = "";
     if (!memories.length) {
       var empty = document.createElement("p");
@@ -191,7 +196,7 @@
       message.textContent = memory.message;
       var footer = document.createElement("footer");
       var date = new Date(memory.created_at);
-      footer.textContent = memory.author_name + " · " + new Intl.DateTimeFormat("lt-LT", { dateStyle: "medium" }).format(date);
+      footer.textContent = (memory.author_name || "Lankytojas") + (Number.isNaN(date.getTime()) ? "" : " · " + new Intl.DateTimeFormat("lt-LT", { dateStyle: "medium" }).format(date));
       article.appendChild(message);
       article.appendChild(footer);
       list.appendChild(article);
@@ -223,8 +228,8 @@
       var button = event.target.closest("[data-memorial-action]");
       if (!button) return;
       var action = button.dataset.memorialAction;
-      if (action === "share") sharePage();
-      if (action === "copy") copyText(pageUrl()).then(function () { toast("Nuoroda nukopijuota."); });
+      if (action === "share") sharePage().catch(function () { toast("Pasidalyti nuoroda nepavyko."); });
+      if (action === "copy") copyText(pageUrl()).then(function () { toast("Nuoroda nukopijuota."); }).catch(function () { toast("Nuorodos nukopijuoti nepavyko."); });
       if (action === "qr") downloadQr().catch(function (error) { toast(error.message); });
       if (action === "save") toggleSaved();
       if (action === "reminder") downloadReminder();
@@ -248,9 +253,10 @@
     document.getElementById("memorial-memory-form").addEventListener("submit", function (event) {
       event.preventDefault();
       var form = event.currentTarget;
+      var submit = form.querySelector("button[type='submit']");
+      if (submit.disabled) return;
       if (!form.reportValidity()) return;
       var values = Object.fromEntries(new FormData(form).entries());
-      var submit = form.querySelector("button[type='submit']");
       submit.disabled = true;
       status.textContent = "Prisiminimas pateikiamas…";
       postEngagement({

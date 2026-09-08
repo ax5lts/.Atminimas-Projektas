@@ -86,7 +86,7 @@ async function isAdmin(client: ReturnType<typeof adminClient>, userId: string) {
   return Boolean(data);
 }
 
-async function signedMedia(
+export async function signedMedia(
   client: ReturnType<typeof adminClient>,
   value: unknown,
   ownerId: string | null,
@@ -95,6 +95,7 @@ async function signedMedia(
 ) {
   if (!Array.isArray(value)) return [];
   const candidates = value.slice(0, 10).flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
     const item = raw as MediaItem;
     const type = cleanText(item.type, 20);
     const path = safePath(item.path, ownerId, profileId, type);
@@ -111,14 +112,18 @@ async function signedMedia(
     }];
   });
 
-  const signed = await Promise.all(candidates.map(async (item) => {
-    const { data, error } = await client.storage.from("atminimas")
-      .createSignedUrl(item.path, 3600);
-    if (error || !data?.signedUrl) {
+  if (!candidates.length) return [];
+  const paths = [...new Set(candidates.map((item) => item.path))];
+  const { data, error } = await client.storage.from("atminimas")
+    .createSignedUrls(paths, 3600);
+  const byPath = new Map((data || []).map((item) => [item.path, item]));
+  const signed = candidates.map((item) => {
+    const result = byPath.get(item.path);
+    if (error || result?.error || !result?.signedUrl) {
       console.error("profile-content signing failed", {
         profileId,
         path: item.path,
-        error,
+        error: error || result?.error || "Missing signed URL",
       });
       if (!includePath) return null;
       return {
@@ -133,18 +138,18 @@ async function signedMedia(
     }
     return {
       type: item.type,
-      url: data.signedUrl,
+      url: result.signedUrl,
       ...(includePath ? { path: item.path } : {}),
       ...(item.alt ? { alt: item.alt } : {}),
       ...(item.caption ? { caption: item.caption } : {}),
       ...(item.language ? { language: item.language } : {}),
       order: item.order,
     };
-  }));
+  });
   return signed.filter(Boolean);
 }
 
-Deno.serve(async (request: Request) => {
+export async function handleRequest(request: Request) {
   const options = handleOptions(request);
   if (options) return options;
   if (request.method !== "GET") {
@@ -208,4 +213,6 @@ Deno.serve(async (request: Request) => {
     console.error("profile-content failed", error);
     return json({ error: "Atminimo puslapio įkelti nepavyko" }, 500);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);

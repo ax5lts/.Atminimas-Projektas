@@ -253,7 +253,7 @@
   function savedGraves() {
     try {
       var saved = JSON.parse(localStorage.getItem(savedKey) || "[]");
-      return Array.isArray(saved) ? saved : [];
+      return Array.isArray(saved) ? saved.filter(function (item) { return item && typeof item === "object" && item.key; }).slice(0, 50) : [];
     } catch (_error) {
       return [];
     }
@@ -353,18 +353,16 @@
     if (config().CEMETERY_SEARCH_API_URL) return config().CEMETERY_SEARCH_API_URL;
     return config().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/cemetery-search";
   }
-  async function officialSearch(payload) {
+  async function officialSearch(payload, signal) {
     var key = config().SUPABASE_ANON_KEY;
     var headers = { apikey: key, "Content-Type": "application/json" };
     if (key && !key.startsWith("sb_publishable_")) headers.Authorization = "Bearer " + key;
-    var controller = new AbortController();
-    var timeout = window.setTimeout(function () { controller.abort(); }, officialSearchTimeoutMs);
     try {
       var response = await fetch(edgeUrl(), {
         method: "POST",
         headers: headers,
         body: JSON.stringify(payload),
-        signal: controller.signal
+        signal: signal
       });
       var result = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(result.error || "Oficiali paieška šiuo metu neatsakė.");
@@ -374,16 +372,14 @@
       throw new Error(error && error.message && error.message !== "Failed to fetch"
         ? error.message
         : "Oficiali paieška šiuo metu neatsakė.");
-    } finally {
-      window.clearTimeout(timeout);
     }
   }
-  async function rpc(name, payload) {
+  async function rpc(name, payload, signal) {
     var key = config().SUPABASE_ANON_KEY;
     var headers = { apikey: key, "Content-Type": "application/json" };
     if (key && !key.startsWith("sb_publishable_")) headers.Authorization = "Bearer " + key;
     var response = await fetch(config().SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/rpc/" + name, {
-      method: "POST", headers: headers, body: JSON.stringify(payload)
+      method: "POST", headers: headers, body: JSON.stringify(payload), signal: signal
     });
     if (!response.ok) return [];
     return response.json();
@@ -500,6 +496,9 @@
     var pager = document.querySelector("[data-grave-pagination]");
     var page = 1;
     var lastRows = [];
+    var searchNumber = 0;
+    var searchController = null;
+    var pendingSearchKey = "";
     var rich = form.hasAttribute("data-map-preview");
     var locationButton = form.querySelector("[data-use-location]");
     var locationStatus = form.querySelector("[data-location-status]");
@@ -526,7 +525,10 @@
         if (!button) return;
         var item = button.closest("[data-saved-grave-key]");
         var next = savedGraves().filter(function (saved) { return saved.key !== item.dataset.savedGraveKey; });
-        localStorage.setItem(savedKey, JSON.stringify(next));
+        try { localStorage.setItem(savedKey, JSON.stringify(next)); } catch (_error) {
+          if (window.AtminimasUi) AtminimasUi.toast("Išsaugotų kapaviečių pakeisti nepavyko. Patikrinkite naršyklės saugyklos leidimus.");
+          return;
+        }
         renderSavedPanel();
         if (lastRows.length) renderRows(lastRows);
       });
@@ -663,14 +665,19 @@
       if (action.hasAttribute("data-share-grave")) {
         var shareData = { title: data.name, text: [data.name, data.place].filter(Boolean).join(" – "), url: shareUrl };
         if (navigator.share) navigator.share(shareData).catch(function () {});
-        else if (window.AtminimasUi) AtminimasUi.copyText(shareUrl).then(function () { AtminimasUi.toast("Kapavietės nuoroda nukopijuota."); });
+        else if (window.AtminimasUi) AtminimasUi.copyText(shareUrl).then(function () {
+          AtminimasUi.toast("Kapavietės nuoroda nukopijuota.");
+        }).catch(function () { AtminimasUi.toast("Nuorodos nukopijuoti nepavyko."); });
         return;
       }
       var saved = savedGraves();
       var index = saved.findIndex(function (item) { return item.key === data.key; });
       if (index >= 0) saved.splice(index, 1);
       else saved.unshift(data);
-      localStorage.setItem(savedKey, JSON.stringify(saved.slice(0, 50)));
+      try { localStorage.setItem(savedKey, JSON.stringify(saved.slice(0, 50))); } catch (_error) {
+        if (window.AtminimasUi) AtminimasUi.toast("Kapavietės išsaugoti nepavyko. Patikrinkite naršyklės saugyklos leidimus.");
+        return;
+      }
       action.classList.toggle("is-saved", index < 0);
       action.textContent = index < 0 ? "Išsaugota" : "Išsaugoti";
       renderSavedPanel();
@@ -685,25 +692,41 @@
       }
       var pageSize = form.dataset.limit ? Number(form.dataset.limit) : 20;
       query.p_page = page; query.p_page_size = pageSize;
+      var queryKey = JSON.stringify(query);
+      if (queryKey === pendingSearchKey) return;
+      var requestNumber = ++searchNumber;
+      var requestedPage = page;
+      pendingSearchKey = queryKey;
+      if (searchController) searchController.abort();
+      searchController = new AbortController();
+      var controller = searchController;
+      // Both sources must finish or time out; a stalled manual lookup must not hold official results forever.
+      var requestTimeout = window.setTimeout(function () { controller.abort(); }, officialSearchTimeoutMs);
       var submit = form.querySelector("button[type='submit']");
       status.dataset.state = "loading";
       status.textContent = "Ieškoma…";
       var slowNotice = window.setTimeout(function () {
-        if (status.dataset.state === "loading") status.textContent = "Paieška dar tikrinama…";
+        if (requestNumber === searchNumber && status.dataset.state === "loading") status.textContent = "Paieška dar tikrinama…";
       }, 4000);
       results.setAttribute("aria-busy", "true");
       if (submit) {
         submit.disabled = true;
         submit.setAttribute("aria-busy", "true");
       }
+      if (pager) {
+        pager.querySelector("[data-page-prev]").disabled = true;
+        pager.querySelector("[data-page-next]").disabled = true;
+      }
       results.innerHTML = loader();
       try {
-        var manualCall = page === 1 && query.p_query ? rpc("ieskoti_kapavieciu", { paieska: query.p_query, rezultatu_limitas: pageSize }) : Promise.resolve([]);
-        var responses = await Promise.allSettled([officialSearch(query), manualCall]);
+        var manualCall = requestedPage === 1 && query.p_query ? rpc("ieskoti_kapavieciu", { paieska: query.p_query, rezultatu_limitas: pageSize }, controller.signal) : Promise.resolve([]);
+        var responses = await Promise.allSettled([officialSearch(query, controller.signal), manualCall]);
+        if (requestNumber !== searchNumber) return;
         var officialFailed = responses[0].status === "rejected";
         var officialResult = officialFailed ? {} : (responses[0].value || {});
-        var official = officialResult.items || [];
-        var manualRows = responses[1].status === "fulfilled" ? (responses[1].value || []).map(manual) : [];
+        var official = Array.isArray(officialResult.items) ? officialResult.items.filter(function (row) { return row && typeof row === "object"; }) : [];
+        var manualRows = responses[1].status === "fulfilled" && Array.isArray(responses[1].value)
+          ? responses[1].value.filter(function (row) { return row && typeof row === "object"; }).map(manual) : [];
         var rows = official.concat(manualRows);
         var officialIncomplete = officialFailed || Boolean(officialResult.failedModels);
         if (!rows.length && officialIncomplete) renderSearchHelp();
@@ -715,21 +738,26 @@
         if (rows.length && officialIncomplete) status.textContent += " Dalis savivaldybių laikinai neatsakė.";
         if (count) count.textContent = officialResult.hasMore ? "Rasta daugiau rezultatų" : (officialResult.matched ? "Rasta: " + officialResult.matched : "");
         if (pager) {
-          pager.hidden = officialFailed || (page <= 1 && !officialResult.hasMore);
-          pager.querySelector("[data-page-label]").textContent = "Puslapis " + page;
-          pager.querySelector("[data-page-prev]").disabled = page <= 1;
+          pager.hidden = officialFailed || (requestedPage <= 1 && !officialResult.hasMore);
+          pager.querySelector("[data-page-label]").textContent = "Puslapis " + requestedPage;
+          pager.querySelector("[data-page-prev]").disabled = requestedPage <= 1;
           pager.querySelector("[data-page-next]").disabled = !officialResult.hasMore;
         }
       } catch (error) {
+        if (requestNumber !== searchNumber) return;
         status.dataset.state = "error";
         status.textContent = error.message;
         results.innerHTML = "";
       } finally {
         window.clearTimeout(slowNotice);
-        results.setAttribute("aria-busy", "false");
-        if (submit) {
-          submit.disabled = false;
-          submit.removeAttribute("aria-busy");
+        window.clearTimeout(requestTimeout);
+        if (requestNumber === searchNumber) {
+          pendingSearchKey = "";
+          results.setAttribute("aria-busy", "false");
+          if (submit) {
+            submit.disabled = false;
+            submit.removeAttribute("aria-busy");
+          }
         }
       }
     }

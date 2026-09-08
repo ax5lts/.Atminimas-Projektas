@@ -79,6 +79,7 @@
 
   requestForm.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (requestForm.hidden || requestForm.querySelector("button[type='submit']").disabled) return;
     var email = String(new FormData(requestForm).get("email") || "").trim();
     setBusy(requestForm, true, "Siunčiamas laiškas…");
     setStatus("Ruošiame saugią atkūrimo nuorodą…", "loading");
@@ -97,6 +98,7 @@
 
   updateForm.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (updateForm.hidden || updateForm.querySelector("button[type='submit']").disabled) return;
     var data = Object.fromEntries(new FormData(updateForm).entries());
     if (data.password !== data.password_confirm) {
       setStatus("Slaptažodžiai nesutampa.", "error");

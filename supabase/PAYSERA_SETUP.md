@@ -2,6 +2,14 @@
 
 Integracija skirta QR lentelių užsakymams ir priimtiems kapavietės priežiūros pasiūlymams. QR lentelių katalogo kainos: `metal` ir `asa` po 5000 ct; pristatymas į paštomatą – 300 ct. Mokėjimo suma skaičiuojama serveryje.
 
+## Tikro 0,50 EUR mokėjimo patikra 2026-09-08
+
+- Savininkas prisijungė ir pats apmokėjo atskirą 50 ct patikros pasiūlymą `50ca5386-b396-49b7-a300-332a1690aacf`. „Paysera“ užsakymas: `01a08009-2fd4-72db-8c76-b58fceb05b54`.
+- Serveris gavo du pasirašytus pranešimus apie tą patį mokėjimą: abu `order.paid`, `accepted`, 50 ct EUR, `test=false`. Tai du callback, o ne du mokėjimai.
+- Užklausa turi `payment_status='paid'`, `payment_test=false`, `paid_at='2026-09-08T08:02:33.936216Z'` (11:02 Vilniaus laiku). Tikras apmokėjimas patvirtintas pagal serverio įrašą, ne vien pagal grįžimo URL.
+- Patikros įrašas aiškiai pažymėtas techniniu bandymu; gaminys negaminamas ir kapavietės priežiūra neatliekama. Automatinių paslaugos įvykių nesukurta, parduotuvės kainos nepakeistos, grąžinimas neinicijuotas.
+- Ši patikra patvirtina tikrą Paysera mokėjimą per atskirą paslaugos pasiūlymą. Visas 53 EUR fizinės QR lentelės mokėjimas atskirai dar neatliktas.
+
 ## Patikra 2026-09-07
 
 - „Paysera“ projektas aktyvuotas; savininkas įjungė projekto „Test Mode“.

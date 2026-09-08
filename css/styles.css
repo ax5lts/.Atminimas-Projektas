@@ -24,8 +24,10 @@
   --fall-step: 0.14s;
 }
 
-@view-transition {
-  navigation: auto;
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
 }
 
 ::view-transition-old(root) {
@@ -7186,6 +7188,8 @@ body[data-loading]::after {
   cursor: pointer;
   list-style: none;
 }
+
+.editor-product-card.editor-product-card--summary { grid-template-columns: minmax(0, 1fr); }
 
 .editor-completion summary::-webkit-details-marker {
   display: none;

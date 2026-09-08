@@ -6,6 +6,7 @@ import {
   requireUser,
 } from "../_shared/core.ts";
 import { bytesToBase64, sendEmail } from "../_shared/email.ts";
+import { orderDesignCopy } from "../_shared/order-copy.ts";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -61,7 +62,7 @@ Deno.serve(async (request: Request) => {
 
     const [{ data: order, error: orderError }, { data: svgBlob, error: svgError }] =
       await Promise.all([
-        client.from("uzsakymai").select("id,product_type")
+        client.from("uzsakymai").select("id,product_type,product_color,product_pattern")
           .eq("id", orderId).maybeSingle(),
         client.storage.from("automation-documents").download(job.qr_svg_path),
       ]);
@@ -93,6 +94,7 @@ Deno.serve(async (request: Request) => {
       paragraphs: [
         `Užsakymas: #${orderId.slice(0, 8).toUpperCase()}`,
         `Produktas: ${product?.name || order.product_type}`,
+        ...orderDesignCopy(order),
         "Spaudai ir graviravimui naudokite pridėtą SVG failą. Nekeiskite balto tarpo aplink QR kodą.",
       ],
       attachments: [{

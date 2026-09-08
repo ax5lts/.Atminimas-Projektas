@@ -41,6 +41,7 @@
   }
 
   function setBusy(busy) {
+    submitting = busy;
     if (window.AtminimasForms) {
       AtminimasForms.setBusy(form, busy, "Pateikiama…");
       return;
@@ -86,6 +87,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (submitting) return;
     if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
       setStatus("Išankstinių užsakymų forma dar nesukonfigūruota. Susisiekite rekvizituose nurodytu el. paštu.", "error");
       return;
@@ -135,11 +137,11 @@
         message = "Nepavyko susisiekti su PREORDER serveriu. Užsakymas neišsaugotas – patikrinkite interneto ryšį ir bandykite dar kartą.";
       }
       setStatus(message, "error");
-    } finally {
       setBusy(false);
     }
   });
 
+  var submitting = false;
   applyRequestedProduct();
   loadPrices().catch(function () {
     var checked = form.querySelector("input[name='product_type']:checked");

@@ -20,14 +20,14 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertNotIn('id="preorder-form"', self.page)
         self.assertNotIn('assets/preorder.js', self.page)
         self.assertIn('href="parduotuve.html"', self.page)
-        self.assertIn('53 €', self.page)
+        self.assertIn('63 €', self.page)
 
     def test_shop_and_home_offer_paid_orders(self):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
         self.assertNotIn('isankstinis-uzsakymas.html', shop)
         self.assertNotIn('PREORDER', home)
-        self.assertIn('53 €', home)
+        self.assertIn('63 €', home)
 
     def test_client_uses_edge_function_and_thank_you_receipt(self):
         self.assertIn('"/functions/v1/preorder"', self.client)

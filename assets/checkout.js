@@ -444,7 +444,7 @@
     }
     var response = await apiFetch(rest(
       "uzsakymai?id=eq." + encodeURIComponent(orderId) +
-      "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,payment_test,subtotal_cents,shipping_cents,total_cents,currency&limit=1"
+      "&select=id,profilis_id,product_type,product_color,product_pattern,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,payment_test,subtotal_cents,shipping_cents,total_cents,currency&limit=1"
     ), { headers: AtminimasAuth.headers(false) });
     if (response.status === 401) {
       AtminimasAuth.signOut();
@@ -460,6 +460,9 @@
     orderEl.textContent = order.product_type === "asa"
       ? "ASA QR atminimo lentelė"
       : "Graviruota plieno QR atminimo lentelė";
+    if (order.product_color && order.product_pattern && window.AtminimasPlaqueDesign) {
+      orderEl.textContent += " · " + AtminimasPlaqueDesign.label({ color: order.product_color, pattern: order.product_pattern });
+    }
     ["recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
       if (order[name] && form.elements[name]) form.elements[name].value = order[name];
     });

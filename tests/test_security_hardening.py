@@ -89,7 +89,7 @@ class SecurityHardeningTests(unittest.TestCase):
 
     def test_public_profile_endpoint_returns_only_sanitized_signed_content(self):
         source = (ROOT / "supabase" / "functions" / "profile-content" / "index.ts").read_text(encoding="utf-8")
-        self.assertIn('createSignedUrl(item.path, 3600)', source)
+        self.assertIn('createSignedUrls(paths, 3600)', source)
         self.assertIn("safeProfileLayout(profile.layout_json)", source)
         self.assertIn("if (!profile.aktyvus && !canManage)", source)
         self.assertIn("parts[0] !== profileId", source)
@@ -118,7 +118,8 @@ class SecurityHardeningTests(unittest.TestCase):
             edge.index('if (action === "update")')
         ]
         self.assertIn("!isOwner || user.is_anonymous", branch)
-        self.assertIn('client.rpc("create_paid_product_order"', branch)
+        self.assertIn('client.rpc("create_designed_product_order"', branch)
+        self.assertIn('p_product_color: productColor, p_product_pattern: productPattern', branch)
         self.assertNotIn('.from("product_catalog")', branch)
         self.assertNotIn('.from("uzsakymai")', branch)
         self.assertIn('drop policy if exists "viesas uzsakymu kurimas"', migration)

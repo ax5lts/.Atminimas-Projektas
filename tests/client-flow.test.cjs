@@ -39,7 +39,7 @@ function page() {
   return { context, get, storage };
 }
 
-test('shop keeps stored product and a newer choice when catalog finishes', async () => {
+test('shop replaces removed product and keeps the latest design when catalog finishes', async () => {
   const p = page();
   const pending = deferred();
   p.storage.set('atminimas.selected-product.v1', 'asa');
@@ -47,23 +47,63 @@ test('shop keeps stored product and a newer choice when catalog finishes', async
     normalizeType: value => value === 'asa' ? 'asa' : 'metal',
     load: () => pending.promise, formatPrice: value => String(value)
   };
+  vm.runInNewContext(source('plaque-design.js'), p.context);
   vm.runInNewContext(source('shop.js'), p.context);
-  assert.match(p.get('product-create-link').href, /product=asa/);
-  p.get('product-selector').listeners.change({ target: { name: 'product_type', value: 'metal' } });
+  assert.match(p.get('product-create-link').href, /product=metal/);
+  p.get('product-selector').listeners.change({ target: { name: 'plaque_color', value: 'black' } });
   pending.resolve({ remote: true, metal: { price_cents: 1200 } });
   await tick();
   assert.match(p.get('product-create-link').href, /product=metal/);
   assert.equal(p.get('product-price').textContent, '1200');
+  assert.match(p.get('product-create-link').href, /color=black/);
+  assert.equal(p.get('product-image').dataset.color, 'black');
 });
 
 test('shop handles unavailable storage and a rejected catalog without an unhandled error', async () => {
   const p = page();
   p.context.sessionStorage.getItem = p.context.sessionStorage.setItem = () => { throw new Error('blocked'); };
   p.context.AtminimasProductCatalog = { load: async () => { throw new Error('offline'); }, normalizeType: () => 'metal' };
+  vm.runInNewContext(source('plaque-design.js'), p.context);
   vm.runInNewContext(source('shop.js'), p.context);
   await tick();
   assert.equal(p.get('shop-catalog-retry').disabled, false);
   assert.equal(p.get('shop-catalog-retry').hidden, false);
+});
+
+test('preorder sends once during submission and remains locked while navigating', async () => {
+  const p = page();
+  const pending = deferred();
+  let calls = 0;
+  p.context.ATMINIMAS_CONFIG = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'test' };
+  p.context.fetch = () => { calls++; return pending.promise; };
+  const form = p.get('preorder-form');
+  const button = element();
+  form.querySelector = selector => selector.startsWith('button') ? button : null;
+  form.values = { customer_name: 'Test', customer_email: 'test@example.test', consent: 'yes' };
+  vm.runInNewContext(source('preorder.js'), p.context);
+  const first = form.listeners.submit({ preventDefault() {} });
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal(calls, 1);
+  pending.resolve({ ok: true, json: async () => ({ reference_code: 'TEST' }) });
+  await first;
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal(calls, 1);
+  assert.equal(button.disabled, true);
+});
+
+test('preorder failure releases submission lock for a deliberate retry', async () => {
+  const p = page();
+  let calls = 0;
+  p.context.ATMINIMAS_CONFIG = { SUPABASE_URL: 'https://example.test', SUPABASE_ANON_KEY: 'test' };
+  p.context.fetch = async () => { calls++; throw new Error('offline'); };
+  const form = p.get('preorder-form');
+  const button = element();
+  form.querySelector = selector => selector.startsWith('button') ? button : null;
+  vm.runInNewContext(source('preorder.js'), p.context);
+  await form.listeners.submit({ preventDefault() {} });
+  await form.listeners.submit({ preventDefault() {} });
+  assert.equal(calls, 2);
+  assert.equal(button.disabled, false);
 });
 
 function editor() {
@@ -79,7 +119,7 @@ function editor() {
     photoSyncPromise: Promise.resolve(), photoPreparationFailed: false,
     processedPhotos: [{ name: 'photo.jpg' }], uploadedPhotos: [], uploadedVideo: null, uploadedCaptions: null,
     editingMedia: [], editId: '', prototypeRequested: false, isAdminPrototype: false, prototypePublishPending: false,
-    productType: 'digital', physicalOrderPending: false, MAX_PHOTOS: 8, MAX_VIDEO_BYTES: 50 * 1024 * 1024,
+    productType: 'digital', selectedPlaqueDesign: { color: 'gold', pattern: 'tree' }, physicalOrderPending: false, MAX_PHOTOS: 8, MAX_VIDEO_BYTES: 50 * 1024 * 1024,
     resultBox: element(), previewCode: element(), openLink: element(), preorderLink: element(),
     clientLink: element(), qrLink: element(), orderCode: element(), saveProgressEl: element(),
     isSignedIn: () => true, validateDatePickers: () => true, formData: () => ({ vardas: 'Test' }),
@@ -186,12 +226,15 @@ test('paid product creation retries on the same profile and immediately redirect
 
 test('an existing digital page can receive a physical order without creating another profile', async () => {
   const p = editor();
-  p.context.productType = 'asa';
+  p.context.productType = 'metal';
+  p.context.selectedPlaqueDesign = { color: 'black', pattern: 'wings' };
   p.context.editId = 'existing-page';
   p.context.physicalOrderPending = true;
   p.context.AtminimasApi.createUzsakymas = async (id, options) => {
     assert.equal(id, 'existing-page');
-    assert.equal(options.product_type, 'asa');
+    assert.equal(options.product_type, 'metal');
+    assert.equal(options.product_color, 'black');
+    assert.equal(options.product_pattern, 'wings');
     return { id: 'asa-order' };
   };
   await p.submit();

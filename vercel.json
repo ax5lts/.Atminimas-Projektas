@@ -1,5 +1,7 @@
 {
-  "outputDirectory": ".",
+  "installCommand": "npx --yes pnpm@11.19.0 install --frozen-lockfile --prod=false",
+  "buildCommand": "node scripts/build.mjs",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/paysera-verify-0c92a4c0084e58746594a9df8face37c.txt",

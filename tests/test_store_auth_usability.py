@@ -115,7 +115,7 @@ class StoreAuthUsabilityTests(unittest.TestCase):
         self.assertIn('class="product-order-summary"', shop)
         self.assertIn('createLink.href = "redaktorius.html?product="', script)
         self.assertIn('Kainų patikrinti nepavyko. Atnaujinkite kainas prieš tęsdami užsakymą.', script)
-        self.assertIn('<span>Su pristatymu</span><strong>53 EUR</strong>', shop)
+        self.assertIn('<span>Su pristatymu</span><strong>63 EUR</strong>', shop)
 
 
 if __name__ == "__main__":

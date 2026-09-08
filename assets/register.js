@@ -33,7 +33,10 @@
   function nextPage() {
     var value = (new URLSearchParams(window.location.search).get("next") || "").trim();
     if (/^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(value)) return value;
-    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "kapu-prieziura.html#uzklausa" : "vartotojas.html";
+    try {
+      if (sessionStorage.getItem("atminimas.service-request.draft.v1")) return "kapu-prieziura.html#uzklausa";
+    } catch (_error) {}
+    return "vartotojas.html";
   }
 
   var next = nextPage();
@@ -46,6 +49,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (form.hidden || form.querySelector("button[type='submit']").disabled) return;
     var data = Object.fromEntries(new FormData(form).entries());
     data.email = String(data.email || "").trim();
     setBusy(true, "Kuriama paskyra…");
@@ -74,7 +78,7 @@
   });
 
   resendButton.addEventListener("click", async function () {
-    if (!pendingEmail) return;
+    if (!pendingEmail || resendButton.disabled) return;
     setResendBusy(true);
     setStatus(resendStatus, "Siunčiame naują patvirtinimo laišką…", "loading");
     try {

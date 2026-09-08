@@ -4,6 +4,7 @@
   var CONFIRMATION_NOTICE_KEY = "atminimas.auth.confirmation-notice.v1";
   var refreshPromise = null;
   var refreshTimer = null;
+  var userRequest = null;
   var REFRESH_SKEW_MS = 90 * 1000;
 
   function removeLegacySession() {
@@ -134,17 +135,31 @@
       apikey: anonKey(),
       Accept: "application/json"
     };
-    h.Authorization = "Bearer " + (token || anonKey());
+    if (token || anonKey().indexOf("sb_publishable_") !== 0) {
+      h.Authorization = "Bearer " + (token || anonKey());
+    }
     if (json) h["Content-Type"] = "application/json";
     return h;
   }
 
-  async function authFetch(path, options) {
-    var res = await fetch(baseUrl() + path, Object.assign({
+  async function readAuthResponse(response) {
+    var text = await response.text();
+    try {
+      var data = text ? JSON.parse(text) : {};
+      return data && typeof data === "object" ? data : {};
+    } catch (_error) {
+      var error = new Error("Prisijungimo paslauga laikinai nepasiekiama. Bandykite dar kartą.");
+      error.status = response.status;
+      throw error;
+    }
+  }
+
+  async function authFetch(path, options, authenticated) {
+    var send = authenticated ? authorizedFetch : fetch;
+    var res = await send(baseUrl() + path, Object.assign({
       headers: headers(true)
     }, options || {}));
-    var text = await res.text();
-    var data = text ? JSON.parse(text) : {};
+    var data = await readAuthResponse(res);
     if (!res.ok) {
       var message = data.msg || data.error_description || data.message || "Prisijungti nepavyko.";
       var error = new Error(translatedAuthMessage(message));
@@ -182,8 +197,7 @@
       } catch (error) {
         throw new Error("Nepavyko atnaujinti prisijungimo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
       }
-      var text = await response.text();
-      var data = text ? JSON.parse(text) : {};
+      var data = await readAuthResponse(response);
       if (!response.ok || !data.access_token) {
         var active = session();
         if (
@@ -220,11 +234,15 @@
   }
 
   function requestHeaders(input) {
-    var merged = Object.assign({}, input || {});
+    var merged = {};
+    new Headers(input || {}).forEach(function (value, name) {
+      if (name !== "authorization" && name !== "apikey" && name !== "accept") merged[name] = value;
+      if (name === "accept") merged.Accept = value;
+    });
     var latest = headers(false);
     merged.apikey = latest.apikey;
     merged.Accept = merged.Accept || latest.Accept;
-    merged.Authorization = latest.Authorization;
+    if (latest.Authorization) merged.Authorization = latest.Authorization;
     return merged;
   }
 
@@ -232,11 +250,16 @@
     await ensureFreshSession();
     var request = Object.assign({}, options || {});
     request.headers = requestHeaders(request.headers);
+    var sentToken = accessToken();
+    var sentUser = userId();
     var response = await fetch(url, request);
     var current = session();
     if (response.status !== 401 || !current || !current.refresh_token) return response;
+    if (userId() !== sentUser) return response;
 
-    await refreshSession(true);
+    // Kita užklausa jau galėjo atnaujinti tą pačią sesiją, kol laukėme atsakymo.
+    if (current.access_token === sentToken) await refreshSession(true);
+    if (!accessToken() || userId() !== sentUser) return response;
     request.headers = requestHeaders(options && options.headers);
     return fetch(url, request);
   }
@@ -310,20 +333,32 @@
 
   async function user() {
     if (!accessToken()) return null;
-    try {
-      await ensureFreshSession();
-      return await authFetch("/auth/v1/user", { method: "GET" });
-    } catch (error) {
-      if (error && (error.status === 401 || error.status === 403)) {
-        clearSession();
-        return null;
+    var token = accessToken();
+    var requestedUser = userId();
+    if (userRequest && userRequest.token === token) return userRequest.promise;
+    var pending = { token: token, promise: null };
+    pending.promise = (async function () {
+      try {
+        var me = await authFetch("/auth/v1/user", { method: "GET" }, true);
+        return accessToken() && userId() === requestedUser ? me : null;
+      } catch (error) {
+        if (error && (error.status === 401 || error.status === 403)) {
+          if (userId() === requestedUser) clearSession();
+          return null;
+        }
+        throw error;
       }
-      throw error;
+    })();
+    userRequest = pending;
+    try {
+      return await pending.promise;
+    } finally {
+      if (userRequest === pending) userRequest = null;
     }
   }
 
-  async function isAdmin() {
-    var me = await user();
+  async function isAdmin(verifiedUser) {
+    var me = verifiedUser || await user();
     if (!me) return false;
     var res = await authorizedFetch(baseUrl() + "/rest/v1/user_roles?user_id=eq." + encodeURIComponent(me.id) + "&role=eq.admin&select=role&limit=1", {
       headers: headers(false)

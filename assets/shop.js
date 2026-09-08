@@ -8,24 +8,9 @@
     metal: {
       kind: "Plieninis variantas",
       title: "Plieninė QR lentelė",
-      image: "assets/qr-plienas-480.webp",
-      imageSet: "assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w",
-      alt: "Graviruota plieno QR atminimo lentelė",
       price: business.price || "Kaina tikslinama", available: false,
       copy: "QR kodas atidaro asmeninį atminimo puslapį.",
       material: "Plienas",
-      dimensions: "5 × 5 cm",
-      mounting: "Klijais"
-    },
-    asa: {
-      kind: "3D spausdintas variantas",
-      title: "3D spausdinta QR lentelė",
-      image: "assets/qr-asa-480.webp",
-      imageSet: "assets/qr-asa-480.webp 480w, assets/qr-asa.webp 1086w",
-      alt: "ASA 3D spausdinta QR atminimo lentelė",
-      price: "Kaina tikslinama", available: false,
-      copy: "QR kodas atidaro asmeninį atminimo puslapį.",
-      material: "ASA plastikas",
       dimensions: "5 × 5 cm",
       mounting: "Klijais"
     }
@@ -43,18 +28,15 @@
   };
   var createLink = document.getElementById("product-create-link");
   var metalPrice = document.querySelector("[data-metal-price]");
-  var asaPrice = document.querySelector("[data-asa-price]");
+  var designApi = window.AtminimasPlaqueDesign;
+  var selectedDesign = designApi.read();
   var catalogStatus = document.getElementById("shop-catalog-status");
   var catalogMessage = document.getElementById("shop-catalog-message");
   var catalogRetry = document.getElementById("shop-catalog-retry");
   var selectedType = "metal";
   var catalogLoading = false;
 
-  function normalizeType(type) {
-    return window.AtminimasProductCatalog
-      ? AtminimasProductCatalog.normalizeType(type)
-      : (type === "asa" ? "asa" : "metal");
-  }
+  function normalizeType() { return "metal"; }
 
   function selectProduct(type) {
     var safeType = normalizeType(type);
@@ -62,18 +44,28 @@
     var product = products[safeType];
     fields.kind.textContent = product.kind;
     fields.title.textContent = product.title;
-    fields.image.src = product.image;
-    fields.image.srcset = product.imageSet;
-    fields.image.alt = product.alt;
+    renderDesign();
     fields.price.textContent = product.price;
     fields.copy.textContent = product.copy;
     fields.material.textContent = product.material;
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
-    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType);
+    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType) + "&" + designApi.query(selectedDesign);
     createLink.textContent = product.available ? "Kurti puslapį ir užsakyti · " + product.price : "Kaina tikrinama";
     createLink.setAttribute("aria-disabled", product.available ? "false" : "true");
     try { sessionStorage.setItem(selectedKey, safeType); } catch (_error) {}
+  }
+
+  function renderDesign() {
+    designApi.save(selectedDesign);
+    designApi.render(fields.image, selectedDesign);
+    document.getElementById("product-selection").textContent = designApi.label(selectedDesign);
+    document.getElementById("product-preview-caption").textContent = designApi.label(selectedDesign);
+    selector.querySelectorAll("[data-pattern-preview]").forEach(function (preview) {
+      designApi.render(preview, { color: selectedDesign.color, pattern: preview.dataset.patternPreview });
+    });
+    selector.querySelectorAll("input[name='plaque_color']").forEach(function (input) { input.checked = input.value === selectedDesign.color; });
+    selector.querySelectorAll("input[name='plaque_pattern']").forEach(function (input) { input.checked = input.value === selectedDesign.pattern; });
   }
 
   function setCatalogStatus(message, canRetry) {
@@ -83,16 +75,14 @@
   }
 
   function updateCatalogPrices(catalog) {
-    ["metal", "asa"].forEach(function (type) {
+    ["metal"].forEach(function (type) {
       var item = catalog[type];
       products[type].available = !!(catalog.remote && item && item.available && Number.isInteger(item.price_cents) && item.price_cents > 0);
       if (item && item.price_cents != null) {
         products[type].price = AtminimasProductCatalog.formatPrice(item.price_cents, item.currency);
       }
     });
-    metalPrice.textContent = products.metal.price;
-    asaPrice.textContent = products.asa.price;
-    asaPrice.classList.toggle("product-choice__price--status", products.asa.price === "Kaina tikslinama");
+    if (metalPrice) metalPrice.textContent = products.metal.price;
   }
 
   function applyInitialSelection() {
@@ -115,7 +105,7 @@
       var catalog = await AtminimasProductCatalog.load();
       updateCatalogPrices(catalog);
       if (!catalog.remote) {
-        setCatalogStatus("Kainų patikrinti nepavyko. Atnaujinkite kainas prieš tęsdami užsakymą.", true);
+        setCatalogStatus(catalog.error || "Kainų patikrinti nepavyko. Atnaujinkite kainas prieš tęsdami užsakymą.", true);
       } else {
         setCatalogStatus("", false);
       }
@@ -132,15 +122,25 @@
   createLink.addEventListener("click", function (event) { if (!products[selectedType].available) event.preventDefault(); });
 
   selector.addEventListener("change", function (event) {
-    if (event.target.name === "product_type") selectProduct(event.target.value);
+    if (event.target.name === "plaque_color" || event.target.name === "plaque_pattern") {
+      selectedDesign[event.target.name === "plaque_color" ? "color" : "pattern"] = event.target.value;
+      selectedDesign = designApi.normalize(selectedDesign);
+      selectProduct("metal");
+      if (window.history && window.history.replaceState) {
+        var params = new URLSearchParams(window.location.search);
+        params.set("product", "metal");
+        params.set("color", selectedDesign.color);
+        params.set("pattern", selectedDesign.pattern);
+        window.history.replaceState(window.history.state, "", window.location.pathname + "?" + params.toString());
+      }
+    }
   });
   catalogRetry.addEventListener("click", function () {
     if (window.AtminimasProductCatalog) loadCatalog();
     else window.location.reload();
   });
 
-  metalPrice.textContent = products.metal.price;
-  asaPrice.textContent = products.asa.price;
+  if (metalPrice) metalPrice.textContent = products.metal.price;
   applyInitialSelection();
   if (!window.AtminimasProductCatalog) {
     setCatalogStatus("Kainų patikra nepasiekiama. Pabandykite atnaujinti puslapį.", true);

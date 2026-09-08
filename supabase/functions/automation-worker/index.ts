@@ -2,6 +2,7 @@ import { adminClient, BlockedAutomationError, env, json, publicSiteUrl, requireA
 import { bytesToBase64, sendEmail } from "../_shared/email.ts";
 import { createInvoicePdf, sha256Hex } from "../_shared/invoice-pdf.ts";
 import { createShipment } from "../_shared/shipping.ts";
+import { ORDER_COPY_EMAIL, orderDesignCopy, orderEmailRecipient, orderManufacturingText } from "../_shared/order-copy.ts";
 
 type AutomationEvent = {
   id: number;
@@ -15,6 +16,13 @@ type AutomationEvent = {
 };
 
 const client = adminClient();
+
+function orderCopyAttachment(order: Parameters<typeof orderManufacturingText>[0]) {
+  return {
+    filename: `uzsakymas-${order.id}.txt`,
+    content: bytesToBase64(new TextEncoder().encode(orderManufacturingText(order))),
+  };
+}
 
 async function orderDetails(orderId: string) {
   const { data, error } = await client.from("uzsakymai")
@@ -118,16 +126,19 @@ async function processQr(event: AutomationEvent) {
   const { error: updateError } = await client.from("production_jobs").update({ status: "qr_ready", qr_svg_path: path }).eq("order_id", order.id);
   if (updateError) throw updateError;
 
-  const adminEmail = env("ADMIN_EMAIL", false);
+  const adminEmail = ORDER_COPY_EMAIL;
   if (adminEmail) {
     await sendEmail({
       to: adminEmail,
       subject: `QR paruoštas gamybai #${order.id.slice(0, 8)}`,
       heading: "Naujas darbas gamybos eilėje",
-      paragraphs: [`Produktas: ${order.product_catalog?.name || order.product_type}`, `Klientas patvirtino užsakymą ${order.id}.`],
+      paragraphs: [`Produktas: ${order.product_catalog?.name || order.product_type}`, ...orderDesignCopy(order), `Klientas patvirtino užsakymą ${order.id}.`],
+      attachments: [orderCopyAttachment(order), { filename: `qr-${order.id}.svg`, content: bytesToBase64(new TextEncoder().encode(svg)) }],
       actionUrl: `${publicSiteUrl()}admin.html`,
       actionLabel: "Atidaryti gamybos eilę",
       idempotencyKey: `${event.event_key}:admin`,
+      orderId: order.id,
+      recipientKind: "admin",
     });
   }
 }
@@ -135,13 +146,13 @@ async function processQr(event: AutomationEvent) {
 async function processEmailEvent(event: AutomationEvent) {
   const order = event.order_id ? await orderDetails(event.order_id) : null;
   const adminEvent = event.event_type.startsWith("admin.") || event.event_type === "order.created";
-  const recipient = event.recipient_email || (adminEvent ? env("ADMIN_EMAIL", false) : order?.recipient_email);
+  const recipient = orderEmailRecipient(adminEvent, ORDER_COPY_EMAIL, event.recipient_email, order?.recipient_email);
   const userUrl = `${publicSiteUrl()}vartotojas.html`;
   const templates: Record<string, { subject: string; heading: string; paragraphs: string[]; action?: string }> = {
     "order.created": {
       subject: "Gautas naujas užsakymas",
       heading: "Naujas užsakymas sistemoje",
-      paragraphs: [`Užsakymas: ${order?.id || "–"}`, `Produktas: ${order?.product_catalog?.name || order?.product_type || "–"}`],
+      paragraphs: [`Užsakymas: ${order?.id || "–"}`, `Produktas: ${order?.product_catalog?.name || order?.product_type || "–"}`, ...orderDesignCopy(order), "Tai užsakymo kopija. Mokėjimo ir gamybos būseną tikrinkite administravime."],
       action: "Atidaryti administravimą",
     },
     "payment.confirmed": {
@@ -213,9 +224,12 @@ async function processEmailEvent(event: AutomationEvent) {
     subject: template.subject,
     heading: template.heading,
     paragraphs: template.paragraphs,
+    attachments: event.event_type === "order.created" && order ? [orderCopyAttachment(order)] : undefined,
     actionUrl: adminEvent ? `${publicSiteUrl()}admin.html` : userUrl,
     actionLabel: template.action,
     idempotencyKey: event.event_key,
+    orderId: event.order_id || undefined,
+    recipientKind: adminEvent ? "admin" : "customer",
   });
 }
 

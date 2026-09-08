@@ -428,18 +428,21 @@
     var rows = await res.json();
     if (!rows.length) {
       finishPageSkeleton();
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę galėsite užsakyti už 50 € ir pristatymo kainą.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='parduotuve.html'>Užsakyti QR lentelę</a></div></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę galėsite užsakyti už 60 € ir pristatymo kainą.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='parduotuve.html'>Užsakyti QR lentelę</a></div></div>";
       scrollToRequestedService();
       return;
     }
 
     var orderResponse = await apiFetch(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,product_type,carrier,city,parcel_terminal,shipping_status,tracking_number,tracking_url,apmoketa,payment_status,fulfillment_status,customer_approved_at,total_cents,currency,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,product_color,product_pattern,carrier,city,parcel_terminal,shipping_status,tracking_number,tracking_url,apmoketa,payment_status,fulfillment_status,customer_approved_at,total_cents,currency,created_at&order=created_at.desc"
     ), { headers: AtminimasAuth.headers(false) });
     var orders = orderResponse.ok ? await orderResponse.json() : [];
-    var invoiceResponse = await apiFetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) });
-    var invoices = invoiceResponse.ok ? await invoiceResponse.json() : [];
+    var invoices = [];
+    if (orders.length) {
+      var invoiceResponse = await apiFetch(restUrl("invoice_documents", "select=order_id,invoice_number,storage_path,emailed_at&order=created_at.desc"), { headers: AtminimasAuth.headers(false) });
+      invoices = invoiceResponse.ok ? await invoiceResponse.json() : [];
+    }
     var invoiceByOrder = Object.fromEntries(invoices.map(function (item) { return [item.order_id, item]; }));
     var orderByProfile = {};
     orders.forEach(function (order) {
@@ -472,7 +475,7 @@
           "<div class='user-card-heading'><p class='eyebrow'>" + (row.aktyvus ? "Viešas puslapis" : "Privatus puslapis") + "</p><span class='user-card-visibility " + (row.aktyvus ? "is-public" : "") + "'>" + (row.aktyvus ? "Viešas" : "Privatus") + "</span></div>" +
           "<h2>" + html(name) + "</h2>" +
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
-          "<p class='user-card-product'>" + (order ? html(productName(order.product_type)) : "Skaitmeninis atminimo puslapis · be fizinio gaminio") + "</p>" +
+          "<p class='user-card-product'>" + (order ? html(productName(order.product_type) + (order.product_color && order.product_pattern && window.AtminimasPlaqueDesign ? " · " + AtminimasPlaqueDesign.label({ color: order.product_color, pattern: order.product_pattern }) : "")) : "Skaitmeninis atminimo puslapis · be fizinio gaminio") + "</p>" +
           shipment +
           primaryAction(row, order) +
           "<details class='user-card-more'><summary>Daugiau veiksmų</summary><div class='actions'>" + moreActions + "</div></details>" +
@@ -483,6 +486,8 @@
   }
 
   listEl.addEventListener("click", async function (event) {
+    var clickedButton = event.target.closest("button");
+    if (clickedButton && clickedButton.disabled) return;
     var qrButton = event.target.closest("button[data-qr-profile]");
     if (qrButton) {
       qrButton.disabled = true;
@@ -556,7 +561,10 @@
     }
   });
 
+  var serviceActionsPending = new Set();
   if (serviceListEl) serviceListEl.addEventListener("click", async function (event) {
+    var clickedButton = event.target.closest("button");
+    if (clickedButton && clickedButton.disabled) return;
     var retry = event.target.closest("button[data-service-retry]");
     if (retry) {
       retry.disabled = true;
@@ -580,7 +588,10 @@
     var payment = event.target.closest("button[data-service-payment]");
     var button = accept || decline || payment;
     if (!button) return;
+    var requestId = button.dataset.serviceAccept || button.dataset.serviceDecline || button.dataset.servicePayment;
+    if (serviceActionsPending.has(requestId)) return;
     if (decline && !window.confirm("Ar tikrai norite atmesti šį pasiūlymą?")) return;
+    serviceActionsPending.add(requestId);
     button.disabled = true;
     try {
       if (accept) {
@@ -598,6 +609,8 @@
     } catch (error) {
       setStatus(error.message || "Veiksmo atlikti nepavyko.", "error");
       button.disabled = false;
+    } finally {
+      serviceActionsPending.delete(requestId);
     }
   });
 

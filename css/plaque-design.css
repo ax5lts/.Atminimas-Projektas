@@ -1,0 +1,18 @@
+/* Ornamented variants use the reference; the fourth is a plain vector QR plate. */
+.plaque-preview {
+  display: block;
+  aspect-ratio: 1;
+  background-image: url('../assets/plaque-designs.png');
+  background-repeat: no-repeat;
+  background-size: 495.548% 372.26%;
+  background-position: 17.49% 2.26%;
+  border-radius: 12px;
+}
+.plaque-preview[hidden] { display: none; }
+.plaque-preview[data-pattern="heart"] { background-position-x: 45.502%; background-size: 479.139% 372.26%; }
+.plaque-preview[data-pattern="wings"] { background-position-x: 74.627%; background-size: 469.805% 372.26%; }
+.plaque-preview[data-color="silver"] { background-position-y: 44.53%; }
+.plaque-preview[data-color="black"] { background-position-y: 86.54%; }
+.plaque-preview[data-pattern="plain"] { background: url('../assets/plaque-plain-gold.svg') center / contain no-repeat; }
+.plaque-preview[data-pattern="plain"][data-color="silver"] { background-image: url('../assets/plaque-plain-silver.svg'); }
+.plaque-preview[data-pattern="plain"][data-color="black"] { background-image: url('../assets/plaque-plain-black.svg'); }

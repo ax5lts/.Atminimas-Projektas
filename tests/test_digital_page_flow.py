@@ -30,7 +30,9 @@ class DigitalPageFlowTests(unittest.TestCase):
     def test_editor_preserves_digital_mode_through_login_and_save(self):
         self.assertIn('if (value === "digital") return "digital"', self.editor)
         self.assertIn('requestedProductType !== "digital"', self.editor)
-        self.assertIn('return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=save"', self.editor)
+        self.assertIn('return "redaktorius.html?product=" + encodeURIComponent(productType)', self.editor)
+        self.assertIn('AtminimasPlaqueDesign.query(selectedPlaqueDesign)', self.editor)
+        self.assertIn('"&resume=save"', self.editor)
         self.assertIn('var digitalOnly = productType === "digital"', self.editor)
         self.assertIn('preorderLink.hidden = digitalOnly', self.editor)
         self.assertIn('clientLink.textContent = digitalOnly ? "Paskelbti ir gauti QR"', self.editor)

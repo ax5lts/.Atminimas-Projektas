@@ -5,6 +5,7 @@
   var rowsEl = document.getElementById("grave-admin-rows");
   var searchEl = document.getElementById("grave-admin-search");
   var cache = [];
+  var saving = false;
   if (!panel || !form) return;
 
   function cfg() { return window.ATMINIMAS_CONFIG; }
@@ -47,7 +48,12 @@
     return path;
   }
   form.addEventListener("submit", async function (event) {
-    event.preventDefault(); statusEl.textContent = "Saugoma…";
+    event.preventDefault();
+    if (saving) return;
+    saving = true;
+    var submit = form.querySelector("button[type='submit']");
+    submit.disabled = true;
+    statusEl.textContent = "Saugoma…";
     try {
       var data = new FormData(form); var id = data.get("id"); var photo = data.get("nuotrauka");
       var payload = {};
@@ -58,6 +64,7 @@
       if (!id) {
         var created = await request(restUrl("select=*"), { method: "POST", headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=representation" }), body: JSON.stringify(payload) });
         id = created[0].id;
+        setField("id", id);
       } else {
         payload.updated_at = new Date().toISOString();
         await request(restUrl("id=eq." + encodeURIComponent(id)), { method: "PATCH", headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }), body: JSON.stringify(payload) });
@@ -66,18 +73,24 @@
         var path = await upload(photo, id);
         await request(restUrl("id=eq." + encodeURIComponent(id)), { method: "PATCH", headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }), body: JSON.stringify({ nuotraukos_kelias: path, updated_at: new Date().toISOString() }) });
       }
-      statusEl.textContent = "Kapavietė išsaugota."; reset(); await load();
+      reset();
+      statusEl.textContent = "Kapavietė išsaugota.";
+      await load().catch(function () { statusEl.textContent = "Kapavietė išsaugota, tačiau sąrašo atnaujinti nepavyko. Paspauskite „Atnaujinti“."; });
     } catch (error) { statusEl.textContent = error.message || "Nepavyko išsaugoti."; }
+    finally { saving = false; submit.disabled = false; }
   });
   rowsEl.addEventListener("click", async function (event) {
+    if (saving) return;
     var editButton = event.target.closest("[data-edit-grave]"); if (editButton) { edit(editButton.dataset.editGrave); return; }
-    var deleteButton = event.target.closest("[data-delete-grave]"); if (!deleteButton) return;
+    var deleteButton = event.target.closest("[data-delete-grave]"); if (!deleteButton || deleteButton.disabled) return;
     if (!window.confirm("Ar tikrai ištrinti šią kapavietę?")) return;
+    deleteButton.disabled = true;
     try { await request(restUrl("id=eq." + encodeURIComponent(deleteButton.dataset.deleteGrave)), { method: "DELETE", headers: Object.assign({}, AtminimasAuth.headers(false), { Prefer: "return=minimal" }) }); await load(); } catch (error) { statusEl.textContent = error.message; }
+    finally { deleteButton.disabled = false; }
   });
   searchEl.addEventListener("input", render);
   document.getElementById("grave-admin-refresh").addEventListener("click", function () { load().catch(function (error) { statusEl.textContent = error.message; }); });
-  document.getElementById("grave-form-reset").addEventListener("click", reset);
+  document.getElementById("grave-form-reset").addEventListener("click", function () { if (!saving) reset(); });
   document.getElementById("admin-logout").addEventListener("click", function () { panel.hidden = true; });
   window.addEventListener("atminimas:admin-ready", function () { load().catch(function (error) { statusEl.textContent = error.message; }); });
 })();

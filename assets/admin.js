@@ -66,6 +66,7 @@
   var automationCache = [];
   var memoryCache = [];
   var preorderCache = [];
+  var adminLoadPromise = null;
   var servicePriceKeys = [
     "candle_1", "candle_2", "candle_5", "candle_other",
     "flower_1", "flower_3", "flower_5", "flower_bouquet", "flower_other",
@@ -451,7 +452,7 @@
       return (
         "<tr>" +
           "<td><strong>#" + html(shortId(order.id)) + "</strong><br>" + html(customer) + "<br><span class='muted'>" + html(order.profilis_id) + "</span></td>" +
-          "<td>" + html(productName(order.product_type)) + "<br><span class='admin-badge'>" + html(order.busena || "sukurtas") + "</span></td>" +
+          "<td>" + html(productName(order.product_type) + (order.product_color && order.product_pattern && window.AtminimasPlaqueDesign ? " · " + AtminimasPlaqueDesign.label({ color: order.product_color, pattern: order.product_pattern }) : "")) + "<br><span class='admin-badge'>" + html(order.busena || "sukurtas") + "</span></td>" +
           "<td>" + html(formatDate(order.created_at)) + "</td>" +
           "<td><span class='admin-badge " + paymentClass + "'>" + paymentText + "</span>" + (order.payment_provider ? "<br><span class='muted'>" + html(order.payment_provider) + "</span>" : "") + "</td>" +
           "<td>" + html(delivery) + "<br><span class='muted'>" + html(order.shipping_status || "–") + "</span></td>" +
@@ -464,7 +465,7 @@
   async function loadOrders() {
     orderCache = await supabaseJson(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,puslapio_url,product_type,busena,apmoketa,payment_status,customer_approved_at,delivery_method,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,tracking_number,payment_provider,payment_reference,created_at&order=created_at.desc"
+      "select=id,profilis_id,puslapio_url,product_type,product_color,product_pattern,busena,apmoketa,payment_status,customer_approved_at,delivery_method,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,tracking_number,payment_provider,payment_reference,created_at&order=created_at.desc"
     ));
     ordersPanel.hidden = false;
     renderOrders();
@@ -496,8 +497,6 @@
     var products = Object.fromEntries(results[1].map(function (row) { return [row.id, row]; }));
     var shipping = Object.fromEntries(results[2].map(function (row) { return [row.carrier, row]; }));
     businessSettingsForm.elements.metal_price.value = centsToInput(products.metal && products.metal.price_cents);
-    businessSettingsForm.elements.asa_price.value = centsToInput(products.asa && products.asa.price_cents);
-    businessSettingsForm.elements.asa_available.checked = !!(products.asa && products.asa.enabled);
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
     businessSettingsForm.elements.dpd_price.value = centsToInput(shipping.DPD && shipping.DPD.price_cents);
@@ -511,13 +510,8 @@
   async function saveBusinessSettings() {
     var values = Object.fromEntries(new FormData(businessSettingsForm).entries());
     var metalPrice = inputToCents(values.metal_price);
-    var asaPrice = inputToCents(values.asa_price);
-    var asaAvailable = values.asa_available === "on";
     if (metalPrice == null) {
       throw new Error("Įrašykite graviruotos plieno lentelės kainą.");
-    }
-    if (asaAvailable && asaPrice == null) {
-      throw new Error("Norint įjungti ASA variantą, pirmiausia įrašykite jo kainą.");
     }
     var businessPayload = {
       legal_name: values.legal_name || null,
@@ -539,7 +533,7 @@
     var productUpdates = [
       ["metal", { name: "Graviruota plieno QR atminimo lentelė", price_cents: metalPrice, enabled: metalPrice != null, updated_at: new Date().toISOString() }],
       ["steel", { enabled: false, updated_at: new Date().toISOString() }],
-      ["asa", { price_cents: asaPrice, enabled: asaAvailable && asaPrice != null, updated_at: new Date().toISOString() }]
+      ["asa", { enabled: false, updated_at: new Date().toISOString() }]
     ];
     var prices = [
       ["shipping_catalog", "carrier", "Omniva", inputToCents(values.omniva_price)],
@@ -674,7 +668,7 @@
         : "";
       return (
         "<tr data-shipment-id='" + html(order.id) + "'>" +
-          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(productName(order.product_type)) + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
+          "<td><strong>" + html(recipient) + "</strong><br><span class='muted'>" + html(order.id) + "</span><br>Produktas: " + html(productName(order.product_type) + (order.product_color && order.product_pattern && window.AtminimasPlaqueDesign ? " · " + AtminimasPlaqueDesign.label({ color: order.product_color, pattern: order.product_pattern }) : "")) + "<br>" + html(order.recipient_phone || "") + "<br>" + html(order.recipient_email || "") + "</td>" +
           "<td>" + html(destination) + "</td>" +
           "<td><select data-shipping-status>" + ["laukiama_duomenu", "paruošti", "išsiųsta", "pristatyta", "atšaukta"].map(function (value) {
             return "<option value='" + value + "' " + ((order.shipping_status || "laukiama_duomenu") === value ? "selected" : "") + ">" + value + "</option>";
@@ -686,10 +680,10 @@
     }).join("") || "<tr><td colspan='5'>Siuntimų nėra.</td></tr>";
   }
 
-  async function loadShipments() {
-    shipmentCache = (await supabaseJson(restUrl(
+  async function loadShipments(orders) {
+    shipmentCache = (orders || await supabaseJson(restUrl(
       "uzsakymai",
-      "select=id,profilis_id,product_type,delivery_method,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,payment_status,customer_approved_at,created_at&order=created_at.desc"
+      "select=id,profilis_id,product_type,product_color,product_pattern,delivery_method,recipient_name,recipient_phone,recipient_email,carrier,city,parcel_terminal,shipping_status,tracking_number,apmoketa,payment_status,customer_approved_at,created_at&order=created_at.desc"
     ))).filter(function (order) { return order.delivery_method === "pastomatas"; });
     shipmentsPanel.hidden = false;
     renderShipments();
@@ -907,9 +901,19 @@
   }
 
   async function loadAdmin() {
+    if (adminLoadPromise) return adminLoadPromise;
+    adminLoadPromise = loadAdminData();
+    try {
+      return await adminLoadPromise;
+    } finally {
+      adminLoadPromise = null;
+    }
+  }
+
+  async function loadAdminData() {
     setStatus("Tikrinamos administratoriaus teisės...");
     var me = await AtminimasAuth.user();
-    var ok = me && await AtminimasAuth.isAdmin();
+    var ok = me && await AtminimasAuth.isAdmin(me);
     if (!ok) {
       form.hidden = false;
       adminSession.hidden = true;
@@ -941,22 +945,23 @@
       "profiliai",
       "deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
     ));
-    await loadOrders();
-    await loadPreorders();
-    await loadBusinessSettings();
-    await loadProduction();
-    await loadAutomation();
-    await loadShipments();
-    await loadServiceRequests();
-    try {
-      await loadServicePricing();
-    } catch (pricingError) {
-      servicePricingStatus.textContent = "Kainodaros įkelti nepavyko: " + (pricingError.message || "nežinoma klaida");
-    }
-    await loadLegalRequests();
-    await loadMemories();
+    var sections = [
+      { name: "Užsakymai ir siuntos", load: function () { return loadOrders().then(function () { return loadShipments(orderCache); }); } },
+      { name: "Išankstiniai užsakymai", load: loadPreorders },
+      { name: "Verslo nustatymai", load: loadBusinessSettings },
+      { name: "Gamyba", load: loadProduction },
+      { name: "Automatika", load: loadAutomation },
+      { name: "Paslaugų užklausos", load: loadServiceRequests },
+      { name: "Kainodara", load: loadServicePricing },
+      { name: "Prašymai", load: loadLegalRequests },
+      { name: "Prisiminimai", load: loadMemories }
+    ];
+    var results = await Promise.allSettled(sections.map(function (section) { return section.load(); }));
+    var failed = sections.filter(function (_section, index) { return results[index].status === "rejected"; });
     updateOverview();
-    setStatus("Administravimo duomenys atnaujinti.");
+    setStatus(failed.length
+      ? "Dalies duomenų įkelti nepavyko: " + failed.map(function (section) { return section.name; }).join(", ") + ". Bandykite atnaujinti."
+      : "Administravimo duomenys atnaujinti.");
     render();
   }
 
@@ -1060,6 +1065,9 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    var button = form.querySelector("button[type='submit']");
+    if (button.disabled) return;
+    button.disabled = true;
     var data = Object.fromEntries(new FormData(form).entries());
     setStatus("Jungiamasi...");
     try {
@@ -1067,6 +1075,8 @@
       await loadAdmin();
     } catch (err) {
       setStatus(err.message || "Nepavyko prisijungti.");
+    } finally {
+      button.disabled = false;
     }
   });
 
@@ -1177,6 +1187,7 @@
   businessSettingsForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var button = businessSettingsForm.querySelector("button[type='submit']");
+    if (button.disabled) return;
     button.disabled = true;
     businessSettingsStatus.textContent = "Nustatymai saugomi...";
     saveBusinessSettings().catch(function (err) {
@@ -1187,6 +1198,7 @@
   servicePricingForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var button = servicePricingForm.querySelector("button[type='submit']");
+    if (button.disabled) return;
     button.disabled = true;
     servicePricingStatus.textContent = "Kainodara saugoma...";
     servicePricingStatus.dataset.state = "info";

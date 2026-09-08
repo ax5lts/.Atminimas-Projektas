@@ -4,7 +4,8 @@
   var requestedNext = (new URLSearchParams(window.location.search).get("next") || "").trim();
   var hasExplicitNext = /^[a-z0-9-]+\.html(?:[?#][^\s]*)?$/i.test(requestedNext);
   var confirmationNoticeKey = "atminimas.auth.confirmation-notice.v1";
-  var confirmationNotice = sessionStorage.getItem(confirmationNoticeKey);
+  var confirmationNotice = "";
+  try { confirmationNotice = sessionStorage.getItem(confirmationNoticeKey); } catch (_error) {}
 
   function setStatus(message, state) {
     if (window.AtminimasForms) AtminimasForms.setStatus(status, message, state);
@@ -17,13 +18,16 @@
   }
 
   if (confirmationNotice) {
-    sessionStorage.removeItem(confirmationNoticeKey);
+    try { sessionStorage.removeItem(confirmationNoticeKey); } catch (_error) {}
     setStatus(confirmationNotice, "success");
   }
 
   function nextPage() {
     if (hasExplicitNext) return requestedNext;
-    return sessionStorage.getItem("atminimas.service-request.draft.v1") ? "kapu-prieziura.html#uzklausa" : "vartotojas.html";
+    try {
+      if (sessionStorage.getItem("atminimas.service-request.draft.v1")) return "kapu-prieziura.html#uzklausa";
+    } catch (_error) {}
+    return "vartotojas.html";
   }
 
   var next = nextPage();
@@ -47,6 +51,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (form.querySelector("button[type='submit']").disabled) return;
     var data = Object.fromEntries(new FormData(form).entries());
     data.email = String(data.email || "").trim();
     setBusy(true);

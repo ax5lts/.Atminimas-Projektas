@@ -57,7 +57,7 @@
 
   function normalizeMedia(atminimas) {
     var saved = parseJson(atminimas.media_json, []);
-    return Array.isArray(saved) ? saved : [];
+    return Array.isArray(saved) ? saved.filter(function (item) { return item && typeof item === "object"; }) : [];
   }
 
   function normalizeStoryBlocks(atminimas) {
@@ -168,6 +168,8 @@
         heightPct = Math.max(4, Math.min(MAX_PIECE_HEIGHT_PCT, heightPct));
         element.style.height = Math.round(width * heightPct / 100) + "px";
       }
+    });
+    view.querySelectorAll(".builder-piece").forEach(function (element) {
       bottom = Math.max(bottom, element.offsetTop + element.offsetHeight);
     });
     var heightPct = ((bottom + width * STAGE_BOTTOM_GAP_PCT / 100) / width) * 100;
@@ -464,9 +466,15 @@
     }
     var mediaSources = buildMediaSources(allImages);
     if (mediaSources) contentRoot.appendChild(mediaSources);
+    var resizePending = false;
     window.addEventListener("resize", function () {
-      fitBuilderName(title);
-      applyResponsiveBuilderHeights(view);
+      if (resizePending) return;
+      resizePending = true;
+      requestAnimationFrame(function () {
+        resizePending = false;
+        fitBuilderName(title);
+        applyResponsiveBuilderHeights(view);
+      });
     });
     bindBuilderGallery(view, allImages);
   }
@@ -537,8 +545,9 @@
     var atminimas = payload.atminimas || payload;
     var media = normalizeMedia(atminimas);
     var layout = parseJson(atminimas.layout_json, {});
+    if (!layout || typeof layout !== "object" || Array.isArray(layout)) layout = {};
     var hasBuilderData = Object.keys(layout).length > 0 ||
-      parseJson(atminimas.media_json, []).length > 0 ||
+      media.length > 0 ||
       normalizeStoryBlocks(atminimas).length > 0;
 
     if (hasBuilderData) renderBuilderLayout(atminimas, media, layout);

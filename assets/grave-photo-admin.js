@@ -4,6 +4,7 @@
   var refresh = document.getElementById("grave-photo-review-refresh");
   var cache = [];
   var previewed = new Set();
+  var decisionsPending = new Set();
   var objectUrls = [];
   if (!rowsEl || !statusEl || !refresh) return;
 
@@ -66,6 +67,9 @@
   }
 
   async function preview(id, button) {
+    if (button.disabled) return;
+    var image = button.closest("tr").querySelector("[data-review-image]");
+    if (!image.hidden) return;
     button.disabled = true;
     statusEl.textContent = "Nuotrauka įkeliama peržiūrai…";
     try {
@@ -76,8 +80,6 @@
       if (blob.type.indexOf("image/") !== 0) throw new Error("Gautas failas nėra nuotrauka.");
       var objectUrl = URL.createObjectURL(blob);
       objectUrls.push(objectUrl);
-      var row = button.closest("tr");
-      var image = row.querySelector("[data-review-image]");
       image.src = objectUrl;
       image.hidden = false;
       previewed.add(id);
@@ -121,7 +123,7 @@
     var approveButton = event.target.closest("[data-approve-photo]");
     var rejectButton = event.target.closest("[data-reject-photo]");
     var id = approveButton ? approveButton.dataset.approvePhoto : rejectButton ? rejectButton.dataset.rejectPhoto : "";
-    if (!id) return;
+    if (!id || decisionsPending.has(id)) return;
     var row = cache.find(function (item) { return item.id === id; });
     if (!row) return;
     if (!previewed.has(id)) {
@@ -129,21 +131,23 @@
       return;
     }
     if (approveButton) {
+      decisionsPending.add(id);
       approveButton.disabled = true;
       setDecision(row, "approved", "").then(function () {
         statusEl.textContent = "Nuotrauka patvirtinta ir dabar gali būti rodoma viešai.";
         return load();
-      }).catch(function (error) { statusEl.textContent = error.message; }).finally(function () { approveButton.disabled = false; });
+      }).catch(function (error) { statusEl.textContent = error.message; }).finally(function () { decisionsPending.delete(id); approveButton.disabled = false; });
       return;
     }
     var note = window.prompt("Atmetimo arba paslėpimo priežastis (nebūtina):", row.admin_note || "");
     if (note === null) return;
+    decisionsPending.add(id);
     rejectButton.disabled = true;
     setDecision(row, "rejected", note.trim()).then(async function () {
       var removed = await removeStoredPhoto(row.storage_path);
       statusEl.textContent = removed ? "Nuotrauka atmesta ir failas pašalintas." : "Nuotrauka paslėpta; failą vėliau reikės pašalinti rankiniu būdu.";
       await load();
-    }).catch(function (error) { statusEl.textContent = error.message; }).finally(function () { rejectButton.disabled = false; });
+    }).catch(function (error) { statusEl.textContent = error.message; }).finally(function () { decisionsPending.delete(id); rejectButton.disabled = false; });
   });
 
   refresh.addEventListener("click", function () { load().catch(function (error) { statusEl.textContent = error.message; }); });

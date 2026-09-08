@@ -51,9 +51,10 @@
     travel_rate_cents_per_km: 35,
     manual_review_over_one_way_km: 200
   };
-  var estimateSnapshot = null;
   var estimateTimer = null;
   var estimateRequestNumber = 0;
+  var estimateKey = "";
+  var estimateController = null;
   var priceCatalogLoaded = true;
   var isFillingLocation = false;
   var optionLabels = {
@@ -246,11 +247,12 @@
     return config().SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/" + encodeURIComponent(name);
   }
 
-  async function serviceFlow(payload) {
+  async function serviceFlow(payload, signal) {
     var response = await fetch(functionUrl("service-flow"), {
       method: "POST",
       headers: AtminimasAuth.headers(true),
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: signal
     });
     var result = await response.json().catch(function () { return {}; });
     if (!response.ok) {
@@ -280,7 +282,6 @@
   }
 
   function renderEstimate(result) {
-    estimateSnapshot = result || null;
     if (result && result.price_catalog_cents) {
       Object.keys(defaultServicePrices).forEach(function (key) {
         var value = result.price_catalog_cents[key];
@@ -361,17 +362,18 @@
   }
 
   async function refreshEstimate() {
+    clearTimeout(estimateTimer);
+    var payload = estimatePayload();
+    estimateKey = JSON.stringify(payload);
     var requestNumber = ++estimateRequestNumber;
+    if (estimateController) estimateController.abort();
+    estimateController = new AbortController();
     try {
-      var result = await serviceFlow({
-        action: "estimate",
-        price_keys: selectedPriceKeys(),
-        destination_latitude: form.elements.destination_latitude.value || null,
-        destination_longitude: form.elements.destination_longitude.value || null
-      });
+      var result = await serviceFlow(payload, estimateController.signal);
       if (requestNumber === estimateRequestNumber) renderEstimate(result);
     } catch (error) {
       if (requestNumber !== estimateRequestNumber) return;
+      estimateKey = "";
       estimateServicesEl.textContent = priceTextForKeys(selectedPriceKeys()) === "derinama" ? "–" : priceTextForKeys(selectedPriceKeys());
       estimateTravelEl.textContent = "–";
       estimateEl.textContent = "–";
@@ -379,8 +381,23 @@
     }
   }
 
+  function estimatePayload() {
+    return {
+      action: "estimate",
+      price_keys: selectedPriceKeys(),
+      destination_latitude: form.elements.destination_latitude.value || null,
+      destination_longitude: form.elements.destination_longitude.value || null
+    };
+  }
+
   function updateEstimate() {
+    var nextKey = JSON.stringify(estimatePayload());
+    if (nextKey === estimateKey) return;
+    estimateKey = nextKey;
+    estimateRequestNumber += 1;
+    if (estimateController) estimateController.abort();
     clearTimeout(estimateTimer);
+    renderEstimate(null);
     estimateTimer = setTimeout(refreshEstimate, 180);
   }
 
@@ -466,7 +483,7 @@
   function savedGraves() {
     try {
       var saved = JSON.parse(localStorage.getItem(savedGravesKey) || "[]");
-      return Array.isArray(saved) ? saved : [];
+      return Array.isArray(saved) ? saved.filter(function (item) { return item && typeof item === "object"; }).slice(0, 50) : [];
     } catch (_error) {
       return [];
     }
@@ -501,6 +518,7 @@
         savedGraveSelect.appendChild(option);
       });
       savedGraveSelect.addEventListener("change", function () {
+        if (savedGraveSelect.value === "") return;
         var grave = saved[Number(savedGraveSelect.value)];
         if (grave) fillGrave(grave);
       });
@@ -553,7 +571,7 @@
         fields[field.name] = field.value;
       }
     });
-    sessionStorage.setItem(draftKey, JSON.stringify({ services: selectedServices(), fields: fields }));
+    try { sessionStorage.setItem(draftKey, JSON.stringify({ services: selectedServices(), fields: fields })); } catch (_error) {}
   }
 
   function normalizeCleaningSelection() {
@@ -565,9 +583,9 @@
   }
 
   function restoreDraft() {
-    var raw = sessionStorage.getItem(draftKey);
-    if (!raw) return;
     try {
+      var raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
       var draft = JSON.parse(raw);
       var fields = draft.fields || draft;
       Array.from(form.elements).forEach(function (field) {
@@ -587,7 +605,7 @@
       updateServiceFields();
       updateLocationStatus();
     } catch (_error) {
-      sessionStorage.removeItem(draftKey);
+      try { sessionStorage.removeItem(draftKey); } catch (_storageError) {}
     }
   }
 
@@ -670,6 +688,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (submitButton.disabled) return;
     var services = selectedServices().filter(function (service) { return allowedServices.indexOf(service) !== -1; });
     if (!services.length) {
       activateServiceStep(1, true);
@@ -714,7 +733,7 @@
     statusEl.textContent = "Užklausa siunčiama...";
     try {
       await serviceFlow(payload);
-      sessionStorage.removeItem(draftKey);
+      try { sessionStorage.removeItem(draftKey); } catch (_storageError) {}
       window.location.assign("aciu.html?type=service");
       return;
     } catch (error) {

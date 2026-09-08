@@ -28,6 +28,7 @@
     var toggle = header.querySelector("[data-site-menu-toggle]");
     if (toggle) {
       toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "Atidaryti meniu");
       if (returnFocus) toggle.focus();
     }
   }
@@ -255,17 +256,26 @@
   }
 
   function copyText(value) {
-    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(value);
-    var field = document.createElement("textarea");
-    field.value = value;
-    field.setAttribute("readonly", "");
-    field.style.position = "fixed";
-    field.style.left = "-9999px";
-    document.body.appendChild(field);
-    field.select();
-    document.execCommand("copy");
-    field.remove();
-    return Promise.resolve();
+    function legacyCopy() {
+      var previousFocus = document.activeElement;
+      var field = document.createElement("textarea");
+      try {
+        field.value = value;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.left = "-9999px";
+        document.body.appendChild(field);
+        field.select();
+        if (!document.execCommand("copy")) throw new Error("Nuorodos nukopijuoti nepavyko.");
+      } finally {
+        field.remove();
+        if (previousFocus && previousFocus.focus) previousFocus.focus({ preventScroll: true });
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value).catch(legacyCopy);
+    }
+    return Promise.resolve().then(legacyCopy);
   }
 
   function toast(message) {

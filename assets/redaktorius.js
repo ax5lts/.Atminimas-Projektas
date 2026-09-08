@@ -52,8 +52,7 @@
   var editorCanvas = document.querySelector(".editor-canvas");
   var previewSurface = document.getElementById("editor-preview-surface");
   var openPreviewDialog = null;
-  var productImage = document.getElementById("editor-product-image");
-  var productCard = productImage ? productImage.closest(".editor-product-card") : null;
+  var productCard = document.querySelector(".editor-product-card");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
   var colorCurrent = document.getElementById("editor-color-current");
@@ -165,13 +164,7 @@
       image: "assets/qr-plienas-480.webp",
       alt: "Pasirinkta plieno QR atminimo lentelė",
       name: "graviruota plieno QR atminimo lentelė",
-      priceNote: ". Kaina – 50,00 EUR."
-    },
-    asa: {
-      image: "assets/qr-asa-480.webp",
-      alt: "Pasirinkta ASA QR atminimo lentelė",
-      name: "ASA 3D spausdinta QR atminimo lentelė",
-      priceNote: "."
+      priceNote: ". Kaina – 60,00 EUR."
     },
     digital: {
       image: "",
@@ -188,9 +181,10 @@
     if (value === "digital") return "digital";
     return window.AtminimasProductCatalog
       ? AtminimasProductCatalog.normalizeType(value)
-      : (value === "asa" ? "asa" : "metal");
+      : "metal";
   }
 
+  var selectedPlaqueDesign = window.AtminimasPlaqueDesign ? AtminimasPlaqueDesign.read() : { color: "gold", pattern: "tree" };
   var requestedProductType = requestedProduct();
   var productType = "metal";
 
@@ -204,13 +198,6 @@
     var selectedProductOption = productOptions[productType];
     var digitalOnly = productType === "digital";
     sessionStorage.setItem(PRODUCT_KEY, productType);
-    if (productImage) {
-      productImage.hidden = digitalOnly;
-      if (!digitalOnly) {
-        productImage.src = selectedProductOption.image;
-        productImage.alt = selectedProductOption.alt;
-      }
-    }
     if (productCard) productCard.classList.toggle("editor-product-card--digital", digitalOnly);
     if (productSummary) {
       productSummary.textContent = editId
@@ -235,14 +222,10 @@
     if (productSummary) productSummary.textContent = "Tikrinamas pasirinkto produkto prieinamumas…";
     AtminimasProductCatalog.load().then(function (catalog) {
       var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
-      var asaAvailable = !!(catalog.remote && catalog.asa && catalog.asa.available && catalog.asa.price_cents != null);
       if (metalAvailable) {
         productOptions.metal.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.metal.price_cents, catalog.metal.currency) + ".";
       }
-      if (asaAvailable) {
-        productOptions.asa.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.asa.price_cents, catalog.asa.currency) + ".";
-      }
-      var selectedType = requestedProductType === "asa" ? "asa" : "metal";
+      var selectedType = "metal";
       applySelectedProduct(selectedType);
       if (!catalog.remote) {
         setProductUnavailable(catalog.error || "Kainos patikrinti nepavyko. Puslapio juodraštį galite kurti; prieš užsakymą reikės patikrinti kainą.");
@@ -260,7 +243,7 @@
 
   function editorSaveReturnUrl() {
     if (prototypeRequested) return "redaktorius.html?prototype=1";
-    return "redaktorius.html?product=" + encodeURIComponent(productType) + "&resume=save";
+    return "redaktorius.html?product=" + encodeURIComponent(productType) + (productType !== "digital" && window.AtminimasPlaqueDesign ? "&" + AtminimasPlaqueDesign.query(selectedPlaqueDesign) : "") + "&resume=save";
   }
 
   function editorLoginUrl() {
@@ -3872,7 +3855,7 @@
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
       var digitalOnly = productType === "digital";
-      var physicalOrder = digitalOnly ? null : await AtminimasApi.createUzsakymas(result.identifier, { product_type: productType });
+      var physicalOrder = digitalOnly ? null : await AtminimasApi.createUzsakymas(result.identifier, { product_type: productType, product_color: selectedPlaqueDesign.color, product_pattern: selectedPlaqueDesign.pattern });
       physicalOrderPending = false;
       await discardSavedDraft();
       var savedStatusMessage = digitalOnly

@@ -14,7 +14,10 @@
       var parsed = new URL(String(value || ""), window.location.href);
       var page = (parsed.pathname.split("/").pop() || "").toLowerCase();
       if (parsed.origin !== window.location.origin || page !== "sablonas-viskas.html") return "";
-      if ((parsed.searchParams.get("slug") || "") !== String(id || "")) return "";
+      var identifier = parsed.searchParams.get("id") || parsed.searchParams.get("slug") || parsed.searchParams.get("s") || "";
+      if (identifier !== String(id || "")) return "";
+      parsed.search = "";
+      parsed.searchParams.set("slug", id);
       parsed.hash = "";
       return parsed.href;
     } catch (_error) {
@@ -157,9 +160,14 @@
 
   function remove(item) {
     var next = savedItems().filter(function (saved) { return saved.id !== item.id; });
-    localStorage.setItem(savedKey, JSON.stringify(next.map(function (saved) {
-      return { id: saved.id, name: saved.name, url: saved.url, death_date: saved.deathDate || null };
-    })));
+    try {
+      localStorage.setItem(savedKey, JSON.stringify(next.map(function (saved) {
+        return { id: saved.id, name: saved.name, url: saved.url, death_date: saved.deathDate || null };
+      })));
+    } catch (_error) {
+      announce("Atminimo pašalinti nepavyko. Patikrinkite naršyklės saugyklos leidimus.");
+      return;
+    }
     render();
     announce("Atminimas pašalintas iš išsaugotų.");
   }

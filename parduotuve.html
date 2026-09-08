@@ -7,13 +7,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-icon.png" type="image/png" sizes="512x512">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
-<meta name="description" content="QR atminimo lentelės po 50 €. Sukurkite puslapį, pasirinkite pristatymą ir apmokėkite per Paysera.">
+<meta name="description" content="QR atminimo lentelės po 60 €. Sukurkite puslapį, pasirinkite pristatymą ir apmokėkite per Paysera.">
 <link rel="canonical" href="https://atminimokodas.lt/parduotuve.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Atminimas">
 <meta property="og:locale" content="lt_LT">
 <meta property="og:title" content="QR atminimo lentelės – Atminimas">
-<meta property="og:description" content="Pasirinkite plieninę arba 3D spausdintą QR atminimo lentelę ir rezervuokite ją be mokėjimo.">
+<meta property="og:description" content="Pasirinkite plieninės QR lentelės spalvą ir raštą. 3 spalvos, 4 raštai, 5 × 5 cm.">
 <meta property="og:url" content="https://atminimokodas.lt/parduotuve.html">
 <meta property="og:image" content="https://atminimokodas.lt/assets/atminimo-kodas-preview.jpg">
 <meta property="og:image:type" content="image/jpeg">
@@ -25,7 +25,8 @@
 <meta name="twitter:image:alt" content="Atminimo kodas – prisiminimai, kurie išlieka">
 <title>QR atminimo lentelės – parduotuvė</title>
 <link rel="stylesheet" href="css/styles.css?v=20260903-3">
-<link rel="stylesheet" href="css/shop-ux.css?v=20260819-1">
+<link rel="stylesheet" href="css/shop-ux.css?v=20260908-2">
+<link rel="stylesheet" href="css/plaque-design.css?v=20260908-1">
 </head>
 <body data-loading>
 <div class="site-shell">
@@ -52,40 +53,20 @@
     <header class="shop-heading">
       <p class="eyebrow">QR atminimo lentelės</p>
       <h1>Pasirinkite QR lentelę</h1>
-      <p id="shop-heading-copy">Pasirinkite plieninę arba 3D spausdintą lentelę už 50 €. Sukurkite atminimo puslapį, pasirinkite pristatymą ir apmokėkite per Paysera.</p>
+      <p id="shop-heading-copy">Pasirinkite plieninės lentelės spalvą ir raštą už 60 €. Sukurkite atminimo puslapį, pasirinkite pristatymą ir apmokėkite per Paysera.</p>
     </header>
 
-    <aside class="legal-notice shop-legal-notice preorder-notice"><strong>QR lentelė — 50 €, pristatymas — 3 €</strong><p>Galutinė suma su pristatymu — 53 €. Užsakymą apmokėsite per Paysera, o gamybą pradėsime po galutinio maketo patvirtinimo.</p><p>Preliminari gamyba trunka 1–2 savaites po galutinio maketo patvirtinimo, o pristatymas – 1–3 darbo dienas po pagaminimo.</p></aside>
+    <aside class="legal-notice shop-legal-notice preorder-notice"><strong>QR lentelė — 60 €, pristatymas — 3 €</strong><p>Galutinė suma su pristatymu — 63 €. Užsakymą apmokėsite per Paysera, o gamybą pradėsime po galutinio maketo patvirtinimo.</p><p>Preliminari gamyba trunka 1–2 savaites po galutinio maketo patvirtinimo, o pristatymas – 1–3 darbo dienas po pagaminimo.</p></aside>
 
     <p class="shop-flow-label">Fizinės QR lentelės eiga</p>
 
     <ol class="shop-journey shop-journey--preorder" aria-label="Užsakymo eiga">
       <li class="is-current" aria-current="step"><span>1</span><strong>Pasirinkite lentelę</strong><small>Esate čia</small></li>
       <li><span>2</span><strong>Kurkite puslapį</strong><small>Paruoškite atminimą</small></li>
-      <li><span>3</span><strong>Apmokėkite</strong><small>50 € + 3 € pristatymas</small></li>
+      <li><span>3</span><strong>Apmokėkite</strong><small>60 € + 3 € pristatymas</small></li>
     </ol>
 
-    <fieldset class="product-selector" id="product-selector">
-      <legend class="visually-hidden">Pasirinktas produktas</legend>
-      <label class="product-choice product-choice--recommended" data-product-choice="metal">
-        <input type="radio" name="product_type" value="metal" checked>
-        <span class="product-recommendation">Rekomenduojama</span>
-        <span class="product-choice__image"><img src="assets/qr-plienas-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="Graviruota plieno QR atminimo lentelė"></span>
-        <span class="product-choice__content">
-          <span><strong>Plieninė QR lentelė</strong><small>5 × 5 cm · klijuojama · Siunčiame</small></span>
-          <span class="product-choice__price" data-metal-price>–</span>
-        </span>
-      </label>
-      <label class="product-choice" data-product-choice="asa">
-        <input type="radio" name="product_type" value="asa">
-        <span class="product-availability product-availability--available" data-product-availability="asa">Galima užsakyti</span>
-        <span class="product-choice__image"><img src="assets/qr-asa-480.webp" width="480" height="640" loading="lazy" decoding="async" alt="ASA 3D spausdinta QR atminimo lentelė"></span>
-        <span class="product-choice__content">
-          <span><strong>3D spausdinta QR lentelė</strong><small data-asa-description>5 × 5 cm · ASA plastikas · klijuojama · Siunčiame</small></span>
-          <span class="product-choice__price product-choice__price--status" data-asa-price>Kaina tikslinama</span>
-        </span>
-      </label>
-    </fieldset>
+    <input type="hidden" name="product_type" value="metal">
     <div class="shop-catalog-status" id="shop-catalog-status" role="status" aria-live="polite" hidden>
       <p id="shop-catalog-message"></p>
       <button class="button button--ghost" id="shop-catalog-retry" type="button">Bandyti dar kartą</button>
@@ -94,8 +75,10 @@
     <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
       <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
         <div class="product-media">
-          <img id="product-image" src="assets/qr-plienas-480.webp" srcset="assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w" sizes="(max-width: 760px) 92vw, 540px" width="1086" height="1448" decoding="async" fetchpriority="high" alt="Graviruota plieno QR atminimo lentelė">
+          <div id="product-image" class="plaque-preview" data-color="gold" data-pattern="tree" role="img" aria-label="Aukso spalvos plienas · Gyvybės medis"></div>
         </div>
+        <p class="product-preview-caption" id="product-preview-caption" aria-live="polite">Aukso spalvos plienas · Gyvybės medis</p>
+        <p class="product-preview-note">Pavyzdinis dizainas. Jūsų lentelėje bus jūsų atminimo puslapio QR kodas.</p>
       </div>
 
       <div class="shop-side">
@@ -104,6 +87,27 @@
           <h2 id="product-title">Plieninė QR lentelė</h2>
           <p class="product-price" id="product-price">–</p>
           <p class="product-preorder-price-note">Vieneto kaina · pristatymas papildomai 3 €.</p>
+
+          <div class="plaque-options" id="product-selector">
+            <fieldset class="plaque-option-group">
+              <legend>1. Pasirinkite spalvą</legend>
+              <div class="plaque-colors">
+                <label class="plaque-choice"><input type="radio" name="plaque_color" value="gold" checked><span class="plaque-color-swatch plaque-color-swatch--gold" aria-hidden="true"></span><span>Aukso</span></label>
+                <label class="plaque-choice"><input type="radio" name="plaque_color" value="silver"><span class="plaque-color-swatch plaque-color-swatch--silver" aria-hidden="true"></span><span>Sidabro</span></label>
+                <label class="plaque-choice"><input type="radio" name="plaque_color" value="black"><span class="plaque-color-swatch plaque-color-swatch--black" aria-hidden="true"></span><span>Juoda</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="plaque-option-group">
+              <legend>2. Pasirinkite raštą</legend>
+              <div class="plaque-patterns">
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="tree" checked><span class="plaque-preview" data-pattern-preview="tree" data-color="gold" data-pattern="tree" aria-hidden="true"></span><span><small>Variantas 1</small>Gyvybės medis</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="heart"><span class="plaque-preview" data-pattern-preview="heart" data-color="gold" data-pattern="heart" aria-hidden="true"></span><span><small>Variantas 2</small>Širdis ir žvakė</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="wings"><span class="plaque-preview" data-pattern-preview="wings" data-color="gold" data-pattern="wings" aria-hidden="true"></span><span><small>Variantas 3</small>Angelo sparnai</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="plain"><span class="plaque-preview" data-pattern-preview="plain" data-color="gold" data-pattern="plain" aria-hidden="true"></span><span><small>Variantas 4</small>Tik QR kodas</span></label>
+              </div>
+            </fieldset>
+            <p class="plaque-selection" role="status">Jūsų pasirinkimas: <strong id="product-selection">Aukso spalvos plienas · Gyvybės medis</strong></p>
+          </div>
           <ul class="product-highlights" aria-label="Svarbiausia produkto informacija">
             <li><span>Matmenys</span><strong id="product-dimensions">5 × 5 cm</strong></li>
             <li><span>Medžiaga</span><strong id="product-material">Plienas</strong></li>
@@ -114,7 +118,7 @@
           <p class="product-copy" id="product-copy">QR kodas atidaro asmeninį atminimo puslapį.</p>
 
           <div class="product-order-summary" aria-label="Kas bus toliau">
-            <div><span>Su pristatymu</span><strong>53 EUR</strong></div>
+            <div><span>Su pristatymu</span><strong>63 EUR</strong></div>
             <div><span>Apmokėjimas</span><strong>Per Paysera</strong></div>
           </div>
           <div class="actions">
@@ -194,7 +198,7 @@
     <section class="info-grid info-grid--single" aria-label="Papildoma informacija">
       <div class="info-box">
         <h2>Užsakymo informacija</h2>
-        <p>Lentelė: <strong>50 EUR</strong>, pristatymas: <strong>3 EUR</strong>, visa suma: <strong>53 EUR</strong>. Preliminari gamyba – <strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong>, pristatymas – <strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong>. Pristatymo teritorija: <span data-business="shippingTerritory">Lietuva</span>. Pristatymo kaina ir galutinė suma patvirtinamos prieš mokėjimą. Talpinimas: <span data-business="hostingPeriod">kol paslauga aktyvi; tikslų laikotarpį patvirtinsime prieš užsakymą</span>.</p><p><a href="taisykles.html">Pirkimo ir naudojimo sąlygos</a></p>
+        <p>Lentelė: <strong>60 EUR</strong>, pristatymas: <strong>3 EUR</strong>, visa suma: <strong>63 EUR</strong>. Preliminari gamyba – <strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong>, pristatymas – <strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong>. Pristatymo teritorija: <span data-business="shippingTerritory">Lietuva</span>. Pristatymo kaina ir galutinė suma patvirtinamos prieš mokėjimą. Talpinimas: <span data-business="hostingPeriod">kol paslauga aktyvi; tikslų laikotarpį patvirtinsime prieš užsakymą</span>.</p><p><a href="taisykles.html">Pirkimo ir naudojimo sąlygos</a></p>
       </div>
     </section>
   </main>
@@ -212,7 +216,8 @@
 <script src="assets/business-config.js?v=20260908-1"></script>
 <script src="assets/business-details.js?v=20260903-1"></script>
 <script src="assets/product-catalog.js?v=20260811-3"></script>
-<script src="assets/shop.js?v=20260908-1"></script>
+<script src="assets/plaque-design.js?v=20260908-1"></script>
+<script src="assets/shop.js?v=20260908-2"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
 <script src="assets/site-ui.js?v=20260908-1"></script>
 </body>

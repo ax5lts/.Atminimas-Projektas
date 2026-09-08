@@ -71,10 +71,30 @@ export async function readJson(
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
     throw new RequestError("Request body is too large", 413);
   }
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
-    throw new RequestError("Request body is too large", 413);
+  const reader = request.body?.getReader();
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let receivedBytes = 0;
+  if (reader) {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        receivedBytes += value.byteLength;
+        if (receivedBytes > maxBytes) {
+          // Enforce the limit while streaming, including chunked requests that
+          // omit Content-Length, instead of buffering an arbitrarily large body.
+          await reader.cancel().catch(() => {});
+          throw new RequestError("Request body is too large", 413);
+        }
+        parts.push(decoder.decode(value, { stream: true }));
+      }
+      parts.push(decoder.decode());
+    } finally {
+      reader.releaseLock();
+    }
   }
+  const raw = parts.join("");
   try {
     const parsed = JSON.parse(raw || "{}");
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

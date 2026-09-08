@@ -19,9 +19,15 @@
   }
 
   function showDownload(container, text, filename) {
+    var previous = container.querySelector("[data-legal-receipt]");
+    if (previous) {
+      URL.revokeObjectURL(previous.href);
+      previous.remove();
+    }
     var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     var link = document.createElement("a");
     link.className = "button button--ghost";
+    link.dataset.legalReceipt = "";
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.textContent = "Atsisiųsti pateikimo patvirtinimą";
@@ -34,6 +40,7 @@
       if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) return;
       var status = form.querySelector("[role='status']");
       var button = form.querySelector("button[type='submit']");
+      if (button.disabled) return;
       var data = Object.fromEntries(new FormData(form).entries());
       data.form_type = form.dataset.legalForm;
       delete data.confirmation;

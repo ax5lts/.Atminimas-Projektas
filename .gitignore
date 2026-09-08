@@ -13,3 +13,5 @@ data-imports/
 *.py[cod]
 tmp/
 .vercel
+node_modules/
+dist/

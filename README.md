@@ -1,6 +1,20 @@
 # Atminimas
 
-„Atminimas“ yra statinis HTML/CSS/JS projektas su Supabase PostgreSQL, Auth, Storage ir Edge Functions. `app.py` suteikia vietinį Flask API, o produkcinis frontend diegiamas per GitHub Pages.
+„Atminimas“ yra statinis HTML/CSS/JS projektas su Supabase PostgreSQL, Auth, Storage ir Edge Functions. `app.py` suteikia vietinį Flask API, o produkcinis frontend paruošiamas į `dist/` ir diegiamas per Vercel.
+
+## Vietinė peržiūra ir viešinimo failai
+
+`python serve.py` paleidžia redaguojamus šaltinius adresu `http://localhost:5000`. Viešinimui naudojamas Node.js 22 ar naujesnis ir `pnpm` 11.19.0:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm test
+pnpm build
+```
+
+`scripts/build.mjs` sukuria tik viešus failus kataloge `dist/`, sumažina JavaScript ir CSS, išlaiko skriptų vykdymo tvarką ir pagal turinį atnaujina jų versijas HTML bei dinamiškai įkeliamuose skriptuose. `.env`, serverio kodas, testai ir įrankių failai į viešinimo katalogą nepatenka. Šaltinius keiskite `assets/`, `css/` ir šakniniuose HTML failuose; `dist/` sugeneruojamas iš naujo. Vercel šią komandą vykdo automatiškai pagal `vercel.json`.
+
+`pnpm-workspace.yaml` parinktas `hoisted` režimas leidžia priklausomybes įdiegti ir Windows exFAT diske, nepalaikančiame simbolinių nuorodų.
 
 ## Oficiali kapaviečių paieška
 
@@ -44,6 +58,8 @@ Importo kodas ir vietiniai CSV palikti kaip techninė atsarginė kopija. `data-i
 
 ```bash
 python -m unittest discover -s tests -v
+node --test tests/*.test.cjs
+deno test --no-lock --node-modules-dir=none --allow-env supabase/functions
 ```
 
 Prieš produkcinį pakeitimą patikrinkite paiešką su viena savivaldybe ir be savivaldybės filtro, Edge Function žurnalus bei Supabase Security Advisor.

@@ -5,7 +5,7 @@
   };
 
   function normalizeType(value) {
-    return value === "asa" ? "asa" : "metal";
+    return "metal";
   }
 
   function formatPrice(priceCents, currency) {
@@ -33,7 +33,7 @@
     var controller = typeof AbortController === "function" ? new AbortController() : null;
     var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, 6000) : null;
     try {
-      var query = "select=id,name,price_cents,currency,enabled&id=in.(metal,asa)&enabled=eq.true";
+      var query = "select=id,name,price_cents,currency,enabled&id=eq.metal&enabled=eq.true";
       var response = await fetch(config.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/product_catalog?" + query, {
         headers: {
           apikey: config.SUPABASE_ANON_KEY,
@@ -44,6 +44,11 @@
       if (!response.ok) throw new Error("Produkto katalogas nepasiekiamas.");
 
       var rows = await response.json();
+      // Never offer the retired price while the published copy promises 60 EUR.
+      var metal = rows.find(function (row) { return row.id === "metal"; });
+      if (metal && metal.enabled && (metal.price_cents !== 6000 || metal.currency !== "EUR")) {
+        return fallbackCatalog("Užsakymas laikinai nepasiekiamas. Pabandykite dar kartą vėliau.");
+      }
       var catalog = {
         metal: { id: "metal", available: false, price_cents: null, currency: "EUR" },
         asa: { id: "asa", available: false, price_cents: null, currency: "EUR" },

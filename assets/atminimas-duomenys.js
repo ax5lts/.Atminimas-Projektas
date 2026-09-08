@@ -328,7 +328,9 @@
     var row = await manageProfile({
       action: "create_order",
       profile_id: identifier,
-      product_type: input && input.product_type === "asa" ? "asa" : "metal"
+      product_type: "metal",
+      product_color: input && input.product_color || "gold",
+      product_pattern: input && input.product_pattern || "tree"
     });
     return {
       id: row.id,

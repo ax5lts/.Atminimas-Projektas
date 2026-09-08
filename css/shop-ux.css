@@ -7,6 +7,30 @@
   list-style: none;
 }
 
+.plaque-options { margin: 24px 0; }
+.plaque-option-group { min-width: 0; margin: 0 0 22px; padding: 0; border: 0; }
+.plaque-option-group legend { margin-bottom: 12px; font-weight: 750; }
+.plaque-colors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.plaque-patterns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.plaque-choice { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px; border: 2px solid #ded8cb; border-radius: 12px; cursor: pointer; background: #fffdf8; text-align: center; font-size: .9rem; }
+.plaque-choice:has(input:checked) { border-color: #78622f; background: #f5efdf; box-shadow: 0 0 0 1px #78622f; }
+.plaque-choice:has(input:focus-visible) { outline: 3px solid #305d85; outline-offset: 3px; }
+.plaque-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.plaque-color-swatch { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #9b927f; }
+.plaque-color-swatch--gold { background: linear-gradient(135deg, #ba852d, #ffe8a1, #c39441); }
+.plaque-color-swatch--silver { background: linear-gradient(135deg, #aaa, #f4f4f4, #999); }
+.plaque-color-swatch--black { background: linear-gradient(135deg, #111, #494949, #111); }
+.plaque-choice--pattern { display: grid; justify-items: center; padding: 12px; }
+.plaque-choice--pattern .plaque-preview { width: 100%; max-width: 134px; }
+.plaque-choice small { display: block; margin-bottom: 3px; color: #6b665e; font-size: .75rem; }
+.plaque-selection { padding: 14px; background: #f3eee2; border-radius: 10px; line-height: 1.6; }
+.plaque-selection strong { display: block; }
+.product-gallery .product-media { padding: clamp(18px, 4vw, 40px); background: #f3f0e9; }
+#product-image.plaque-preview { width: 100%; height: auto; max-width: 480px; margin: auto; box-shadow: 0 12px 24px #35291025; }
+.product-preview-caption { text-align: center; font-weight: 700; margin: 18px 12px 8px; }
+.product-preview-note { color: #6b665e; text-align: center; font-size: .85rem; margin: 0 18px 20px; }
+@media (min-width: 981px) { .product-gallery--single { position: sticky; top: 24px; align-self: start; } }
+
 .shop-journey--preorder {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
