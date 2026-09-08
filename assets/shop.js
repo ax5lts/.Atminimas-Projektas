@@ -11,7 +11,7 @@
       image: "assets/qr-plienas-480.webp",
       imageSet: "assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w",
       alt: "Graviruota plieno QR atminimo lentelė",
-      price: business.price || "Kaina tikslinama",
+      price: business.price || "Kaina tikslinama", available: false,
       copy: "QR kodas atidaro asmeninį atminimo puslapį.",
       material: "Plienas",
       dimensions: "5 × 5 cm",
@@ -23,7 +23,7 @@
       image: "assets/qr-asa-480.webp",
       imageSet: "assets/qr-asa-480.webp 480w, assets/qr-asa.webp 1086w",
       alt: "ASA 3D spausdinta QR atminimo lentelė",
-      price: "Kaina tikslinama",
+      price: "Kaina tikslinama", available: false,
       copy: "QR kodas atidaro asmeninį atminimo puslapį.",
       material: "ASA plastikas",
       dimensions: "5 × 5 cm",
@@ -47,6 +47,8 @@
   var catalogStatus = document.getElementById("shop-catalog-status");
   var catalogMessage = document.getElementById("shop-catalog-message");
   var catalogRetry = document.getElementById("shop-catalog-retry");
+  var selectedType = "metal";
+  var catalogLoading = false;
 
   function normalizeType(type) {
     return window.AtminimasProductCatalog
@@ -56,6 +58,7 @@
 
   function selectProduct(type) {
     var safeType = normalizeType(type);
+    selectedType = safeType;
     var product = products[safeType];
     fields.kind.textContent = product.kind;
     fields.title.textContent = product.title;
@@ -67,9 +70,10 @@
     fields.material.textContent = product.material;
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
-    createLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(safeType);
-    createLink.textContent = "Pateikti PREORDER · 0 € dabar";
-    sessionStorage.setItem(selectedKey, safeType);
+    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType);
+    createLink.textContent = product.available ? "Kurti puslapį ir užsakyti · " + product.price : "Kaina tikrinama";
+    createLink.setAttribute("aria-disabled", product.available ? "false" : "true");
+    try { sessionStorage.setItem(selectedKey, safeType); } catch (_error) {}
   }
 
   function setCatalogStatus(message, canRetry) {
@@ -81,6 +85,7 @@
   function updateCatalogPrices(catalog) {
     ["metal", "asa"].forEach(function (type) {
       var item = catalog[type];
+      products[type].available = !!(catalog.remote && item && item.available && Number.isInteger(item.price_cents) && item.price_cents > 0);
       if (item && item.price_cents != null) {
         products[type].price = AtminimasProductCatalog.formatPrice(item.price_cents, item.currency);
       }
@@ -92,7 +97,8 @@
 
   function applyInitialSelection() {
     var requested = new URLSearchParams(window.location.search).get("product");
-    var stored = sessionStorage.getItem(selectedKey);
+    var stored = "";
+    try { stored = sessionStorage.getItem(selectedKey) || ""; } catch (_error) {}
     var initial = normalizeType(requested || stored || "metal");
     var input = selector.querySelector("input[value='" + initial + "']");
     if (input) input.checked = true;
@@ -100,23 +106,30 @@
   }
 
   async function loadCatalog() {
+    if (catalogLoading) return;
+    catalogLoading = true;
     catalogRetry.disabled = true;
     selector.setAttribute("aria-busy", "true");
-    setCatalogStatus("Tikrinamos orientacinės kainos…", false);
+    setCatalogStatus("Tikrinamos kainos ir prieinamumas…", false);
     try {
       var catalog = await AtminimasProductCatalog.load();
       updateCatalogPrices(catalog);
       if (!catalog.remote) {
-        setCatalogStatus("Kainų patikrinti nepavyko. Išankstinį užsakymą vis tiek galite pateikti be mokėjimo.", true);
+        setCatalogStatus("Kainų patikrinti nepavyko. Atnaujinkite kainas prieš tęsdami užsakymą.", true);
       } else {
         setCatalogStatus("", false);
       }
-      applyInitialSelection();
+      selectProduct(selectedType);
+    } catch (_error) {
+      setCatalogStatus("Kainų patikrinti nepavyko. Atnaujinkite kainas prieš tęsdami užsakymą.", true);
     } finally {
+      catalogLoading = false;
       selector.removeAttribute("aria-busy");
       catalogRetry.disabled = false;
     }
   }
+
+  createLink.addEventListener("click", function (event) { if (!products[selectedType].available) event.preventDefault(); });
 
   selector.addEventListener("change", function (event) {
     if (event.target.name === "product_type") selectProduct(event.target.value);
@@ -128,10 +141,9 @@
 
   metalPrice.textContent = products.metal.price;
   asaPrice.textContent = products.asa.price;
-  selectProduct("metal");
+  applyInitialSelection();
   if (!window.AtminimasProductCatalog) {
-    setCatalogStatus("Kainų patikra nepasiekiama. Išankstinį užsakymą vis tiek galite pateikti be mokėjimo.", true);
-    applyInitialSelection();
+    setCatalogStatus("Kainų patikra nepasiekiama. Pabandykite atnaujinti puslapį.", true);
     return;
   }
   loadCatalog();

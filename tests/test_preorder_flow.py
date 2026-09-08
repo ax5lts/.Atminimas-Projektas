@@ -16,24 +16,18 @@ class PreorderFlowTests(unittest.TestCase):
             raise AssertionError("Preorder migration was not created")
         cls.migration = migration_paths[-1].read_text(encoding="utf-8").lower()
 
-    def test_public_form_is_clear_and_non_binding(self):
-        self.assertIn('id="preorder-form"', self.page)
-        self.assertIn('name="product_type"', self.page)
-        self.assertIn('name="customer_email"', self.page)
-        self.assertNotIn('name="quantity"', self.page)
-        self.assertNotIn(">Kiekis", self.page)
-        self.assertIn('name="consent" value="yes" required', self.page)
-        self.assertIn('name="website"', self.page)
-        self.assertIn("šio PREORDER suma yra 0 EUR", self.page)
-        self.assertIn("Tai nėra pirkimo sutartis", self.page)
+    def test_legacy_route_is_a_paid_shop_landing_without_a_submission_form(self):
+        self.assertNotIn('id="preorder-form"', self.page)
+        self.assertNotIn('assets/preorder.js', self.page)
+        self.assertIn('href="parduotuve.html"', self.page)
+        self.assertIn('53 €', self.page)
 
-    def test_shop_and_home_link_to_preorder(self):
+    def test_shop_and_home_offer_paid_orders(self):
         shop = (ROOT / "parduotuve.html").read_text(encoding="utf-8")
         home = (ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', shop)
-        self.assertIn(">Pateikti PREORDER · 0 € dabar</a>", shop)
-        self.assertIn('href="isankstinis-uzsakymas.html?product=metal"', home)
-        self.assertNotIn("Saugiai apmokėkite", shop)
+        self.assertNotIn('isankstinis-uzsakymas.html', shop)
+        self.assertNotIn('PREORDER', home)
+        self.assertIn('53 €', home)
 
     def test_client_uses_edge_function_and_thank_you_receipt(self):
         self.assertIn('"/functions/v1/preorder"', self.client)
@@ -48,15 +42,11 @@ class PreorderFlowTests(unittest.TestCase):
         self.assertIn('primary.href = "redaktorius.html?product="', thank_you)
         self.assertIn("Pradėti kurti atminimo puslapį", thank_you)
 
-    def test_edge_validates_and_rate_limits_before_service_role_insert(self):
-        self.assertIn('body.consent !== "yes"', self.edge)
-        self.assertIn("consume_service_request_rate_limit", self.edge)
-        self.assertIn('text(body.website, 200)', self.edge)
-        self.assertIn('(count || 0) >= 3', self.edge)
-        self.assertIn('.from("preorder_requests").insert(', self.edge)
-        self.assertIn("payment_taken: false", self.edge)
-        self.assertIn("const quantity = 1;", self.edge)
-        self.assertNotIn("Number(body.quantity)", self.edge)
+    def test_legacy_endpoint_rejects_new_submissions_without_writes(self):
+        self.assertIn('}, 410)', self.edge)
+        self.assertIn('shop_url:', self.edge)
+        self.assertNotIn('.insert(', self.edge)
+        self.assertNotIn('adminClient', self.edge)
 
     def test_database_is_private_except_for_admin_reads_and_updates(self):
         self.assertIn("alter table public.preorder_requests enable row level security", self.migration)
@@ -78,9 +68,9 @@ class PreorderFlowTests(unittest.TestCase):
     def test_legal_pages_document_preorder_processing(self):
         privacy = (ROOT / "privatumas.html").read_text(encoding="utf-8")
         terms = (ROOT / "taisykles.html").read_text(encoding="utf-8")
-        self.assertIn("Išankstinio užsakymo duomenis", privacy)
+        self.assertIn("Ankstesnių išankstinių užsakymų duomenis", privacy)
         self.assertIn("daugiausia 12 mėnesių", privacy)
-        self.assertIn("neįpareigojanti rezervacija", terms)
+        self.assertIn("QR lentelės užsakymas apmokamas per Paysera", terms)
 
 
 if __name__ == "__main__":

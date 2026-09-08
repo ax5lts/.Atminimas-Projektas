@@ -1,8 +1,20 @@
 # Paysera Checkout Modern
 
-Integracija skirta priimtiems kapavietės priežiūros pasiūlymams. QR lentelių išankstinių užsakymų režimas lieka be mokėjimo.
+Integracija skirta QR lentelių užsakymams ir priimtiems kapavietės priežiūros pasiūlymams. QR lentelių katalogo kainos: `metal` ir `asa` po 5000 ct; pristatymas į paštomatą – 300 ct. Mokėjimo suma skaičiuojama serveryje.
 
-## Būsena 2026-09-05
+## Patikra 2026-09-07
+
+- „Paysera“ projektas aktyvuotas; savininkas įjungė projekto „Test Mode“.
+- Per gyvą svetainę prisijungta, priimtas atskiras 1 EUR bandomasis pasiūlymas ir sukurtas „Checkout Modern“ užsakymas. „Mock payment / Test Bank“ sėkmingai imitavo mokėjimą, grįžimo nuoroda nuvedė į kliento zoną.
+- Svetainė užregistravo pasirašytą tikrą „Paysera“ testinį callback: `payment_test=true`, `payment_status='cancelled'`, `paid_at=null`. Paslaugų el. laiškų automatikos įvykių nesukurta; tikri pinigai nepervesti.
+- Patikra aptiko pakartotinių testinių callback klaidą: „payment“ pranešimas gavo HTTP 200, vėlesnis atskiras „order“ pranešimas – HTTP 409, nes pirmasis uždarė bandymą. Tai pakartotinių pranešimų apdorojimo klaida, o ne nepavykęs testinis mokėjimas.
+- Produkcijoje pritaikyta migracija `20260907151856_acknowledge_completed_paysera_test_callbacks.sql`. Ji patvirtina užbaigto testinio bandymo pranešimus pagal ankstesnio sėkmingo testinio mokėjimo įrodymus; nauji įvykiai išsaugo ir projekto ID. Pavėlavę ankstesnio testinio bandymo pranešimai nekeičia naujo bandymo ar tikro mokėjimo būsenos.
+- Visa papildyta „Modern“ DB testų rinkmena praėjo vienoje transakcijoje su `ROLLBACK`. Patikrinti atskiri callback, ankstesnio klaidingo atmetimo pakartojimas, neteisingi užsakymo / projekto / sumos / valiutos duomenys ir vėluojantys pranešimai po naujo ar apmokėto tikro bandymo.
+- Po pataisos per „Paysera“ portalą pakartotas ankstesnis pranešimas („Synchronise status“). Portalas parodė **„Callback Delivered“ (18:19 Vilniaus laiku)**; abu svetainės mokėjimo įvykiai dabar `recorded`. Testinis bandymas išliko neapmokėtas (`payment_test=true`, `paid_at=null`).
+- Bandomoji užklausa: `cb7787df-bed9-4e0a-914f-a78b0ee067e4`. „Paysera“ užsakymas: `01a07c6c-43fb-75b4-82d4-fffc2e8bdc8b`. Po patikros testinė paslauga atšaukta (`statusas='atsaukta'`), pasiūlymo galiojimas užbaigtas, kad vėliau jo nebūtų galima netyčia apmokėti tikru režimu. Įrašas ir callback istorija palikti patikros bei pakartotinių pranešimų sutikrinimui.
+- Dabartinė kliento sąsaja testinį `cancelled` statusą rodo kaip „mokėjimas atšauktas“. Tikras testo rezultatas tikrinamas per `payment_test` ir `service_payment_events`; testinis bandymas sąmoningai nepažymimas apmokėtu. Po šios patikros savininkas pranešė išjungęs projekto „Test Mode“. Tikras mokėjimas dar neatliktas.
+
+## Ankstesnė būsena 2026-09-05
 
 - Produkcijoje pritaikytos migracijos `20260905131320_paysera_service_payments.sql` ir `20260905190542_paysera_modern_checkout.sql`.
 - „Supabase“ projekte `tpwrkgdmtucecqxbpwwf` įdiegtos `service-flow` v7 ir `paysera-webhook` v2. Išsaugota gyvos versijos el. laiškų operacijų apskaita.
@@ -48,11 +60,12 @@ https://tpwrkgdmtucecqxbpwwf.supabase.co/functions/v1/paysera-webhook
 - Pasibaigusi nuoroda automatiškai nekeičiama nauju mokėjimu. Pirmiausia sutikrinama teikėjo būsena. Automatinis grąžinimas ar operacinis įstrigusio bandymo atkūrimo ekranas neįgyvendinti.
 - Pasirašius webhook, serveris papildomai iš „Paysera“ gauna viso užsakymo būseną. Tikrinami projektas, tiekėjo užsakymo ID, mūsų bandymo ID, užfiksuota suma, sumokėta suma ir valiuta. Vien dalinis mokėjimas nesuteikia apmokėtos būsenos.
 - Tik visas apmokėtas užsakymas be `is_test=true` žymimas apmokėtu. Testinis pranešimas registruojamas, o bandymas uždaromas kaip `cancelled`, kad vėliau būtų galima pradėti naują. Pasikartojantis webhook nepakeičia apmokėjimo datos; vėlesnė laukianti būsena nepanaikina apmokėjimo.
+- Atskirų užbaigto testinio mokėjimo webhook priėmimui reikia ankstesnio pilno testinio apmokėjimo įvykio ir sutampančių bandymo, „Paysera“ užsakymo, projekto, sumos bei valiutos duomenų. Ankstesni įvykiai be projekto ID gali būti sutikrinti tik kol paslaugos eilutė dar nurodo tą patį bandymą. Istoriniai testiniai įvykiai neperrašo naujo mokėjimo.
 - Senasis „Stripe“ mokėjimo kodas ir „Checkout Classic“ webhook tikrinimas palikti ankstesniems bandymams. Nauji paslaugų mokėjimai inicijuojami per „Checkout Modern“.
 
 ## Diegimas ir testai
 
-Taikykite abi migracijas chronologine tvarka. Sukonfigūruokite „Vault“ arba visas tris Modern paslaptis, įdiekite `paysera-webhook` ir `service-flow`, tada paskelbkite frontend per esamą Git → Vercel procesą. Slaptos serverio rinkmenos nepublikuojamos dėl `.vercelignore`.
+Taikykite Paysera migracijas chronologine tvarka, įskaitant `20260907151856_acknowledge_completed_paysera_test_callbacks.sql`. Sukonfigūruokite „Vault“ arba visas tris Modern paslaptis, įdiekite `paysera-webhook` ir `service-flow`, tada paskelbkite frontend per esamą Git → Vercel procesą. Slaptos serverio rinkmenos nepublikuojamos dėl `.vercelignore`.
 
 ```text
 deno check supabase/functions/service-flow/index.ts supabase/functions/paysera-webhook/index.ts
@@ -63,3 +76,11 @@ python -m unittest discover -s tests -p "test_*.py"
 `tests/paysera_database.sql` ir `tests/paysera_modern_database.sql` vykdomos DB transakcijoje su `ROLLBACK`. Modern testai apima savininką, pasiūlymo galiojimą, vienalaikį inicijavimą, neaiškius ir galutinius API atsakymus, sumos bei užsakymo susiejimą, dalinį ir pilną mokėjimą, pasikartojančius įvykius, testinį režimą ir RPC teises.
 
 Oficialūs šaltiniai: [pirmas mokėjimas](https://developers.paysera.com/guides/checkout-modern/getting-started/your-first-payment), [užsakymai ir pakartotinių užklausų ribos](https://developers.paysera.com/guides/checkout-modern/api-integration/payment-orders), [mokėjimo nuorodos](https://developers.paysera.com/guides/checkout-modern/api-integration/payment-links), [webhook parašai](https://developers.paysera.com/guides/checkout-modern/api-integration/webhooks), [įvykių struktūra](https://developers.paysera.com/guides/checkout-modern/reference/webhook-events), [testavimo režimas](https://developers.paysera.com/guides/checkout-modern/getting-started/test-mode), [Supabase Vault](https://supabase.com/docs/guides/database/vault).
+
+## Mokami QR lentelių užsakymai
+
+2026-09-08 (Vilniaus laiku) pritaikyta `paysera_product_orders` migracija ir įdiegtos `payment-create` v6, `profile-manage` v14, `paysera-webhook` v3 bei `preorder` v5. Nauji PREORDER pateikimai gauna HTTP 410; istorija išsaugota.
+
+`product_payment_attempts` saugo nekeičiamą kainą ir tiekėjo užsakymo numerį. Vienu metu leidžiamas tik vienas mokėjimo kūrimo bandymas; pakartojimas grąžina tą pačią nuorodą. Po neaiškaus Paysera POST atsakymo ar nuorodos galiojimo pabaigos reikia sutikrinti tiekėjo būseną prieš pradedant kitą mokėjimą. Suma ir pristatymo duomenys užrakinami pradėjus mokėjimą. Tik pilnas tikras mokėjimas įjungia apmokėjimo ir vykdymo automatiką.
+
+Patikros: 205 Python patikros; 16 Deno Modern ir produkto testų; 8 kliento srautų testai. Produkto DB testai su ROLLBACK patikrino savininką, 5000+300 ct kainą, pasikartojančius bandymus, sumų ir nuorodų klastojimą, dalinius bei testinius mokėjimus ir vėluojančius callback. Bandomi duomenys neišsaugoti. Tikras 53 EUR bankinis mokėjimas neatliktas.

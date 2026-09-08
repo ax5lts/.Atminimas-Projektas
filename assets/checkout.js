@@ -1,5 +1,6 @@
 (function () {
   var form = document.getElementById("delivery-form");
+  if (!form) return;
   var statusEl = document.getElementById("delivery-status");
   var orderEl = document.getElementById("checkout-order");
   var submitButton = document.getElementById("checkout-submit");
@@ -96,6 +97,11 @@
   function updatePriceSummary() {
     if (!currentOrder) return;
     subtotalEl.textContent = money(currentOrder.subtotal_cents, currentOrder.currency);
+    if (currentOrder.payment_status === "processing" || currentOrder.apmoketa) {
+      shippingEl.textContent = money(currentOrder.shipping_cents, currentOrder.currency);
+      totalEl.textContent = money(currentOrder.total_cents, currentOrder.currency);
+      return;
+    }
     var method = selectedShippingMethod();
     if (method) {
       shippingEl.textContent = money(method.price_cents, method.currency);
@@ -111,6 +117,11 @@
 
   function updateActionText() {
     if (!currentOrder) return;
+    if (currentOrder.payment_status === "processing") {
+      submitButton.textContent = "Tęsti mokėjimą · " + money(currentOrder.total_cents, currentOrder.currency);
+      paymentHelp.textContent = "Atidarysime pradėtą Paysera mokėjimą su išsaugota suma ir pristatymu.";
+      return;
+    }
     if (currentOrder.apmoketa || currentOrder.payment_status === "paid") {
       submitButton.textContent = "Išsaugoti pristatymo duomenis";
       paymentHelp.textContent = "Mokėjimas gautas. Gamybą patvirtinsite kliento zonoje.";
@@ -136,6 +147,10 @@
   }
 
   function syncSubmitState() {
+    if (currentOrder && currentOrder.payment_status === "processing") {
+      submitButton.disabled = isWorking;
+      return;
+    }
     var lockerUnavailable = !!carrierSelect.value && !lockersReady;
     submitButton.disabled = isWorking || !currentOrder || !shippingCatalogReady ||
       !shippingMethods.length || lockerUnavailable;
@@ -158,14 +173,19 @@
     paymentSuccess.hidden = false;
     paymentSuccessTitle.textContent = confirmed
       ? "Apmokėjimas patvirtintas"
-      : "Mokėjimas gautas – laukiame patvirtinimo";
+      : "Laukiame mokėjimo patvirtinimo";
     paymentSuccessMessage.textContent = confirmed
       ? "Kad pradėtume gamybą, kliento zonoje peržiūrėkite galutinį maketą ir paspauskite „Patvirtinti gamybai“."
-      : "Mokėjimo puslapis uždarytas sėkmingai. Saugus patvirtinimas gali užtrukti kelias akimirkas. Kai būsena pasikeis į „Apmokėta“, kliento zonoje peržiūrėkite maketą ir patvirtinkite gamybą.";
+      : "Grįžote iš mokėjimo puslapio. Saugus patvirtinimas gali užtrukti kelias akimirkas. Kai būsena pasikeis į „Apmokėta“, kliento zonoje peržiūrėkite maketą ir patvirtinkite gamybą.";
     paymentSuccessAction.textContent = confirmed
       ? "Peržiūrėti ir patvirtinti gamybą"
       : "Stebėti užsakymo būseną";
     paymentSuccessAction.href = "vartotojas.html?order=" + encodeURIComponent(order.id) + "#user-pages";
+    if (order.payment_test) {
+      paymentSuccessTitle.textContent = "Bandomasis mokėjimas užbaigtas";
+      paymentSuccessMessage.textContent = "Tai buvo Paysera testas. Tikras apmokėjimas negautas; gamyba nepradedama.";
+      paymentSuccessAction.textContent = "Grįžti į kliento zoną";
+    }
     if (!successWasAnnounced) {
       successWasAnnounced = true;
       window.requestAnimationFrame(function () {
@@ -423,7 +443,7 @@
     }
     var response = await apiFetch(rest(
       "uzsakymai?id=eq." + encodeURIComponent(orderId) +
-      "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,subtotal_cents,shipping_cents,total_cents,currency&limit=1"
+      "&select=id,profilis_id,product_type,carrier,city,parcel_terminal,recipient_name,recipient_phone,recipient_email,shipping_status,apmoketa,payment_status,payment_test,subtotal_cents,shipping_cents,total_cents,currency&limit=1"
     ), { headers: AtminimasAuth.headers(false) });
     if (response.status === 401) {
       AtminimasAuth.signOut();
@@ -459,15 +479,28 @@
       statusEl.textContent = "Anksčiau pasirinktas pristatymo būdas šiuo metu neaktyvus. Pasirinkite kitą būdą.";
     }
     if (params.get("payment") === "success" && !order.apmoketa) {
-      statusEl.textContent = "Mokėjimas priimtas. Laukiama saugaus patvirtinimo iš mokėjimų teikėjo – būsena netrukus atsinaujins.";
+      statusEl.textContent = "Grįžote iš mokėjimo puslapio. Mokėjimas bus patvirtintas gavus Paysera pranešimą.";
     }
     if (params.get("payment") === "cancelled") {
       statusEl.textContent = "Mokėjimas atšauktas. Užsakymas išsaugotas, galite bandyti dar kartą.";
     }
+    if (order.payment_status === "processing") {
+      statusEl.textContent = "Mokėjimas pradėtas. Pristatymo duomenų keisti nebegalima; galite tęsti tą patį mokėjimą.";
+      ["carrier", "city", "parcel_terminal", "recipient_name", "recipient_phone", "recipient_email"].forEach(function (name) {
+        form.elements[name].disabled = true;
+      });
+      lockerSearch.disabled = true;
+    }
+    if (order.payment_test) statusEl.textContent = "Bandomasis mokėjimas baigtas. Užsakymas dar neapmokėtas.";
   }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (isWorking) return;
+    if (currentOrder && currentOrder.payment_status === "processing") {
+      await startPayment();
+      return;
+    }
     var values = Object.fromEntries(new FormData(form).entries());
     var method = selectedShippingMethod(values.carrier);
     var selectedLockerExists = lockers.some(function (locker) {
@@ -575,6 +608,7 @@
       });
       var data = await response.json().catch(function () { return {}; });
       if (!response.ok || !data.checkout_url) throw new Error(data.error || "Nepavyko pradėti mokėjimo.");
+      if (!/^https:\/\/api\.paysera\.com\/checkout-payment-link\/payment-collection\/v1\/payment-links\/[A-Za-z0-9_-]+$/.test(data.checkout_url)) throw new Error("Neteisinga mokėjimo nuoroda.");
       window.location.assign(data.checkout_url);
     } catch (error) {
       isWorking = false;

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="assets/atminimas-icon.png" type="image/png" sizes="512x512">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
-<meta name="description" content="Nemokamai ir neįpareigojančiai rezervuokite QR atminimo lentelę. Mokėjimo dabar nereikia.">
+<meta name="description" content="Užsakykite QR atminimo lentelę už 50 € ir 3 € pristatymą. Apmokėjimas per Paysera.">
 <link rel="canonical" href="https://atminimokodas.lt/isankstinis-uzsakymas.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Atminimas">
@@ -23,7 +23,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://atminimokodas.lt/assets/atminimo-kodas-preview.jpg">
 <meta name="twitter:image:alt" content="Atminimo kodas – prisiminimai, kurie išlieka">
-<title>Išankstinis QR lentelės užsakymas – Atminimas</title>
+<title>QR lentelės užsakymas – Atminimas</title>
 <link rel="stylesheet" href="css/styles.css?v=20260903-3">
 </head>
 <body data-loading>
@@ -41,97 +41,24 @@
     </div>
   </header>
 
-  <main class="site-main preorder-page">
-    <nav class="breadcrumbs" aria-label="Kelias">
-      <a href="/">Pradžia</a>
-      <a href="parduotuve.html">Lentelės</a>
-      <span aria-current="page">Išankstinis užsakymas</span>
-    </nav>
-
-    <header class="preorder-hero">
-      <p class="eyebrow">PREORDER · 0 € dabar</p>
-      <h1>Rezervuokite QR lentelę be mokėjimo</h1>
-      <p>Pasirinkite variantą ir palikite kontaktą. Mokėjimo kortelės ir pristatymo duomenų neprašome. Pateikę formą iškart galėsite pradėti kurti atminimo puslapį.</p>
-      <ul class="preorder-promises" aria-label="Išankstinio užsakymo sąlygos">
-        <li><span aria-hidden="true">✓</span> Mokėjimas: 0 EUR</li>
-        <li><span aria-hidden="true">✓</span> Neįpareigoja pirkti</li>
-        <li><span aria-hidden="true">✓</span> Galutinės sąlygos prieš mokėjimą</li>
-      </ul>
-      <aside class="preorder-deadline-notice" aria-label="PREORDER laikotarpis"><strong>PREORDER priimame iki 2026 m. spalio 31 d.</strong><span>Iki šios datos papildomų naujienų nesiųsime. Po pateikimo ekrane iškart matysite patvirtinimą, o nuo lapkričio 1 d. susisieksime dėl galutinės kainos, termino ir pristatymo.</span></aside>
-    </header>
-
-    <div class="preorder-layout">
-      <aside class="preorder-summary" aria-labelledby="preorder-summary-title">
-        <div class="preorder-summary__image"><img id="preorder-product-image" src="assets/qr-plienas-480.webp" width="480" height="640" alt="Graviruota plieno QR atminimo lentelė"></div>
-        <div>
-          <p class="eyebrow">Jūsų pasirinkimas</p>
-          <h2 id="preorder-summary-title">Plieninė QR lentelė</h2>
-          <p id="preorder-summary-price" class="preorder-summary__price">Orientacinė kaina: 50,00 EUR</p>
-          <p class="muted" id="preorder-summary-details">5 × 5 cm · plienas · klijuojama · siunčiame</p>
-        </div>
-      </aside>
-
-      <section class="preorder-card" aria-labelledby="preorder-form-title">
-        <div class="preorder-card__heading">
-          <p class="eyebrow">Užtruks apie minutę</p>
-          <h2 id="preorder-form-title">Kontaktas ir pasirinkimas</h2>
-        </div>
-        <form class="auth-form preorder-form" id="preorder-form" data-friendly-validation>
-          <fieldset class="preorder-product-picker">
-            <legend>Lentelės variantas</legend>
-            <label><input type="radio" name="product_type" value="metal" checked><span><strong>Plieninė QR lentelė</strong><small>5 × 5 cm · klijuojama</small></span></label>
-            <label><input type="radio" name="product_type" value="asa"><span><strong>3D spausdinta QR lentelė</strong><small>5 × 5 cm · ASA plastikas</small></span></label>
-          </fieldset>
-
-          <div class="form-grid preorder-contact-grid">
-            <label class="form-field">Vardas ir pavardė
-              <input name="customer_name" autocomplete="name" minlength="2" maxlength="160" required>
-            </label>
-            <label class="form-field">El. paštas
-              <input name="customer_email" type="email" autocomplete="email" maxlength="254" inputmode="email" required>
-            </label>
-            <label class="form-field">Telefonas <small>(nebūtina)</small>
-              <input name="customer_phone" type="tel" autocomplete="tel" minlength="5" maxlength="40" inputmode="tel">
-            </label>
-          </div>
-
-          <label class="form-field">Klausimas ar pageidavimas <small>(nebūtina)</small>
-            <textarea name="notes" rows="4" maxlength="2000" placeholder="Pavyzdžiui, norima spalva ar kitas pageidavimas"></textarea>
-          </label>
-          <label class="form-honeypot" aria-hidden="true">Svetainė
-            <input name="website" tabindex="-1" autocomplete="off">
-          </label>
-          <label class="check-label preorder-consent">
-            <input type="checkbox" name="consent" value="yes" required>
-            <span>Sutinku, kad pateikti duomenys būtų naudojami šiai rezervacijai administruoti ir susisiekti dėl pasiūlymo. Susipažinau su <a href="privatumas.html" target="_blank" rel="noopener">privatumo politika</a>.</span>
-          </label>
-
-          <div class="preorder-submit">
-            <button class="button" type="submit">Pateikti PREORDER ir pradėti kurti</button>
-            <p><strong>Dabar mokėti nereikės: šio PREORDER suma yra 0 EUR.</strong> Tai nėra pirkimo sutartis.</p>
-          </div>
-          <p class="form-status" id="preorder-status" role="status" aria-live="polite"></p>
-        </form>
-      </section>
-    </div>
-  </main>
+  <main class="page-shell"><section class="info-box"><h1>Užsakykite QR atminimo lentelę</h1><p>Lentelė – 50 €, pristatymas į paštomatą – 3 €. Galutinė suma – 53 €.</p><p>Pasirinkite lentelę, sukurkite atminimo puslapį ir apmokėkite per Paysera.</p><a class="button" href="parduotuve.html">Pasirinkti lentelę</a></section></main>
 
   <footer class="site-footer">
     <div class="site-footer__inner">
       <span>Atminimas</span>
-      <span class="site-footer__support">PREORDER patvirtinimą matysite iškart; dėl tolesnių veiksmų susisieksime nuo 2026 m. lapkričio 1 d.</span>
+      <span class="site-footer__support">Užsakymo būseną stebėkite kliento zonoje.</span>
       <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="prieinamumas.html">Prieinamumas</a></nav>
     </div>
   </footer>
 </div>
 
 <script src="assets/supabase-config.js?v=20260828-1"></script>
-<script src="assets/business-config.js?v=20260828-1"></script>
+<script src="assets/business-config.js?v=20260908-1"></script>
 <script src="assets/business-details.js?v=20260903-1"></script>
 <script src="assets/product-catalog.js?v=20260811-3"></script>
 <script src="assets/form-validation.js?v=20260724-4"></script>
-<script src="assets/preorder.js?v=20260827-1"></script>
+
 <script src="assets/loading.js?v=20260811-2"></script>
-<script src="assets/site-ui.js?v=20260904-1"></script>
+<script src="assets/site-ui.js?v=20260908-1"></script>
 </body>
 </html>

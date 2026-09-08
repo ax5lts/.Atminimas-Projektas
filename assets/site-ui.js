@@ -107,12 +107,12 @@
     var labels = {
       "404.html": "Puslapis nerastas",
       "aciu.html": "Ačiū",
-      "apmokejimas.html": "Išankstinis užsakymas",
+      "apmokejimas.html": "Užsakymo apmokėjimas",
       "grazinimas.html": "Atsisakyti sutarties",
       "kapu-ieskojimas.html": "Kapų paieška",
       "kapu-prieziura.html": "Kapavietės priežiūra",
       "klientai.html": "Klientams",
-      "isankstinis-uzsakymas.html": "Išankstinis užsakymas",
+      "isankstinis-uzsakymas.html": "QR lentelės užsakymas",
       "parduotuve.html": "Parduotuvė",
       "pranesti.html": "Pranešti apie turinį",
       "prieinamumas.html": "Prieinamumas",
@@ -240,7 +240,7 @@
     if (!staticSeo) {
       var businessReady = window.ATMINIMAS_BUSINESS
         ? Promise.resolve()
-        : loadScriptOnce("assets/business-config.js?v=20260826-1", "business-config");
+        : loadScriptOnce("assets/business-config.js?v=20260908-1", "business-config");
       businessReady.then(function () {
         return loadScriptOnce("assets/site-seo.js?v=20260811-1", "site-seo");
       }).catch(function () {});

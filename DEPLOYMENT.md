@@ -1,6 +1,6 @@
 # Paleidimo kontrolinis sąrašas
 
-Kapavietės priežiūros mokėjimams per „Paysera“ papildomai vykdykite [supabase/PAYSERA_SETUP.md](supabase/PAYSERA_SETUP.md). QR lentelių išankstinių užsakymų režimas lieka be mokėjimo.
+QR lentelių ir kapavietės priežiūros mokėjimams per „Paysera“ vykdykite [supabase/PAYSERA_SETUP.md](supabase/PAYSERA_SETUP.md).
 
 1. Užpildykite `assets/business-config.js` tikrais rekvizitais ir komercinėmis sąlygomis.
 2. Įrašykite produkcinį HTTPS adresą į `PUBLIC_SITE_URL` faile `assets/supabase-config.js`.
@@ -11,8 +11,8 @@ Kapavietės priežiūros mokėjimams per „Paysera“ papildomai vykdykite [sup
 7. Priverstinai naudokite HTTPS. HTML turi atsarginę CSP taisyklę, o vietiniai serveriai nustato saugumo antraštes, tačiau produkcinis hostingas arba reverse proxy turi nustatyti ir HTTP CSP su `frame-ancestors`, HSTS, `nosniff`, Referrer, Permissions, COOP bei CORP antraštes. Vien „GitHub Pages“ tam nepakanka.
 8. „Supabase Auth“ nustatymuose įjunkite nutekėjusių slaptažodžių apsaugą ir bent 12 simbolių politiką. CAPTCHA įjunkite tik prijungę jos valdiklį bei tokeno perdavimą visose Auth formose. Prieš tikrų klientų duomenis taip pat paruoškite administratoriaus MFA registravimą ir serverinį `aal2` tikrinimą.
 9. Pasirašykite / priimkite duomenų tvarkymo susitarimus su „Supabase“, hostingu, el. pašto, mokėjimo ir kitais asmens duomenų tvarkytojais.
-10. QR lentelių išankstiniams užsakymams mokėjimo teikėjo nereikia: klientui nerodomas mokėjimo mygtukas, o `payment-create` naujų mokėjimo sesijų nekuria. El. pašto teikėją prijunkite tik toms automatikoms, kurios realiai siunčia pranešimus.
+10. QR lentelių `payment-create` naudoja Paysera Checkout Modern. Kainos imamos iš serverio katalogo; testiniai mokėjimai neįjungia užsakymo vykdymo. El. pašto teikėją prijunkite tik toms automatikoms, kurios realiai siunčia pranešimus.
 11. Saugumo pakeitimus diekite `SECURITY.md` nurodyta tvarka: nustatykite tikslų Edge Functions `PUBLIC_SITE_URL`, komanda `supabase functions deploy` įdiekite visas funkcijas, tada frontend, atsarginę kopiją ir duomenų bazės migraciją. Po diegimo paleiskite „Supabase Security Advisor“ ir patikrinkite visus viešo, privataus, savininko bei administratoriaus srautus.
 12. Panaikinkite visus anksčiau paviešintus slaptus raktus. Produkcijos paslaptys turi būti tik hostingo ar „Supabase Edge Functions Secrets“ saugykloje.
 13. „GitHub Pages“ diegimas dabar yra rankinis. Workflow lange `backend_ready` pažymėkite tik įdiegę reikiamas Edge Functions; tai apsaugo gyvą svetainę nuo nesuderinto frontend paleidimo.
-14. Išankstinio užsakymo funkcijai pirmiausia pritaikykite migraciją `*_create_preorder_requests.sql`, tada įdiekite `preorder`, atnaujintą `profile-manage` ir mokėjimą blokuojančią `payment-create` Edge Function. Tik po sėkmingo bandomojo pateikimo ir patikros, kad `payment-create` grąžina `409`, viešinkite frontend. Tiesioginio `anon` rašymo į `preorder_requests` neatverkite.
+14. Mokamiems QR lentelių užsakymams pirmiausia pritaikykite `20260907205618_paysera_product_orders.sql`, tada įdiekite `profile-manage`, `payment-create`, `paysera-webhook` ir naujus PREORDER pateikimus uždarančią `preorder`. Po DB regresinių testų su `ROLLBACK` ir Edge patikrų viešinkite frontend. Ankstesni `preorder_requests` įrašai lieka istorijai; jie automatiškai nekonvertuojami į mokamus užsakymus.

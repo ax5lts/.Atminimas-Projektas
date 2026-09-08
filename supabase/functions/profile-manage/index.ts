@@ -1,4 +1,5 @@
 import {
+  adminClient,
   env,
   handleOptions,
   json,
@@ -33,6 +34,29 @@ const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
 };
 const text = (value: unknown, max: number) =>
   String(value ?? "").trim().slice(0, max) || null;
+
+function weakAccessCode(value: string) {
+  return new Set(value).size === 1 ||
+    "0123456789".includes(value) ||
+    "9876543210".includes(value);
+}
+
+function validAccessCode(value: string) {
+  if (!/^\d{5,6}$/.test(value)) {
+    throw new RequestError(
+      value.length < 5
+        ? "Prieigos kodą turi sudaryti bent 5 skaitmenys."
+        : "Prieigos kodą turi sudaryti 5–6 skaitmenys.",
+      400,
+    );
+  }
+  if (weakAccessCode(value)) {
+    throw new RequestError(
+      "Šis prieigos kodas per silpnas. Pasirinkite sunkiau atspėjamą kodą.",
+      400,
+    );
+  }
+}
 
 function mediaPath(
   raw: unknown,
@@ -187,6 +211,34 @@ Deno.serve(async (request: Request) => {
       return json({ error: "Puslapis nerastas" }, 404);
     }
 
+    if (action === "set_access_code") {
+      if (!isOwner) {
+        return json(
+          { error: "Prieigos kodą gali keisti tik puslapio savininkas" },
+          403,
+        );
+      }
+      const protectedPage = body.access_protected === true;
+      const accessCode = String(body.access_code || "").trim();
+      if (protectedPage) validAccessCode(accessCode);
+
+      const { data: accessStatus, error: accessError } = await adminClient().rpc(
+        "set_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_owner_id: user.id,
+          p_protected: protectedPage,
+          p_access_code: protectedPage ? accessCode : null,
+        },
+      );
+      if (accessError) throw accessError;
+      return json({
+        ok: true,
+        profile_id: profileId,
+        access_protected: accessStatus === "protected",
+      });
+    }
+
     if (action === "publish_prototype") {
       if (!isOwner || !await adminAccess(client, user.id)) {
         return json(
@@ -200,6 +252,17 @@ Deno.serve(async (request: Request) => {
         statusas: "apmoketa",
       }).eq("id", profileId).eq("owner_id", user.id);
       if (publishError) throw publishError;
+
+      const { error: accessError } = await adminClient().rpc(
+        "set_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_owner_id: user.id,
+          p_protected: false,
+          p_access_code: null,
+        },
+      );
+      if (accessError) throw accessError;
 
       const page = new URL("sablonas-viskas.html", publicSiteUrl());
       page.searchParams.set("slug", profileId);
@@ -216,12 +279,17 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "create_order") {
-      return json({
-        error:
-          "Nauji mokami užsakymai išjungti. Pateikite išankstinį užsakymą be mokėjimo.",
-        preorder_url: "/isankstinis-uzsakymas.html",
-        payment_enabled: false,
-      }, 409);
+      if (!isOwner || user.is_anonymous) return json({ error: "Užsakymą gali sukurti tik prisijungęs puslapio savininkas" }, 403);
+      const productType = String(body.product_type || "");
+      if (productType !== "metal" && productType !== "asa") return json({ error: "Neteisingas produkto tipas" }, 400);
+      const page = new URL("sablonas-viskas.html", publicSiteUrl());
+      page.searchParams.set("slug", profileId);
+      const qr = `${env("SUPABASE_URL").replace(/\/$/, "")}/functions/v1/qr-code?data=${encodeURIComponent(page.href)}&format=png`;
+      const { data: order, error: orderError } = await client.rpc("create_paid_product_order", {
+        p_profile_id: profileId, p_actor_id: user.id, p_product_type: productType, p_page_url: page.href, p_qr_url: qr,
+      });
+      if (orderError || !order) return json({ error: "Užsakymo sukurti nepavyko. Patikrinkite produkto prieinamumą." }, 409);
+      return json(order, 201);
     }
 
     if (action === "update") {
@@ -335,6 +403,7 @@ Deno.serve(async (request: Request) => {
           story_blocks_json: [],
           layout_json: {},
           media_json: [],
+          access_code_hash: null,
           aktyvus: false,
           deleted_at: new Date().toISOString(),
         }).eq("id", profileId);

@@ -16,6 +16,7 @@
   var successDialogMessage = document.getElementById("editor-success-message");
   var successDialogClose = document.querySelector("[data-editor-success-close]");
   var openLink = document.getElementById("editor-open-link");
+  var physicalOrderPending = new URLSearchParams(window.location.search).get("order") === "1";
   var preorderLink = document.getElementById("editor-preorder-link");
   var clientLink = document.getElementById("editor-client-link");
   var qrLink = document.getElementById("editor-qr-link");
@@ -109,6 +110,10 @@
   var savedVideoFile = null;
   var savedCaptionsFile = null;
   var editingMedia = [];
+  var uploadedPhotos = [];
+  var uploadedVideo = null;
+  var uploadedCaptions = null;
+  var prototypePublishPending = false;
   var isRestoringDraft = false;
   var draftSaveTimer = null;
   var stageFitFrame = null;
@@ -211,7 +216,7 @@
       productSummary.textContent = editId
           ? "Redaguojamas jūsų atminimo puslapis."
           : (digitalOnly
-            ? "Kuriamas tik skaitmeninis atminimo puslapis. Fizinis gaminys, PREORDER ir pristatymas nebus kuriami."
+            ? "Kuriamas tik skaitmeninis atminimo puslapis. Fizinis gaminys ir pristatymas nebus užsakomi."
             : "Pasirinktas produktas: " + selectedProductOption.name + selectedProductOption.priceNote);
     }
     if (accountNoteEl && digitalOnly && !editId) {
@@ -221,7 +226,7 @@
 
   applySelectedProduct(requestedProductType);
   function setProductUnavailable(message) {
-    if (productSummary) productSummary.textContent = "Orientacinės kainos patikrinti nepavyko. Puslapį galite išsaugoti, o išankstinį užsakymą pateikti be mokėjimo.";
+    if (productSummary) productSummary.textContent = "Kainos patikrinti nepavyko. Juodraštį galite kurti; užsakymą galėsite tęsti, kai kainos vėl bus pasiekiamos.";
     if (productUnavailableMessage) productUnavailableMessage.textContent = message;
     if (productUnavailable) productUnavailable.hidden = false;
   }
@@ -240,7 +245,7 @@
       var selectedType = requestedProductType === "asa" ? "asa" : "metal";
       applySelectedProduct(selectedType);
       if (!catalog.remote) {
-        setProductUnavailable(catalog.error || "Kainos patikrinti nepavyko. Išankstinį užsakymą vis tiek galėsite pateikti be mokėjimo.");
+        setProductUnavailable(catalog.error || "Kainos patikrinti nepavyko. Puslapio juodraštį galite kurti; prieš užsakymą reikės patikrinti kainą.");
       } else if (productUnavailable) productUnavailable.hidden = true;
     }).catch(function () {
       setProductUnavailable("Nepavyko patikrinti produkto kainos ir prieinamumo. Patikrinkite interneto ryšį ir bandykite dar kartą.");
@@ -2093,6 +2098,12 @@
     await clearDraftFiles();
   }
 
+  async function discardSavedDraft() {
+    await discardCurrentDraft();
+    DRAFT_KEY = "atminimas.editor.edit." + editId + ".v1";
+    DRAFT_FILE_PREFIX = "edit-" + editId + "-";
+  }
+
   function applyLayout(layout) {
     if (!layout) return;
     if (layout.__stage && layout.__stage.background) {
@@ -3672,6 +3683,7 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (submitButton.disabled) return;
     delete statusEl.dataset.state;
     if (!validateDatePickers(false)) {
       activateEditorStep("text", true, "replace");
@@ -3745,6 +3757,7 @@
     showSaveProgress(10, "Ruošiamos nuotraukos…");
     submit.disabled = true;
     resultBox.hidden = true;
+    try {
     await photoSyncPromise;
     if (photoPreparationFailed) {
       submit.disabled = false;
@@ -3768,8 +3781,11 @@
     submit.disabled = true;
     resultBox.hidden = true;
 
-    try {
       var captions = (captionsInput.files && captionsInput.files[0]) ? captionsInput.files[0] : savedCaptionsFile;
+      var wasEditing = !!editId;
+      var photosUnchanged = photos.length === uploadedPhotos.length && photos.every(function (file, index) {
+        return file === uploadedPhotos[index];
+      });
       function onUploadProgress(done, total) {
         var fraction = total ? done / total : 1;
         showSaveProgress(28 + fraction * 58, total ? "Įkeliami failai: " + done + " iš " + total + "…" : "Saugomas puslapis…");
@@ -3777,7 +3793,11 @@
       var result = editId
         ? await AtminimasApi.updateAtminimas(editId, data, {
             existingMedia: editingMedia,
-             files: { photos: photos, video: video, captions: captions },
+             files: {
+               photos: photosUnchanged ? [] : photos,
+               video: video === uploadedVideo ? null : video,
+               captions: captions === uploadedCaptions ? null : captions
+             },
              layout: collectLayout(),
              storyBlocks: collectStoryBlocks(true),
              onProgress: onUploadProgress
@@ -3788,10 +3808,23 @@
              storyBlocks: collectStoryBlocks(true),
              onProgress: onUploadProgress
           });
+      editingMedia = result.media || editingMedia;
+      uploadedPhotos = photos.slice();
+      uploadedVideo = video;
+      uploadedCaptions = captions;
+      if (!wasEditing) {
+        editId = result.identifier;
+        prototypePublishPending = isAdminPrototype;
+        physicalOrderPending = !isAdminPrototype && productType !== "digital";
+        var editUrl = new URL(window.location.href);
+        editUrl.searchParams.set("edit", editId);
+        editUrl.searchParams.delete("resume");
+        window.history.replaceState(window.history.state, "", editUrl.href);
+        submit.textContent = "Išsaugoti pakeitimus";
+      }
       showSaveProgress(94, "Baigiamas išsaugojimas…");
-      if (editId) {
-        editingMedia = result.media || editingMedia;
-        await discardCurrentDraft();
+      if (wasEditing && !prototypePublishPending && !physicalOrderPending) {
+        await discardSavedDraft();
         var editPageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(editId);
         previewCode.textContent = "puslapis: " + editId;
         openLink.href = editPageUrl;
@@ -3810,9 +3843,10 @@
       }
       if (isAdminPrototype) {
         var prototype = await AtminimasApi.publishAdminPrototype(result.identifier);
+        prototypePublishPending = false;
         var prototypePageUrl = prototype.page_url ||
           ("sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier));
-        await discardCurrentDraft();
+        await discardSavedDraft();
         previewCode.textContent = "Prototipas paskelbtas";
         openLink.href = prototypePageUrl;
         openLink.textContent = "Atidaryti viešą prototipą";
@@ -3837,15 +3871,17 @@
       }
       var pageUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier);
       var clientUrl = "vartotojas.html";
-      await discardCurrentDraft();
       var digitalOnly = productType === "digital";
+      var physicalOrder = digitalOnly ? null : await AtminimasApi.createUzsakymas(result.identifier, { product_type: productType });
+      physicalOrderPending = false;
+      await discardSavedDraft();
       var savedStatusMessage = digitalOnly
         ? "Puslapis išsaugotas kaip privatus. Kliento zonoje paskelbkite jį ir atsisiųskite QR kodą."
-        : "Puslapis išsaugotas kaip privatus. Išankstinį užsakymą galite pateikti atskirai – mokėti nereikės.";
+        : "Puslapis išsaugotas. Pasirinkite pristatymą ir apmokėkite QR lentelės užsakymą per Paysera.";
       previewCode.textContent = "Puslapis paruoštas";
       openLink.href = pageUrl;
       preorderLink.hidden = digitalOnly;
-      if (!digitalOnly) preorderLink.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(productType);
+      if (!digitalOnly) { preorderLink.href = "apmokejimas.html?order=" + encodeURIComponent(physicalOrder.id); preorderLink.textContent = "Pasirinkti pristatymą ir apmokėti"; }
       clientLink.href = clientUrl;
       clientLink.textContent = digitalOnly ? "Paskelbti ir gauti QR" : "Kliento zona";
       qrLink.hidden = true;

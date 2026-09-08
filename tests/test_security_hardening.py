@@ -100,7 +100,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertNotIn("deleted_at:", response)
         self.assertNotIn("aktyvus:", response)
 
-    def test_new_paid_orders_are_disabled_server_side(self):
+    def test_new_paid_orders_require_server_ownership_and_catalog_validation(self):
         client = (ROOT / "assets" / "atminimas-duomenys.js").read_text(encoding="utf-8")
         edge = (ROOT / "supabase" / "functions" / "profile-manage" / "index.ts").read_text(encoding="utf-8")
         migration = (
@@ -110,15 +110,15 @@ class SecurityHardeningTests(unittest.TestCase):
             / "20260730121821_harden_private_profile_media.sql"
         ).read_text(encoding="utf-8").lower()
 
-        self.assertNotIn('action: "create_order"', client)
+        self.assertIn('action: "create_order"', client)
         self.assertNotIn('postJson("uzsakymai"', client)
         self.assertIn('if (action === "create_order")', edge)
         branch = edge[
             edge.index('if (action === "create_order")'):
             edge.index('if (action === "update")')
         ]
-        self.assertIn("payment_enabled: false", branch)
-        self.assertIn("preorder_url:", branch)
+        self.assertIn("!isOwner || user.is_anonymous", branch)
+        self.assertIn('client.rpc("create_paid_product_order"', branch)
         self.assertNotIn('.from("product_catalog")', branch)
         self.assertNotIn('.from("uzsakymai")', branch)
         self.assertIn('drop policy if exists "viesas uzsakymu kurimas"', migration)
@@ -310,9 +310,9 @@ class SecurityHardeningTests(unittest.TestCase):
         engagement = (ROOT / "supabase" / "functions" / "memorial-engagement" / "index.ts").read_text(encoding="utf-8")
         webhook = (ROOT / "supabase" / "functions" / "payment-webhook" / "index.ts").read_text(encoding="utf-8")
 
-        self.assertIn("payment_enabled: false", payment)
-        self.assertIn("preorder_url:", payment)
-        self.assertIn("}, 409);", payment)
+        self.assertIn("startProductPayment", payment)
+        self.assertIn("readJson(request, 8_000)", payment)
+        self.assertIn("error instanceof RequestError", payment)
         self.assertNotIn("checkout.stripe.com", payment)
         self.assertNotIn("STRIPE_SECRET_KEY", payment)
         self.assertIn("readJson(request, 8_000)", shipping)

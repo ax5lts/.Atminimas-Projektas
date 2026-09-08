@@ -449,10 +449,13 @@ export async function handleModernWebhook(request: Request) {
       token,
     );
     const event = modernPaymentEvent(raw, callback, order, config);
-    const { data, error } = await client.rpc(
+    let { data, error } = await client.rpc(
       "process_paysera_modern_payment",
       event,
     );
+    if (!error && data === "not_found") {
+      ({ data, error } = await client.rpc("process_product_paysera_payment", event));
+    }
     if (error) return reply("Processing failed", 500);
     if (data === "not_found" || data === "rejected_quote_or_amount") {
       return reply("Order mismatch", 409);

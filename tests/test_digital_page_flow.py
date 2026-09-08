@@ -25,7 +25,7 @@ class DigitalPageFlowTests(unittest.TestCase):
         self.assertNotIn("PREORDER galima praleisti", self.preorder)
         self.assertNotIn(".digital-page-offer", self.styles)
         self.assertIn("Pasirinkite QR lentelę", self.shop)
-        self.assertIn("Fizinės lentelės PREORDER", self.shop)
+        self.assertIn("Fizinės QR lentelės eiga", self.shop)
 
     def test_editor_preserves_digital_mode_through_login_and_save(self):
         self.assertIn('if (value === "digital") return "digital"', self.editor)
@@ -39,7 +39,7 @@ class DigitalPageFlowTests(unittest.TestCase):
 
     def test_client_zone_publishes_then_offers_qr_without_an_order(self):
         self.assertIn('id="user-create" hidden>Kurti naują puslapį</a>', self.user_page)
-        self.assertIn('id="user-preorder" hidden>QR lentelės PREORDER</a>', self.user_page)
+        self.assertIn('id="user-preorder" hidden>Užsakyti QR lentelę</a>', self.user_page)
         self.assertIn("Paskelbti ir gauti QR", self.user)
         self.assertIn("Atsisiųsti QR kodą", self.user)
         self.assertIn("Skaitmeninis atminimo puslapis · be fizinio gaminio", self.user)

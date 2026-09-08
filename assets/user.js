@@ -49,7 +49,7 @@
 
   var chosenProduct = selectedProduct();
   if (createButton) createButton.href = "redaktorius.html?product=digital";
-  if (preorderButton) preorderButton.href = "isankstinis-uzsakymas.html?product=" + encodeURIComponent(chosenProduct);
+  if (preorderButton) preorderButton.href = "parduotuve.html?product=" + encodeURIComponent(chosenProduct);
   if (guestActions) {
     var next = requestedServiceId
       ? "vartotojas.html?service=" + encodeURIComponent(requestedServiceId) + (claimRequested ? "&claim=1" : "") + "#paslaugos"
@@ -294,7 +294,7 @@
       return "<button class='button user-card-primary' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='png'>Atsisiųsti QR kodą</button>";
     }
     if (!order.apmoketa) {
-      return "<a class='button user-card-primary' href='isankstinis-uzsakymas.html?product=" + encodeURIComponent(order.product_type || "metal") + "'>Išankstinis užsakymas</a>";
+      return "<a class='button user-card-primary' href='apmokejimas.html?order=" + encodeURIComponent(order.id) + "'>Pristatymas ir apmokėjimas</a>";
     }
     if (!order.customer_approved_at) {
       return "<button class='button user-card-primary' type='button' data-approve-order='" + html(order.id) + "'>Patvirtinti gamybai</button>";
@@ -428,7 +428,7 @@
     var rows = await res.json();
     if (!rows.length) {
       finishPageSkeleton();
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę, jei jos reikės, galėsite rezervuoti atskirai.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='isankstinis-uzsakymas.html'>QR lentelės PREORDER</a></div></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę galėsite užsakyti už 50 € ir pristatymo kainą.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='parduotuve.html'>Užsakyti QR lentelę</a></div></div>";
       scrollToRequestedService();
       return;
     }
@@ -460,6 +460,7 @@
           "<button class='button button--ghost' type='button' data-qr-profile='" + html(row.id) + "' data-qr-format='jpg'>QR JPG</button>"
         : "<p class='user-card-qr-note'>Paskelbkite puslapį, tada čia galėsite atsisiųsti veikiantį QR kodą.</p>";
       var moreActions =
+        (!order ? "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "&amp;product=" + encodeURIComponent(chosenProduct) + "&amp;order=1'>Užsakyti QR lentelę šiam puslapiui</a>" : "") +
         "<a class='button button--ghost' href='" + publicUrl + "'>Peržiūrėti puslapį</a>" +
         "<a class='button button--ghost' href='redaktorius.html?edit=" + encodeURIComponent(row.id) + "'>Redaguoti</a>" +
         qrActions +

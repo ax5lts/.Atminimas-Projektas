@@ -171,7 +171,7 @@ class EditorWizardTests(unittest.TestCase):
         self.assertGreaterEqual(self.script.count("setVideoSlotVisible(true);"), 3)
         self.assertGreaterEqual(self.script.count("setVideoSlotVisible(false);"), 4)
 
-    def test_preorder_draft_is_not_blocked_when_catalog_is_unavailable(self):
+    def test_draft_stays_editable_when_catalog_is_unavailable(self):
         self.assertIn('id="editor-product-unavailable"', self.page)
         self.assertIn("function setProductUnavailable(message)", self.script)
         self.assertIn(
@@ -179,10 +179,10 @@ class EditorWizardTests(unittest.TestCase):
             self.script,
         )
         self.assertIn("catalog.remote && catalog.metal", self.script)
-        self.assertIn("Išankstinį užsakymą vis tiek galėsite pateikti be mokėjimo", self.script)
+        self.assertIn("Puslapio juodraštį galite kurti; prieš užsakymą reikės patikrinti kainą", self.script)
         self.assertNotIn("productAvailabilityReady", self.script)
-        self.assertNotIn("AtminimasApi.createUzsakymas", self.script)
-        self.assertIn('preorderLink.href = "isankstinis-uzsakymas.html?product="', self.script)
+        self.assertIn("AtminimasApi.createUzsakymas", self.script)
+        self.assertIn('preorderLink.href = "apmokejimas.html?order="', self.script)
 
     def test_manual_preview_opens_on_desktop_and_restores_focus(self):
         editor_mobile_media = self.styles.rfind("@media (max-width: 860px)")
