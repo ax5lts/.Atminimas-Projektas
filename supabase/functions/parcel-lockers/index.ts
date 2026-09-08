@@ -7,7 +7,7 @@ const SOURCES: Record<string, string> = {
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
+  "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
 };
 
 Deno.serve(async (request: Request) => {

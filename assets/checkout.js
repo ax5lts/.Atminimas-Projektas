@@ -391,7 +391,8 @@
     var requestId = ++lockerRequestId;
     setLockerState("Kraunamas paštomatų sąrašas…", "loading", false);
     try {
-      var response = await apiFetch(
+      // The public locker directory needs no account token or session refresh.
+      var response = await fetch(
         functionUrl("parcel-lockers") + "?carrier=" + encodeURIComponent(slug)
       );
       if (!response.ok) throw new Error("parcel-lockers-unavailable");
