@@ -1,4 +1,5 @@
-import { adminClient, BlockedAutomationError, env, json, publicSiteUrl, requireAutomationSecret, retryDelay } from "../_shared/core.ts";
+import { adminClient, BlockedAutomationError, env, json, publicSiteUrl, readJson, retryDelay } from "../_shared/core.ts";
+import { authorizeOrderWorker } from "../_shared/worker-auth.ts";
 import { bytesToBase64, sendEmail } from "../_shared/email.ts";
 import { createInvoicePdf, sha256Hex } from "../_shared/invoice-pdf.ts";
 import { createShipment } from "../_shared/shipping.ts";
@@ -230,6 +231,7 @@ async function processEmailEvent(event: AutomationEvent) {
     idempotencyKey: event.event_key,
     orderId: event.order_id || undefined,
     recipientKind: adminEvent ? "admin" : "customer",
+    category: event.event_type,
   });
 }
 
@@ -247,7 +249,23 @@ async function processEvent(event: AutomationEvent) {
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
-    requireAutomationSecret(request);
+    const authorized = await authorizeOrderWorker(request, env("AUTOMATION_SECRET", false), async (secret) => {
+      const { data, error } = await client.rpc("automation_worker_authorized", { p_secret: secret });
+      if (error) throw new Error("Worker authentication unavailable");
+      return data === true;
+    });
+    if (!authorized) return json({ error: "Unauthorized" }, 401);
+    const input = await readJson(request, 2048);
+    if (input.check === true) {
+      return json({ ready: Boolean(env("RESEND_API_KEY", false) && env("EMAIL_FROM", false)),
+        email_provider_configured: Boolean(env("RESEND_API_KEY", false)), sender: env("EMAIL_FROM", false), recipient: ORDER_COPY_EMAIL });
+    }
+    // Recover interrupted runs; provider idempotency prevents duplicate emails on retry.
+    const { error: recoveryError } = await client.from("automation_events").update({
+      status: "failed", locked_at: null, available_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      last_error: "Retrying interrupted worker run",
+    }).eq("status", "processing").lt("locked_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
+    if (recoveryError) throw recoveryError;
     const { data: candidates, error } = await client.from("automation_events")
       .select("*")
       .in("status", ["pending", "failed"])

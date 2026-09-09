@@ -1,5 +1,15 @@
 # Paleidimo kontrolinis sąrašas
 
+## Užsakymų el. laiškų automatika įjungta
+
+2026-09-09 įdiegtas `automation-worker` v9 ir migracijos `20260909091811_schedule_order_emails.sql`, `20260909091921_enable_order_emails.sql`. „Supabase Cron“ užduotis `atminimas-order-emails-every-minute` vykdoma kas minutę. Siuntėjas – `Atminimo kodas <noreply@atminimokodas.lt>`, užsakymų kopijų gavėjas – `atminimokodas@gmail.com`. Pirmas paleidimas apdorojo 3 laukusias užsakymų kopijas; visoms „Resend“ webhook patvirtino `delivered`.
+
+Planavimo raktas generuojamas duomenų bazėje ir laikomas tik „Vault“. Darbinė funkcija jį patikrina per `automation_worker_authorized`, kuri prieinama tik `service_role`; nei klientas, nei anoniminis lankytojas negali tikrinti rakto ar paleisti planuoklio. Išlaikytas ankstesnio `AUTOMATION_SECRET` palaikymas. Daugiau nei 10 min. nutrūkę vykdymai grąžinami pakartotiniam bandymui; laiškų idempotentiškumo raktai saugo nuo dubliavimo.
+
+Diegiant kitame projekte pirmiausia nustatykite `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL` ir „Vault“ reikšmę `automation_worker_url`. Pritaikykite pirmą migraciją (sukuria sustabdytą užduotį), įdiekite funkciją, iškvieskite `private.invoke_order_email_worker(true)` ir patikrinkite `net._http_response`: turi būti HTTP 200 ir `ready: true`. Tada taikykite įjungimo migraciją. `check=true` tikrina nustatymus ir laiškų nesiunčia.
+
+Vykdymą tikrinkite `cron.job_run_details`, HTTP atsakymus – `net._http_response`, siuntimo būsenas – `automation_events` ir `email_messages`. Užsakymo kopijoje yra dizainas bei tekstinis priedas; gamybos patvirtinimo laiške taip pat pridedamas užsakymo QR SVG. Gamybos srautas šiame paleidime nebuvo imituojamas tikru mokėjimu.
+
 ## Naujausia kainodara: paprastas QR pirmas, 50 €
 
 Pritaikyta `20260909070000_plain_qr_price_50.sql`: `product_catalog.plain_price_cents` yra 5000, `price_cents` – 6000. Variantų eilė: tik QR kodas, gyvybės medis, širdis ir žvakė, angelo sparnai. Spalva kainos nekeičia. Su 3 € pristatymu sumos yra 53 € ir 63 €. Geltonas parduotuvės informacinis blokas pašalintas.
@@ -12,7 +22,7 @@ Kuriant užsakymą serveris parenka kainą pagal raštą. Produktų katalogo pak
 
 Produkciniam projektui `tpwrkgdmtucecqxbpwwf` pritaikytos trys lentelių dizaino ir kainos migracijos (jų failų versijos sutampa su nuotoline migracijų istorija). Įdiegtos `profile-manage` v15, `production-email` v7, `automation-worker` v7, `parcel-lockers` v8 ir `profile-content` v11. Patikra su `service_role` ir `ROLLBACK` patvirtino visus 12 derinių, 6000 ct kainą, pakartotinio užsakymo idempotentiškumą, savininko tikrinimą ir dizaino nekintamumą.
 
-**El. laiškų automatika dar nepaleista:** patikros metu nėra suplanuoto `automation-worker` paleidimo, eilėje yra 3 laukiantys įvykiai ir nė vieno apdoroto. Prieš įjungiant periodinį vykdymą patikrinkite `RESEND_API_KEY`, `EMAIL_FROM` ir `AUTOMATION_SECRET`, peržiūrėkite esamą eilę ir sukonfigūruokite apsaugotą funkcijos paleidimą. Šiuo atnaujinimu tikri laiškai nesiųsti. Naujas gavėjas ir tekstiniai / QR priedai yra įdiegtame kode, bet vien funkcijos įdiegimas siuntimo neįjungia.
+Ankstesnio dizaino diegimo metu automatika dar nebuvo paleista. Dabartinė būsena ir sėkmingas pristatymo patvirtinimas aprašyti šio dokumento pradžioje.
 
 ## Diegimo eiga
 
