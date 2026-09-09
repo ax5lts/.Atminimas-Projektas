@@ -1,12 +1,12 @@
 (function () {
   var colors = { gold: "Aukso spalvos plienas", silver: "Sidabrinis plienas", black: "Juodas plienas" };
-  var patterns = { tree: "Gyvybės medis", heart: "Širdis ir žvakė", wings: "Angelo sparnai", plain: "Tik QR kodas" };
+  var patterns = { plain: "Tik QR kodas", tree: "Gyvybės medis", heart: "Širdis ir žvakė", wings: "Angelo sparnai" };
   var key = "atminimas.plaque-design.v1";
   function normalize(value) {
     value = value || {};
     return {
       color: Object.prototype.hasOwnProperty.call(colors, value.color) ? value.color : "gold",
-      pattern: value.pattern === "star" ? "plain" : (Object.prototype.hasOwnProperty.call(patterns, value.pattern) ? value.pattern : "tree")
+      pattern: value.pattern === "star" ? "plain" : (Object.prototype.hasOwnProperty.call(patterns, value.pattern) ? value.pattern : "plain")
     };
   }
   function read() {

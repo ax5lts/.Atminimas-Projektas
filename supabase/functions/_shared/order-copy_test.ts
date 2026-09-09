@@ -17,7 +17,7 @@ Deno.test("seller's copy contains the saved color and numbered pattern for all t
 Deno.test("forwardable plain QR copy uses the requested mailbox and saved variant without personal shipping details", () => {
   if (ORDER_COPY_EMAIL !== "atminimokodas@gmail.com") throw new Error("Wrong seller mailbox");
   const text = orderManufacturingText({ id: "test-order", product_color: "black", product_pattern: "plain", apmoketa: false });
-  for (const expected of ["test-order", "Juodas plienas", "Variantas 4 – Tik QR kodas", "5 × 5 cm", "nepradėti"]) {
+  for (const expected of ["test-order", "Juodas plienas", "Variantas 1 – Tik QR kodas", "5 × 5 cm", "nepradėti"]) {
     if (!text.includes(expected)) throw new Error(`Copy missing ${expected}`);
   }
   if (text.includes("Žvaigždė")) throw new Error("Plain QR must not contain the retired ornament");

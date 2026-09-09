@@ -1,5 +1,13 @@
 # Paleidimo kontrolinis sąrašas
 
+## Naujausia kainodara: paprastas QR pirmas, 50 €
+
+Pritaikyta `20260909070000_plain_qr_price_50.sql`: `product_catalog.plain_price_cents` yra 5000, `price_cents` – 6000. Variantų eilė: tik QR kodas, gyvybės medis, širdis ir žvakė, angelo sparnai. Spalva kainos nekeičia. Su 3 € pristatymu sumos yra 53 € ir 63 €. Geltonas parduotuvės informacinis blokas pašalintas.
+
+Kuriant užsakymą serveris parenka kainą pagal raštą. Produktų katalogo pakeitimai nebeperrašo esamų užsakymų kainų; pakartotinis naujo užsakymo prašymas naudoja tik tokios pačios dabartinės kainos užsakymą. Įdiegtos `profile-manage` v16, `production-email` v8 ir `automation-worker` v8. Laiškuose atnaujinti variantų numeriai; siuntimo automatikos būsena nepakeista.
+
+`tests/plaque_pricing_database.sql` su `ROLLBACK` patikrina 12 derinių, 53 / 63 € pristatymo sumas ir Paysera mokėjimo įrašus, pakartotinius prašymus bei senų kainų išsaugojimą. Tikri mokėjimai ar laiškai nevykdomi.
+
 ## 2026-09-09 atnaujinimo būsena
 
 Produkciniam projektui `tpwrkgdmtucecqxbpwwf` pritaikytos trys lentelių dizaino ir kainos migracijos (jų failų versijos sutampa su nuotoline migracijų istorija). Įdiegtos `profile-manage` v15, `production-email` v7, `automation-worker` v7, `parcel-lockers` v8 ir `profile-content` v11. Patikra su `service_role` ir `ROLLBACK` patvirtino visus 12 derinių, 6000 ct kainą, pakartotinio užsakymo idempotentiškumą, savininko tikrinimą ir dizaino nekintamumą.

@@ -8,7 +8,7 @@ window.ATMINIMAS_BUSINESS = Object.freeze({
   email: "atminimokodas@gmail.com",
   phone: "+370 645 69101",
   vatStatus: "Ne PVM mokėtojas",
-  price: "60,00 EUR",
+  price: "50,00–60,00 EUR",
   priceVat: "PVM netaikomas – pardavėjas nėra PVM mokėtojas",
   shippingPrice: "3,00 EUR",
   shippingTerritory: "Lietuva",

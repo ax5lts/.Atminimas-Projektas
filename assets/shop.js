@@ -30,6 +30,7 @@
   var metalPrice = document.querySelector("[data-metal-price]");
   var designApi = window.AtminimasPlaqueDesign;
   var selectedDesign = designApi.read();
+  var catalogItem = { price_cents: 6000, plain_price_cents: 5000, currency: "EUR" };
   var catalogStatus = document.getElementById("shop-catalog-status");
   var catalogMessage = document.getElementById("shop-catalog-message");
   var catalogRetry = document.getElementById("shop-catalog-retry");
@@ -42,6 +43,11 @@
     var safeType = normalizeType(type);
     selectedType = safeType;
     var product = products[safeType];
+    var priceCents = selectedDesign.pattern === "plain" ? catalogItem.plain_price_cents : catalogItem.price_cents;
+    var priceFormat = new Intl.NumberFormat("lt-LT", { style: "currency", currency: catalogItem.currency });
+    product.price = priceFormat.format(priceCents / 100);
+    document.getElementById("product-total").textContent = priceFormat.format((priceCents + 300) / 100);
+    document.getElementById("shop-payment-price").textContent = product.price + " + 3 € pristatymas";
     fields.kind.textContent = product.kind;
     fields.title.textContent = product.title;
     renderDesign();
@@ -79,6 +85,7 @@
       var item = catalog[type];
       products[type].available = !!(catalog.remote && item && item.available && Number.isInteger(item.price_cents) && item.price_cents > 0);
       if (item && item.price_cents != null) {
+        catalogItem = item;
         products[type].price = AtminimasProductCatalog.formatPrice(item.price_cents, item.currency);
       }
     });

@@ -147,12 +147,12 @@ class SecurityHardeningTests(unittest.TestCase):
         ]
         self.assertNotIn('.from("uzsakymai")', prototype_branch)
 
-    def test_admin_payment_readiness_explains_missing_shipping_prices(self):
+    def test_admin_payment_readiness_explains_current_variant_prices(self):
         page = (ROOT / "admin.html").read_text(encoding="utf-8")
         script = (ROOT / "assets" / "admin.js").read_text(encoding="utf-8")
         self.assertIn('id="admin-payment-readiness"', page)
-        self.assertIn("Išankstinių užsakymų režimas aktyvus", script)
-        self.assertIn("klientams mokėjimas ir pristatymo pasirinkimas nerodomi", script)
+        self.assertIn("Mokami užsakymai aktyvūs", script)
+        self.assertIn("Tik QR kodas – 50 €, su raštu – 60 €", script)
 
     def test_public_product_catalog_policy_does_not_read_admin_roles(self):
         migration = (

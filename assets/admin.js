@@ -486,7 +486,7 @@
   async function loadBusinessSettings() {
     var results = await Promise.all([
       supabaseJson(restUrl("business_profile", "select=*&singleton=eq.true&limit=1")),
-      supabaseJson(restUrl("product_catalog", "select=id,price_cents,enabled&order=id")),
+      supabaseJson(restUrl("product_catalog", "select=id,price_cents,plain_price_cents,enabled&order=id")),
       supabaseJson(restUrl("shipping_catalog", "select=carrier,price_cents,enabled&order=carrier"))
     ]);
     var business = results[0][0] || {};
@@ -496,13 +496,14 @@
     businessSettingsForm.elements.ready_for_invoicing.checked = !!business.ready_for_invoicing;
     var products = Object.fromEntries(results[1].map(function (row) { return [row.id, row]; }));
     var shipping = Object.fromEntries(results[2].map(function (row) { return [row.carrier, row]; }));
+    businessSettingsForm.elements.plain_price.value = centsToInput(products.metal && products.metal.plain_price_cents);
     businessSettingsForm.elements.metal_price.value = centsToInput(products.metal && products.metal.price_cents);
     businessSettingsForm.elements.omniva_price.value = centsToInput(shipping.Omniva && shipping.Omniva.price_cents);
     businessSettingsForm.elements.lp_express_price.value = centsToInput(shipping["LP Express"] && shipping["LP Express"].price_cents);
     businessSettingsForm.elements.dpd_price.value = centsToInput(shipping.DPD && shipping.DPD.price_cents);
     if (paymentReadiness) {
       paymentReadiness.dataset.state = "ready";
-      paymentReadiness.textContent = "Išankstinių užsakymų režimas aktyvus: klientams mokėjimas ir pristatymo pasirinkimas nerodomi. Šios kainos saugomos būsimam naudojimui.";
+      paymentReadiness.textContent = "Mokami užsakymai aktyvūs. Tik QR kodas – 50 €, su raštu – 60 €. Kaina užfiksuojama kuriant užsakymą.";
     }
     businessSettingsPanel.hidden = false;
   }
@@ -510,7 +511,8 @@
   async function saveBusinessSettings() {
     var values = Object.fromEntries(new FormData(businessSettingsForm).entries());
     var metalPrice = inputToCents(values.metal_price);
-    if (metalPrice == null) {
+    var plainPrice = inputToCents(values.plain_price);
+    if (metalPrice == null || plainPrice == null) {
       throw new Error("Įrašykite graviruotos plieno lentelės kainą.");
     }
     var businessPayload = {
@@ -531,7 +533,7 @@
       method: "PATCH", headers: Object.assign({}, AtminimasAuth.headers(true), { Prefer: "return=minimal" }), body: JSON.stringify(businessPayload)
     });
     var productUpdates = [
-      ["metal", { name: "Graviruota plieno QR atminimo lentelė", price_cents: metalPrice, enabled: metalPrice != null, updated_at: new Date().toISOString() }],
+      ["metal", { name: "Graviruota plieno QR atminimo lentelė", price_cents: metalPrice, plain_price_cents: plainPrice, enabled: metalPrice != null, updated_at: new Date().toISOString() }],
       ["steel", { enabled: false, updated_at: new Date().toISOString() }],
       ["asa", { enabled: false, updated_at: new Date().toISOString() }]
     ];

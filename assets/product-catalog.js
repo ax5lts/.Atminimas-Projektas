@@ -33,7 +33,7 @@
     var controller = typeof AbortController === "function" ? new AbortController() : null;
     var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, 6000) : null;
     try {
-      var query = "select=id,name,price_cents,currency,enabled&id=eq.metal&enabled=eq.true";
+      var query = "select=id,name,price_cents,plain_price_cents,currency,enabled&id=eq.metal&enabled=eq.true";
       var response = await fetch(config.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/product_catalog?" + query, {
         headers: {
           apikey: config.SUPABASE_ANON_KEY,
@@ -44,9 +44,9 @@
       if (!response.ok) throw new Error("Produkto katalogas nepasiekiamas.");
 
       var rows = await response.json();
-      // Never offer the retired price while the published copy promises 60 EUR.
+      // Only enable ordering after both advertised prices have been deployed.
       var metal = rows.find(function (row) { return row.id === "metal"; });
-      if (metal && metal.enabled && (metal.price_cents !== 6000 || metal.currency !== "EUR")) {
+      if (metal && metal.enabled && (metal.price_cents !== 6000 || metal.plain_price_cents !== 5000 || metal.currency !== "EUR")) {
         return fallbackCatalog("Užsakymas laikinai nepasiekiamas. Pabandykite dar kartą vėliau.");
       }
       var catalog = {
@@ -61,6 +61,7 @@
           name: row.name || "",
           available: row.enabled === true && row.price_cents != null,
           price_cents: row.price_cents,
+          plain_price_cents: row.plain_price_cents,
           currency: row.currency || "EUR"
         };
       });
@@ -73,6 +74,9 @@
   }
 
   window.AtminimasProductCatalog = {
+    priceForDesign: function (item, design) {
+      return design && design.pattern === "plain" ? item.plain_price_cents : item.price_cents;
+    },
     formatPrice: formatPrice,
     load: load,
     normalizeType: normalizeType

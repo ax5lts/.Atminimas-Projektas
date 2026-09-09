@@ -31,7 +31,7 @@ test('explicit link wins over saved choice, invalid and malformed values use def
   assert.equal(api.read().pattern, 'plain');
   const invalid = setup('?color=__proto__&pattern=constructor', 'broken').api.read();
   assert.equal(invalid.color, 'gold');
-  assert.equal(invalid.pattern, 'tree');
+  assert.equal(invalid.pattern, 'plain');
   const persisted = setup('', '{"color":"black","pattern":"heart"}').api.read();
   assert.equal(persisted.pattern, 'heart');
 });
@@ -42,4 +42,17 @@ test('old fourth-choice links select plain QR while historical order labels rema
   assert.match(api.label(api.read()), /Tik QR kodas/);
   assert.match(api.label({color:'gold',pattern:'star'}), /Žvaigždė ir šakelė/);
   assert.equal(Object.keys(api.patterns).length, 4);
+});
+
+test('store starts with plain QR at 50 EUR, followed by three 60 EUR ornaments without the yellow notice', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../parduotuve.html'), 'utf8');
+  const choices = [...html.matchAll(/name="plaque_pattern" value="([^"]+)"( checked)?/g)];
+  assert.deepEqual(choices.map(match => match[1]), ['plain', 'tree', 'heart', 'wings']);
+  assert.equal(choices[0][2], ' checked');
+  for (let i=1; i<choices.length; i++) assert.equal(choices[i][2], undefined);
+  assert.match(html, /Variantas 1 · 50 €/);
+  assert.equal((html.match(/Variantas [234] · 60 €/g) || []).length, 3);
+  assert.doesNotMatch(html, /<aside class="legal-notice shop-legal-notice/);
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(new Set(ids).size, ids.length, 'shop element IDs must be unique');
 });

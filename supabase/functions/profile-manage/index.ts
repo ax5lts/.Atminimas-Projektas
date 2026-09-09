@@ -283,7 +283,7 @@ Deno.serve(async (request: Request) => {
       const productType = String(body.product_type || "");
       if (productType !== "metal") return json({ error: "Neteisingas produkto tipas" }, 400);
       const productColor = String(body.product_color || "gold");
-      const productPattern = String(body.product_pattern || "tree");
+      const productPattern = String(body.product_pattern || "plain");
       if (!["gold", "silver", "black"].includes(productColor) || !["tree", "heart", "wings", "plain"].includes(productPattern)) {
         return json({ error: "Neteisinga lentelės spalva arba raštas" }, 400);
       }

@@ -43,26 +43,34 @@ test('shop replaces removed product and keeps the latest design when catalog fin
   const p = page();
   const pending = deferred();
   p.storage.set('atminimas.selected-product.v1', 'asa');
-  p.context.AtminimasProductCatalog = {
-    normalizeType: value => value === 'asa' ? 'asa' : 'metal',
-    load: () => pending.promise, formatPrice: value => String(value)
-  };
+  vm.runInNewContext(source('product-catalog.js'), p.context);
+  p.context.AtminimasProductCatalog.load = () => pending.promise;
   vm.runInNewContext(source('plaque-design.js'), p.context);
   vm.runInNewContext(source('shop.js'), p.context);
   assert.match(p.get('product-create-link').href, /product=metal/);
   p.get('product-selector').listeners.change({ target: { name: 'plaque_color', value: 'black' } });
-  pending.resolve({ remote: true, metal: { price_cents: 1200 } });
+  pending.resolve({ remote: true, metal: { available: true, price_cents: 6000, plain_price_cents: 5000, currency: 'EUR' } });
   await tick();
   assert.match(p.get('product-create-link').href, /product=metal/);
-  assert.equal(p.get('product-price').textContent, '1200');
+  assert.match(p.get('product-price').textContent, /50,00/);
+  assert.match(p.get('product-total').textContent, /53,00/);
   assert.match(p.get('product-create-link').href, /color=black/);
   assert.equal(p.get('product-image').dataset.color, 'black');
+  for (const pattern of ['tree', 'heart', 'wings', 'plain']) {
+    p.get('product-selector').listeners.change({ target: { name: 'plaque_pattern', value: pattern } });
+    assert.match(p.get('product-price').textContent, pattern === 'plain' ? /50,00/ : /60,00/);
+    assert.match(p.get('product-total').textContent, pattern === 'plain' ? /53,00/ : /63,00/);
+    assert.match(p.get('product-create-link').textContent, pattern === 'plain' ? /50,00/ : /60,00/);
+    assert.equal(p.get('product-image').dataset.pattern, pattern);
+    assert.match(p.get('product-create-link').href, new RegExp('pattern=' + pattern));
+  }
 });
 
 test('shop handles unavailable storage and a rejected catalog without an unhandled error', async () => {
   const p = page();
   p.context.sessionStorage.getItem = p.context.sessionStorage.setItem = () => { throw new Error('blocked'); };
-  p.context.AtminimasProductCatalog = { load: async () => { throw new Error('offline'); }, normalizeType: () => 'metal' };
+  vm.runInNewContext(source('product-catalog.js'), p.context);
+  p.context.AtminimasProductCatalog.load = async () => { throw new Error('offline'); };
   vm.runInNewContext(source('plaque-design.js'), p.context);
   vm.runInNewContext(source('shop.js'), p.context);
   await tick();

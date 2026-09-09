@@ -1,4 +1,4 @@
-/* Ornamented variants use the reference; the fourth is a plain vector QR plate. */
+/* The first variant is a plain vector QR plate; ornaments use the reference. */
 .plaque-preview {
   display: block;
   aspect-ratio: 1;

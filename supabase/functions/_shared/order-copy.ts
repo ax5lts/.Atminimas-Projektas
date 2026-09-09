@@ -4,8 +4,8 @@ const colors: Record<string, string> = {
   gold: "Aukso spalvos plienas", silver: "Sidabrinis plienas", black: "Juodas plienas",
 };
 const patterns: Record<string, string> = {
-  tree: "Variantas 1 – Gyvybės medis", heart: "Variantas 2 – Širdis ir žvakė",
-  wings: "Variantas 3 – Angelo sparnai", plain: "Variantas 4 – Tik QR kodas",
+  plain: "Variantas 1 – Tik QR kodas", tree: "Variantas 2 – Gyvybės medis",
+  heart: "Variantas 3 – Širdis ir žvakė", wings: "Variantas 4 – Angelo sparnai",
   star: "Ankstesnis variantas 4 – Žvaigždė ir šakelė",
 };
 

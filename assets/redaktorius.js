@@ -164,7 +164,7 @@
       image: "assets/qr-plienas-480.webp",
       alt: "Pasirinkta plieno QR atminimo lentelė",
       name: "graviruota plieno QR atminimo lentelė",
-      priceNote: ". Kaina – 60,00 EUR."
+      priceNote: ". Kaina tikrinama."
     },
     digital: {
       image: "",
@@ -184,7 +184,7 @@
       : "metal";
   }
 
-  var selectedPlaqueDesign = window.AtminimasPlaqueDesign ? AtminimasPlaqueDesign.read() : { color: "gold", pattern: "tree" };
+  var selectedPlaqueDesign = window.AtminimasPlaqueDesign ? AtminimasPlaqueDesign.read() : { color: "gold", pattern: "plain" };
   var requestedProductType = requestedProduct();
   var productType = "metal";
 
@@ -223,7 +223,7 @@
     AtminimasProductCatalog.load().then(function (catalog) {
       var metalAvailable = !!(catalog.remote && catalog.metal && catalog.metal.available && catalog.metal.price_cents != null);
       if (metalAvailable) {
-        productOptions.metal.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(catalog.metal.price_cents, catalog.metal.currency) + ".";
+        productOptions.metal.priceNote = ". Kaina – " + AtminimasProductCatalog.formatPrice(AtminimasProductCatalog.priceForDesign(catalog.metal, selectedPlaqueDesign), catalog.metal.currency) + ".";
       }
       var selectedType = "metal";
       applySelectedProduct(selectedType);
