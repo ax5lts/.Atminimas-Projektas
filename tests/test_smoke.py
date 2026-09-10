@@ -439,7 +439,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         for slug in ("qa-test", "Romualdas-Rimaitis"):
             with self.subTest(slug=slug):
                 value = urllib.parse.quote(
-                    "https://ax5lts.github.io/.Atminimas-Projektas/sablonas-viskas.html?slug=" + slug,
+                    "https://atminimokodas.lt/sablonas-viskas.html?slug=" + slug,
                     safe="",
                 )
                 with urllib.request.urlopen(

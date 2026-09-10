@@ -1,5 +1,6 @@
 import { adminClient, BlockedAutomationError, env, json, publicSiteUrl, readJson, retryDelay } from "../_shared/core.ts";
 import { authorizeOrderWorker } from "../_shared/worker-auth.ts";
+import { orderQrAttachment } from "../_shared/order-qr.ts";
 import { bytesToBase64, sendEmail } from "../_shared/email.ts";
 import { createInvoicePdf, sha256Hex } from "../_shared/invoice-pdf.ts";
 import { createShipment } from "../_shared/shipping.ts";
@@ -151,8 +152,8 @@ async function processEmailEvent(event: AutomationEvent) {
   const userUrl = `${publicSiteUrl()}vartotojas.html`;
   const templates: Record<string, { subject: string; heading: string; paragraphs: string[]; action?: string }> = {
     "order.created": {
-      subject: "Gautas naujas užsakymas",
-      heading: "Naujas užsakymas sistemoje",
+      subject: event.payload.copy_reason === "svg_attachment" ? "Užsakymo kopija su QR SVG" : "Gautas naujas užsakymas",
+      heading: event.payload.copy_reason === "svg_attachment" ? "Užsakymo kopija su QR SVG" : "Naujas užsakymas sistemoje",
       paragraphs: [`Užsakymas: ${order?.id || "–"}`, `Produktas: ${order?.product_catalog?.name || order?.product_type || "–"}`, ...orderDesignCopy(order), "Tai užsakymo kopija. Mokėjimo ir gamybos būseną tikrinkite administravime."],
       action: "Atidaryti administravimą",
     },
@@ -225,7 +226,8 @@ async function processEmailEvent(event: AutomationEvent) {
     subject: template.subject,
     heading: template.heading,
     paragraphs: template.paragraphs,
-    attachments: event.event_type === "order.created" && order ? [orderCopyAttachment(order)] : undefined,
+    attachments: event.event_type === "order.created" && order
+      ? [orderCopyAttachment(order), await orderQrAttachment(order, env("SUPABASE_URL"))] : undefined,
     actionUrl: adminEvent ? `${publicSiteUrl()}admin.html` : userUrl,
     actionLabel: template.action,
     idempotencyKey: event.event_key,

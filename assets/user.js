@@ -345,7 +345,7 @@
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(objectUrl);
+    window.setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 60000);
   }
 
   async function setVisibility(profileId, active) {

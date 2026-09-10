@@ -81,8 +81,11 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
         self.assertEqual(len(locations), len(set(locations)))
         self.assertEqual(locations.count(CANONICAL_HOME), 1)
         self.assertEqual(
-            [node.text for node in document.findall(".//sitemap:lastmod", namespaces)],
-            [SEO_STABILITY_LASTMOD],
+            {entry.findtext("sitemap:loc", namespaces=namespaces):
+             entry.findtext("sitemap:lastmod", namespaces=namespaces)
+             for entry in entries if entry.find("sitemap:lastmod", namespaces) is not None},
+            {CANONICAL_HOME: SEO_STABILITY_LASTMOD,
+             CANONICAL_HOME + "parduotuve.html": "2026-09-09"},
         )
         self.assertEqual(
             [node.text for node in document.findall(".//image:loc", namespaces)],
@@ -144,6 +147,19 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
             {"source": "/index.html", "destination": "/", "permanent": True},
             config.get("redirects", []),
         )
+
+    def test_retired_order_page_redirects_and_is_not_a_sitemap_target(self):
+        config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+        self.assertIn(
+            {"source": "/isankstinis-uzsakymas.html", "destination": "/parduotuve.html", "permanent": True},
+            config["redirects"],
+        )
+        sitemap = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
+        for redirect in config["redirects"]:
+            if "has" not in redirect:
+                self.assertNotIn("<loc>" + CANONICAL_HOME.rstrip("/") + redirect["source"] + "</loc>", sitemap)
+        fallback = (ROOT / "isankstinis-uzsakymas.html").read_text(encoding="utf-8")
+        self.assertIn('<link rel="canonical" href="https://atminimokodas.lt/parduotuve.html">', fallback)
 
     def test_homepage_indexing_contract_is_unique_and_static(self):
         title = "Atminimo kodas – QR lentelė ir atminimo puslapis | Atminimas"

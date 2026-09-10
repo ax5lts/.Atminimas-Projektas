@@ -50,7 +50,7 @@ function createJpeg(value: string): Uint8Array<ArrayBuffer> {
   return output;
 }
 
-Deno.serve(async (request: Request) => {
+export async function handleQrRequest(request: Request) {
   const options = handleOptions(request);
   if (options) return options;
   if (request.method !== "GET") {
@@ -153,4 +153,6 @@ Deno.serve(async (request: Request) => {
       headers: responseHeaders(),
     });
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleQrRequest);

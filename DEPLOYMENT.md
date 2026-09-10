@@ -1,5 +1,15 @@
 # Paleidimo kontrolinis sąrašas
 
+## 2026-09-10: indeksavimo patikra ir QR failai
+
+Patikrinti visi 8 „Search Console“ nurodyti adresai: HTTP 200, be `noindex` / `X-Robots-Tag` blokavimo, su kanoninėmis nuorodomis. `robots.txt` leidžia nuskaitymą. Likę vieši puslapiai pasiekiami statinėmis pradinio puslapio nuorodomis. Tai prieinamumo patikra, ne įrodymas, kad „Google“ juos indeksavo.
+
+Pasenęs `isankstinis-uzsakymas.html` adresas nukreipiamas nuolatiniu Vercel peradresavimu į `parduotuve.html` ir pašalintas iš `sitemap.xml`. Atsarginio HTML kanoninė nuoroda taip pat veda į parduotuvę. Parduotuvės `lastmod` yra 2026-09-09, kai pakeistas jos turinys; pradinio puslapio data išlaikyta. Nedėkite naujos datos vien dėl pakartotinio surinkimo. „Search Console“ pradėtos validacijos kartoti nereikia; „Discovered – currently not indexed“ išnykimą lemia „Google“ nuskaitymas ir indeksavimo sprendimas. Šioje sesijoje prijungtos naršyklės nebuvo, todėl URL tikrinimo / indeksavimo prašymas ten nepateiktas.
+
+Įdiegtas `qr-code` v9 su dabartiniu bendru `PUBLIC_SITE_URL` nustatymu (ankstesnė įdiegta versija tikėjosi seno „GitHub Pages“ domeno ir grąžino HTTP 400). Veikiančioje sistemoje PNG, JPG ir SVG grąžina HTTP 200 bei teisingus failų tipus. Kliento naršyklėje blob nuoroda atlaisvinama po 60 s, kad mobilusis atsisiuntimas spėtų prasidėti. Regresiniai testai nuskaito sugeneruotus PNG / JPG ir patikrina tikrą QR paskirties adresą.
+
+`automation-worker` v10 prie pirmos administratoriaus užsakymo kopijos prideda ir TXT, ir tikrą SVG failą. SVG imamas pagal išsaugotą užsakymo puslapio nuorodą; generatoriaus klaida sustabdo siuntimą ir palieka įvykį pakartotiniam bandymui. Vienkartinei jau išsiųsto užsakymo kopijai su SVG naudojamas atskiras idempotentiškumo raktas su `:svg-copy:v1`, nekeičiant ankstesnio įvykio ar mokėjimo būsenos. Pakartotinė kopija administratoriui išsiųsta vienu bandymu; „Resend“ webhook patvirtino `delivered`.
+
 ## Užsakymų el. laiškų automatika įjungta
 
 2026-09-09 įdiegtas `automation-worker` v9 ir migracijos `20260909091811_schedule_order_emails.sql`, `20260909091921_enable_order_emails.sql`. „Supabase Cron“ užduotis `atminimas-order-emails-every-minute` vykdoma kas minutę. Siuntėjas – `Atminimo kodas <noreply@atminimokodas.lt>`, užsakymų kopijų gavėjas – `atminimokodas@gmail.com`. Pirmas paleidimas apdorojo 3 laukusias užsakymų kopijas; visoms „Resend“ webhook patvirtino `delivered`.
@@ -8,7 +18,7 @@ Planavimo raktas generuojamas duomenų bazėje ir laikomas tik „Vault“. Darb
 
 Diegiant kitame projekte pirmiausia nustatykite `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_SITE_URL` ir „Vault“ reikšmę `automation_worker_url`. Pritaikykite pirmą migraciją (sukuria sustabdytą užduotį), įdiekite funkciją, iškvieskite `private.invoke_order_email_worker(true)` ir patikrinkite `net._http_response`: turi būti HTTP 200 ir `ready: true`. Tada taikykite įjungimo migraciją. `check=true` tikrina nustatymus ir laiškų nesiunčia.
 
-Vykdymą tikrinkite `cron.job_run_details`, HTTP atsakymus – `net._http_response`, siuntimo būsenas – `automation_events` ir `email_messages`. Užsakymo kopijoje yra dizainas bei tekstinis priedas; gamybos patvirtinimo laiške taip pat pridedamas užsakymo QR SVG. Gamybos srautas šiame paleidime nebuvo imituojamas tikru mokėjimu.
+Vykdymą tikrinkite `cron.job_run_details`, HTTP atsakymus – `net._http_response`, siuntimo būsenas – `automation_events` ir `email_messages`. Užsakymo kopijoje yra dizainas, tekstinis priedas ir (nuo v10) QR SVG; gamybos patvirtinimo laiške taip pat pridedamas užsakymo QR SVG. Gamybos srautas šiame paleidime nebuvo imituojamas tikru mokėjimu.
 
 ## Naujausia kainodara: paprastas QR pirmas, 50 €
 
