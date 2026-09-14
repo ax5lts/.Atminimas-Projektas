@@ -371,6 +371,7 @@
     return section;
   }
 
+  var builderResizeHandler = null;
   function renderBuilderLayout(atminimas, media, layout) {
     document.getElementById("antmastis").hidden = true;
     document.getElementById("nuotraukos").hidden = true;
@@ -467,7 +468,7 @@
     var mediaSources = buildMediaSources(allImages);
     if (mediaSources) contentRoot.appendChild(mediaSources);
     var resizePending = false;
-    window.addEventListener("resize", function () {
+    builderResizeHandler = function () {
       if (resizePending) return;
       resizePending = true;
       requestAnimationFrame(function () {
@@ -475,7 +476,8 @@
         fitBuilderName(title);
         applyResponsiveBuilderHeights(view);
       });
-    });
+    };
+    window.addEventListener("resize", builderResizeHandler);
     bindBuilderGallery(view, allImages);
   }
 
@@ -543,7 +545,47 @@
 
   function renderPage(payload, message) {
     var atminimas = payload.atminimas || payload;
+    if (Array.isArray(payload.members) && payload.members.length && window.AtminimasGroup) {
+      var people = [atminimas].concat(payload.members);
+      var selector = document.getElementById("memorial-group-selector");
+      if (!selector) {
+        selector = document.createElement("nav");
+        selector.id = "memorial-group-selector";
+        selector.className = "memorial-group-selector";
+        selector.setAttribute("aria-label", "Pasirinkite žmogų, kurio atminimą norite peržiūrėti");
+        document.getElementById("turinys").before(selector);
+      }
+      var heading = document.createElement("p");
+      heading.textContent = "Bendras atminimas. Pasirinkite žmogų:";
+      var strip = document.createElement("div");
+      strip.className = "memorial-people";
+      selector.replaceChildren(heading, strip);
+      var requested = new URLSearchParams(window.location.search).get("person");
+      var selected = Math.max(0, people.findIndex(function (person) { return person.id === requested; }));
+      function choose(index) {
+        AtminimasGroup.render(strip, people, index, choose);
+        // Reactions and management links belong to the shared QR/root page.
+        renderPage({ atminimas: Object.assign({}, people[index], { id: atminimas.id }) }, message);
+        var url = new URL(window.location.href);
+        if (index) url.searchParams.set("person", people[index].id);
+        else url.searchParams.delete("person");
+        window.history.replaceState(window.history.state, "", url.href);
+      }
+      choose(selected);
+      return;
+    }
     var media = normalizeMedia(atminimas);
+    if (builderResizeHandler) {
+      window.removeEventListener("resize", builderResizeHandler);
+      builderResizeHandler = null;
+    }
+    var contentRoot = document.getElementById("turinys");
+    contentRoot.querySelectorAll("video").forEach(function (video) { video.pause(); });
+    Array.from(contentRoot.children).forEach(function (child) {
+      if (["antmastis", "nuotraukos", "video-blokas"].indexOf(child.id) < 0) child.remove();
+    });
+    document.getElementById("antmastis").hidden = false;
+    document.getElementById("nuotraukos").hidden = false;
     var layout = parseJson(atminimas.layout_json, {});
     if (!layout || typeof layout !== "object" || Array.isArray(layout)) layout = {};
     var hasBuilderData = Object.keys(layout).length > 0 ||

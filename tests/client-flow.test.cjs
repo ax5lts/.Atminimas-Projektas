@@ -127,6 +127,8 @@ function editor() {
     photoSyncPromise: Promise.resolve(), photoPreparationFailed: false,
     processedPhotos: [{ name: 'photo.jpg' }], uploadedPhotos: [], uploadedVideo: null, uploadedCaptions: null,
     editingMedia: [], editId: '', prototypeRequested: false, isAdminPrototype: false, prototypePublishPending: false,
+    groupEnabled: false, groupWasLinked: false, groupPeople: [],
+    photoItemsForSave: () => null, adoptSavedPhotos() {}, markAccountSaved() {},
     productType: 'digital', selectedPlaqueDesign: { color: 'gold', pattern: 'tree' }, physicalOrderPending: false, MAX_PHOTOS: 8, MAX_VIDEO_BYTES: 50 * 1024 * 1024,
     resultBox: element(), previewCode: element(), openLink: element(), preorderLink: element(),
     clientLink: element(), qrLink: element(), orderCode: element(), saveProgressEl: element(),

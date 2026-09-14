@@ -1,5 +1,13 @@
 # Paleidimo kontrolinis sąrašas
 
+## 2026-09-14: grupinis QR ir redaktoriaus patobulinimai
+
+Vienas bendras leidimas apima iki 8 žmonių po vienu QR kodu, atskiras žmonių istorijas ir dizainą, papildomą nuotraukų įkėlimą, vienos nuotraukos pakeitimą / pašalinimą, pagrindinio portreto pasirinkimą, tris paruoštus išdėstymus ir aiškias saugojimo būsenas. Įtraukti redaktoriaus stabilumo bei juodraščio atkūrimo pataisymai.
+
+Backend jau įdiegtas: `profile-manage` v18, `profile-content` v13 ir migracijos `20260913192953_group_memorials.sql`, `20260914133742_editor_photo_versions.sql`. Frontend leidžiamas vienu `main` pakeitimų rinkiniu per esamą GitHub–Vercel integraciją. Vercel surenka tik viešus `dist/` failus ir atnaujina turinio versijų žymas.
+
+Prieš leidimą praėjo 32 Node, 206 Python ir 10 Deno testų, Chrome patikros 390 / 1440 px bei DB patikros su ROLLBACK. Detalės – `GROUP_QR_PLAN.md`. Po diegimo tikrinamas produkcinis domenas ir įkeltų failų atitiktis surinktam leidimui.
+
 ## 2026-09-10: indeksavimo patikra ir QR failai
 
 Patikrinti visi 8 „Search Console“ nurodyti adresai: HTTP 200, be `noindex` / `X-Robots-Tag` blokavimo, su kanoninėmis nuorodomis. `robots.txt` leidžia nuskaitymą. Likę vieši puslapiai pasiekiami statinėmis pradinio puslapio nuorodomis. Tai prieinamumo patikra, ne įrodymas, kad „Google“ juos indeksavo.

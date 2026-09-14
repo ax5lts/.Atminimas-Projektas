@@ -13,7 +13,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MEDIA_TYPES = new Set(["image", "video", "captions"]);
 const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
-  image: /^photo-[1-8]\.(?:jpg|jpeg|png|webp)$/,
+  image: /^photo-[1-8](?:-[0-9a-f]{32})?\.(?:jpg|jpeg|png|webp)$/,
   video: /^video\.(?:mp4|mov)$/,
   captions: /^captions\.vtt$/,
 };
@@ -169,7 +169,7 @@ export async function handleRequest(request: Request) {
     const { data: profile, error } = await client
       .from("profiliai")
       .select(
-        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at",
+        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at,group_members",
       )
       .eq("id", profileId)
       .maybeSingle();
@@ -194,7 +194,28 @@ export async function handleRequest(request: Request) {
       profileId,
       canManage,
     );
+    const members: Record<string, unknown>[] = [];
+    if (Array.isArray(profile.group_members) && profile.group_members.length && ownerId) {
+      const { data: children, error: childrenError } = await client.from("profiliai")
+        .select("id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,deleted_at")
+        .in("id", profile.group_members.slice(0, 7)).eq("owner_id", ownerId).is("deleted_at", null);
+      if (childrenError) throw childrenError;
+      for (const id of profile.group_members.slice(0, 7)) {
+        const child = children?.find((item) => item.id === id);
+        if (!child) continue;
+        members.push({
+          id: child.id, vardas: child.vardas, pavarde: child.pavarde,
+          gimimo_data: child.gimimo_data, mirties_data: child.mirties_data,
+          epitafija: child.epitafija, tekstas_200: child.tekstas_200,
+          story_blocks_json: safeStoryBlocks(child.story_blocks_json),
+          layout_json: safeProfileLayout(child.layout_json),
+          media_json: await signedMedia(client, child.media_json, ownerId, child.id, canManage),
+        });
+      }
+    }
     return json({
+      members,
+      is_public: profile.aktyvus === true,
       atminimas: {
         id: profile.id,
         vardas: profile.vardas,

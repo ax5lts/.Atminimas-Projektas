@@ -412,7 +412,7 @@
 
     var res = await apiFetch(restUrl(
       "profiliai",
-      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at&order=created_at.desc"
+      "owner_id=eq." + encodeURIComponent(me.id) + "&deleted_at=is.null&select=id,vardas,pavarde,gimimo_data,mirties_data,epitafija,aktyvus,apmoketa,statusas,created_at,group_members&order=created_at.desc"
     ), {
       headers: AtminimasAuth.headers(false)
     });
@@ -450,8 +450,15 @@
     });
 
     finishPageSkeleton();
-    listEl.innerHTML = rows.map(function (row) {
+    var memberIds = new Set();
+    rows.forEach(function (row) { (row.group_members || []).forEach(function (id) { memberIds.add(id); }); });
+    listEl.innerHTML = rows.filter(function (row) { return !memberIds.has(row.id); }).map(function (row) {
       var name = [row.vardas, row.pavarde].filter(Boolean).join(" ") || row.id;
+      var groupNames = (row.group_members || []).map(function (id) {
+        var person = rows.find(function (candidate) { return candidate.id === id; });
+        return person ? [person.vardas, person.pavarde].filter(Boolean).join(" ") : "";
+      }).filter(Boolean);
+      if (groupNames.length) name += " · " + groupNames.join(" · ");
       var publicUrl = "sablonas-viskas.html?slug=" + encodeURIComponent(row.id);
       var order = orderByProfile[row.id];
       var invoice = order ? invoiceByOrder[order.id] : null;
@@ -474,6 +481,7 @@
         "<article class='info-box user-page-card' data-profile-card>" +
           "<div class='user-card-heading'><p class='eyebrow'>" + (row.aktyvus ? "Viešas puslapis" : "Privatus puslapis") + "</p><span class='user-card-visibility " + (row.aktyvus ? "is-public" : "") + "'>" + (row.aktyvus ? "Viešas" : "Privatus") + "</span></div>" +
           "<h2>" + html(name) + "</h2>" +
+          (groupNames.length ? "<p class='user-card-product'>Grupinis QR · " + (groupNames.length + 1) + " žmonės</p>" : "") +
           "<p>" + html([row.gimimo_data, row.mirties_data].filter(Boolean).join(" - ") || "Datos nepateiktos") + "</p>" +
           "<p class='user-card-product'>" + (order ? html(productName(order.product_type) + (order.product_color && order.product_pattern && window.AtminimasPlaqueDesign ? " · " + AtminimasPlaqueDesign.label({ color: order.product_color, pattern: order.product_pattern }) : "")) : "Skaitmeninis atminimo puslapis · be fizinio gaminio") + "</p>" +
           shipment +

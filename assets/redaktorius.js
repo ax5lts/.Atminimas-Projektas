@@ -109,6 +109,443 @@
   var savedVideoFile = null;
   var savedCaptionsFile = null;
   var editingMedia = [];
+  var photoLibrary = null;
+  var replacingPhotoIndex = -1;
+  var replacePhotoInput = document.getElementById("editor-replace-photo");
+  var pageIsPublic = false;
+  var accountSaved = false;
+  var unsavedChanges = false;
+
+  function updateSaveLocation() {
+    var location = document.getElementById("editor-save-location");
+    if (!location) return;
+    location.dataset.state = accountSaved ? (pageIsPublic ? "public" : "account") : "local";
+    location.textContent = accountSaved
+      ? (pageIsPublic ? "Paskelbta lankytojams" : "Išsaugota paskyroje · privatu") +
+        (unsavedChanges ? " · nauji pakeitimai dar tik šiame įrenginyje" : "")
+      : "Juodraštis šiame įrenginyje · dar neišsaugotas paskyroje";
+  }
+
+  function libraryFromCurrent() {
+    if (Array.isArray(photoLibrary)) return photoLibrary.slice();
+    if (photoOrderMode === "existing") return orderedExistingImages().map(function (media) {
+      return { key: media.path, media: media };
+    });
+    return processedPhotos.filter(Boolean).map(function (file) { return { key: crypto.randomUUID(), file: file }; });
+  }
+
+  function setPhotoLibrary(items) {
+    photoLibrary = items.slice(0, MAX_PHOTOS);
+    photoOrderMode = "library";
+    processedPhotos = photoLibrary.map(function (item) { return item.file || null; });
+    photoOrderNames = photoLibrary.map(function (item, index) {
+      return item.file ? item.file.name : (item.media && (item.media.caption || item.media.alt)) || "Nuotrauka " + (index + 1);
+    });
+  }
+
+  function photoItemsForSave() {
+    return Array.isArray(photoLibrary) ? photoLibrary.slice() : null;
+  }
+
+  function adoptSavedPhotos(media) {
+    if (!Array.isArray(photoLibrary)) return;
+    var before = photoLibrary.slice();
+    var images = media.filter(function (item) { return item.type === "image"; }).sort(function (a, b) { return a.order - b.order; });
+    setPhotoLibrary(images.map(function (item, index) {
+      var saved = Object.assign({}, item);
+      if (before[index] && before[index].file) saved.url = photoPreviewUrls.get(before[index].file) || URL.createObjectURL(before[index].file);
+      return { key: saved.path, media: saved };
+    }));
+    refreshPhotoLibrary();
+  }
+
+  function markAccountSaved(published) {
+    accountSaved = true;
+    if (typeof published === "boolean") pageIsPublic = published;
+    unsavedChanges = false;
+    clearTimeout(historySaveTimer);
+    undoHistory = [];
+    redoHistory = [];
+    groupPeople.forEach(function (person) { delete person.undo; delete person.redo; });
+    recordEditorHistory(true);
+    updateSaveLocation();
+  }
+
+  function refreshPhotoLibrary() {
+    renderPhotoFileList(photoOrderNames);
+    updatePhotoDescriptionVisibility(photoOrderNames);
+    renderPhotoOrder();
+    refreshOrderedPhotoPreviews();
+    renderStoryBlockEditor();
+    syncPreview();
+    renderPeople();
+  }
+
+  async function persistPhotoLibrary() {
+    photosProcessing = true;
+    photosInput.disabled = true;
+    try {
+      await persistProcessedPhotoOrder();
+    } finally {
+      photosProcessing = false;
+      photosInput.disabled = false;
+    }
+    refreshPhotoLibrary();
+    scheduleDraftSave();
+  }
+
+  function removePhoto(index) {
+    if (photosProcessing || groupBusy || !photoLibrary || !photoLibrary[index]) return;
+    recordEditorHistory(false);
+    photoLibrary.splice(index, 1);
+    storyBlocks = storyBlocks.filter(function (block) { return block.type !== "photo" || block.photoOrder !== index + 1; });
+    storyBlocks.forEach(function (block) { if (block.type === "photo" && block.photoOrder > index + 1) block.photoOrder -= 1; });
+    ["photo_caption_", "photo_alt_"].forEach(function (prefix) {
+      for (var i = index + 1; i < MAX_PHOTOS; i++) form.elements[prefix + i].value = form.elements[prefix + (i + 1)].value;
+      form.elements[prefix + MAX_PHOTOS].value = "";
+    });
+    setPhotoLibrary(photoLibrary);
+    selectedStoryPhotoIndex = -1;
+    photoSyncPromise = persistPhotoLibrary().catch(groupError);
+  }
+
+  function choosePortrait(index) {
+    if (photosProcessing || groupBusy || index < 0 || index >= storyPhotoCount()) return;
+    var blockIndex = storyBlocks.findIndex(function (block) { return block.type === "photo" && block.photoOrder === index + 1; });
+    if (blockIndex < 0 && storyBlocks.length >= MAX_STORY_BLOCKS) {
+      statusEl.textContent = "Pirmiausia pašalinkite vieną istorijos bloką, kad galėtume pridėti portretą.";
+      return;
+    }
+    recordEditorHistory(false);
+    setPhotoLibrary(libraryFromCurrent());
+    if (index) {
+      var portrait = photoLibrary.splice(index, 1)[0];
+      photoLibrary.unshift(portrait);
+      remapStoryPhotoOrder(index, 0);
+      movePhotoFields(index, 0);
+    }
+    var block = blockIndex >= 0 ? storyBlocks.splice(blockIndex, 1)[0] : { type: "photo", photoOrder: 1 };
+    Object.assign(block, { photoOrder: 1, align: "full", widthPct: 70, fit: "contain", offsetX: 0, offsetY: 0 });
+    storyBlocks.unshift(block);
+    setPhotoLibrary(photoLibrary);
+    photoSyncPromise = persistPhotoLibrary().catch(groupError);
+    statusEl.textContent = "Pagrindinis portretas pasirinktas. Jis bus rodomas kortelėje ir puslapio pradžioje.";
+  }
+
+  function applyTemplate(type) {
+    if (photosProcessing || groupBusy) return;
+    var names = { portrait: "Portretas ir istorija", album: "Nuotraukų albumas", family: "Šeimos atminimas" };
+    if (!names[type]) return;
+    recordEditorHistory(false);
+    var texts = storyBlocks.filter(function (block) { return block.type === "text"; });
+    var pictures = storyBlocks.filter(function (block) { return block.type === "photo"; });
+    var portraitIndex = pictures.findIndex(function (block) { return block.photoOrder === 1; });
+    if (portraitIndex > 0) pictures.unshift(pictures.splice(portraitIndex, 1)[0]);
+    storyBlocks.forEach(function (block) {
+      block.offsetX = 0; block.offsetY = 0;
+      if (block.type === "photo") Object.assign(block, { align: "full", widthPct: type === "album" ? 100 : 70, fit: "contain" });
+      else block.fontScale = 100;
+    });
+    if (type === "album") storyBlocks = pictures.concat(texts);
+    else if (type === "portrait") storyBlocks = pictures.slice(0, 1).concat(texts, pictures.slice(1));
+    else {
+      storyBlocks = [];
+      for (var i = 0; i < Math.max(texts.length, pictures.length); i++) {
+        if (pictures[i]) storyBlocks.push(pictures[i]);
+        if (texts[i]) storyBlocks.push(texts[i]);
+      }
+    }
+    selectedStoryPhotoIndex = -1;
+    setBackgroundColor(type === "family" ? "#f7f2e8" : "#ffffff", false);
+    renderStoryBlockEditor(); syncPreview(); refreshResponsiveStage(true);
+    recordEditorHistory(true);
+    scheduleDraftSave();
+    document.getElementById("editor-template-status").textContent = "Pritaikyta: „" + names[type] + "“. Turinys išliko. Galite atšaukti arba koreguoti toliau.";
+  }
+  var groupPeople = [];
+  var activePerson = 0;
+  var groupEnabled = false;
+  var groupWasLinked = false;
+  var groupBusy = false;
+  var groupAdding = false;
+  var groupType = document.getElementById("editor-group-type");
+  var initialPersonLayout = null;
+  var previewUpdateFrame = null;
+
+  function schedulePreviewUpdate() {
+    if (previewUpdateFrame !== null) return;
+    previewUpdateFrame = requestAnimationFrame(function () {
+      previewUpdateFrame = null;
+      if (isRestoringDraft) return;
+      syncPreview();
+      scheduleStageFit(false);
+    });
+  }
+
+  async function readPersonFiles(person) {
+    if (Array.isArray(person.photos)) return;
+    var files = await Promise.all(Array.from({ length: MAX_PHOTOS }, function (_, index) {
+      return getDraftFile("photo-" + index, person.key);
+    }).concat([getDraftFile("video", person.key), getDraftFile("captions", person.key)]));
+    person.photos = files.slice(0, MAX_PHOTOS);
+    person.video = files[MAX_PHOTOS];
+    person.captions = files[MAX_PHOTOS + 1];
+  }
+
+  function capturePerson() {
+    var previous = groupPeople[activePerson] || { key: "main", id: editId };
+    var snapshot = editorHistorySnapshot();
+    snapshot.key = previous.key;
+    snapshot.id = previous.id;
+    snapshot.media = editingMedia.slice();
+    snapshot.photos = processedPhotos.slice();
+    snapshot.library = Array.isArray(photoLibrary) ? photoLibrary.slice() : null;
+    snapshot.video = (videoInput.files && videoInput.files[0]) || savedVideoFile;
+    snapshot.captions = (captionsInput.files && captionsInput.files[0]) || savedCaptionsFile;
+    snapshot.undo = undoHistory.slice();
+    snapshot.redo = redoHistory.slice();
+    snapshot.thumbnail = photoUrlAt(0);
+    groupPeople[activePerson] = snapshot;
+    return snapshot;
+  }
+
+  function groupDraft() {
+    capturePerson();
+    renderPeople();
+    return { enabled: groupEnabled, active: activePerson, people: groupPeople.map(function (person) {
+      return { key: person.key, id: person.id, form: person.form, storyBlocks: person.storyBlocks,
+        storyEmpty: person.storyEmpty, layout: person.layout, media: person.media,
+        library: Array.isArray(person.library) ? person.library.map(function (item) {
+          return { key: item.key, media: item.media, local: !!item.file || item.local === true };
+        }) : null };
+    }) };
+  }
+
+  function renderPeople() {
+    if (!groupType) return;
+    groupType.value = groupEnabled ? "group" : "single";
+    document.getElementById("editor-group-controls").hidden = !groupEnabled;
+    AtminimasGroup.render(document.getElementById("editor-people"), groupPeople, activePerson, function (index) {
+      switchPerson(index).catch(groupError);
+    }, { readiness: true });
+    document.getElementById("editor-person-add").disabled = groupBusy || groupAdding || groupPeople.length >= AtminimasGroup.maxPeople;
+    document.getElementById("editor-person-remove").disabled = groupBusy || activePerson === 0;
+    document.getElementById("editor-person-status").textContent = "Redaguojate: " +
+      AtminimasGroup.name(groupPeople[activePerson] || {}, activePerson) + ". " + groupPeople.length + " iš 8 žmonių.";
+  }
+
+  function groupError(error) {
+    console.error(error);
+    statusEl.textContent = error.message || "Nepavyko pakeisti grupės žmogaus.";
+  }
+
+  async function applyPerson(person) {
+    processedPhotos = [];
+    savedVideoFile = null;
+    savedCaptionsFile = null;
+    uploadedPhotos = [];
+    uploadedVideo = null;
+    uploadedCaptions = null;
+    photosInput.value = "";
+    videoInput.value = "";
+    captionsInput.value = "";
+    photoOrderNames = [];
+    photoOrderMode = "files";
+    photoSlots.forEach(function (slot) { slot.hidden = true; slot.removeAttribute("src"); });
+    previewVideo.pause();
+    previewVideo.removeAttribute("src");
+    previewVideo.hidden = true;
+    showExistingMedia(person.media || []);
+    restoreDraftFields(person.form);
+    setStoryBlocks(person.storyBlocks || [], true, person.storyEmpty === true);
+    processedPhotos = (person.photos || []).slice();
+    if (processedPhotos.some(Boolean)) {
+      photoOrderMode = "files";
+      photoOrderNames = processedPhotos.map(function (file) { return file ? file.name : ""; });
+    }
+    if (Array.isArray(person.library)) {
+      setPhotoLibrary(person.library.map(function (item, index) {
+        return Object.assign({}, item, { file: item.file || (item.local ? processedPhotos[index] : null) });
+      }));
+    } else {
+      setPhotoLibrary(processedPhotos.some(Boolean)
+        ? processedPhotos.filter(Boolean).map(function (file) { return { key: crypto.randomUUID(), file: file }; })
+        : orderedExistingImages().map(function (media) { return { key: media.path, media: media }; }));
+    }
+    savedVideoFile = person.video || null;
+    savedCaptionsFile = person.captions || null;
+    if (savedVideoFile) {
+      previewVideo.src = URL.createObjectURL(savedVideoFile);
+      previewVideo.hidden = false;
+      setVideoSlotVisible(true);
+    }
+    renderPhotoFileList(photoOrderNames);
+    updatePhotoDescriptionVisibility(photoOrderNames);
+    renderPhotoOrder();
+    syncDatePickersFromHidden();
+    renderStoryBlockEditor();
+    syncPreview();
+    applyLayout(initialPersonLayout);
+    applyLayout(person.layout || {});
+    refreshOrderedPhotoPreviews();
+    refreshResponsiveStage(true);
+    undoHistory = person.undo ? person.undo.slice() : [];
+    redoHistory = person.redo ? person.redo.slice() : [];
+    if (!undoHistory.length) recordEditorHistory(true);
+    else {
+      lastHistoryJson = JSON.stringify(editorHistorySnapshot());
+      syncEditorHistoryButtons();
+    }
+  }
+
+  async function switchPerson(index, skipCapture) {
+    if (groupBusy || submitButton.disabled || index === activePerson || !groupPeople[index]) return;
+    groupBusy = true;
+    groupType.disabled = true;
+    form.inert = true;
+    form.setAttribute("aria-busy", "true");
+    try {
+      await photoSyncPromise;
+      await waitForAuxiliaryMediaPersistence(true);
+      if (!skipCapture) {
+        recordEditorHistory(false);
+        if (!saveDraftNow()) throw new Error("Prieš perjungdami žmogų išsaugokite jo nuotraukas.");
+      }
+      // Read first: a failed draft read must leave the visible person intact.
+      await readPersonFiles(groupPeople[index]);
+      clearTimeout(draftSaveTimer);
+      clearTimeout(historySaveTimer);
+      activePerson = index;
+      isRestoringDraft = true;
+      await applyPerson(groupPeople[index]);
+    } finally {
+      isRestoringDraft = false;
+      groupBusy = false;
+      groupType.disabled = false;
+      form.inert = false;
+      form.removeAttribute("aria-busy");
+      renderPeople();
+    }
+    saveDraftNow();
+  }
+
+  function setupGroupEditor() {
+    initialPersonLayout = collectLayout();
+    if (!Array.isArray(photoLibrary)) setPhotoLibrary(libraryFromCurrent());
+    capturePerson();
+    renderPeople();
+    renderPhotoOrder();
+    updateSaveLocation();
+    document.querySelectorAll("[data-editor-template]").forEach(function (button) {
+      button.addEventListener("click", function () { applyTemplate(button.dataset.editorTemplate); });
+    });
+    groupType.addEventListener("change", async function () {
+      if (groupBusy || submitButton.disabled) { renderPeople(); return; }
+      if (groupType.value === "single" && groupPeople.length > 1) {
+        groupType.value = "group";
+        statusEl.textContent = "Pirmiausia pašalinkite papildomus žmones iš grupės. Pagrindinis žmogus ir QR nuoroda išliks.";
+        return;
+      }
+      groupEnabled = groupType.value === "group";
+      unsavedChanges = true;
+      updateSaveLocation();
+      saveDraftNow();
+    });
+    document.getElementById("editor-person-add").addEventListener("click", async function () {
+      if (groupBusy || groupAdding || submitButton.disabled || groupPeople.length >= 8) return;
+      groupAdding = true;
+      renderPeople();
+      try {
+        await photoSyncPromise;
+        await waitForAuxiliaryMediaPersistence(true);
+        if (!saveDraftNow()) throw new Error("Nepavyko išsaugoti dabartinio žmogaus juodraščio.");
+        var blank = draftFormData();
+        Object.keys(blank).forEach(function (key) { blank[key] = key === "fono_spalva" ? "#ffffff" : ""; });
+        groupPeople.push({ key: "person-" + crypto.randomUUID(), id: "", form: blank,
+          storyBlocks: [], storyEmpty: true, layout: { __stage: { background: "#ffffff" } }, media: [] });
+        await switchPerson(groupPeople.length - 1);
+        unsavedChanges = true;
+        updateSaveLocation();
+      } catch (error) { groupError(error); }
+      finally { groupAdding = false; renderPeople(); }
+    });
+    document.getElementById("editor-person-photo").addEventListener("click", function () {
+      if (!groupBusy && !submitButton.disabled) photosInput.click();
+    });
+    document.getElementById("editor-person-remove").addEventListener("click", async function () {
+      if (groupBusy || submitButton.disabled || activePerson === 0) return;
+      if (!window.confirm("Pašalinti „" + AtminimasGroup.name(groupPeople[activePerson], activePerson) + "“ iš grupės?")) return;
+      try {
+        var removed = activePerson;
+        await switchPerson(0);
+        groupPeople.splice(removed, 1);
+        unsavedChanges = true;
+        updateSaveLocation();
+        saveDraftNow();
+      } catch (error) { groupError(error); }
+    });
+  }
+
+  async function saveGroup(onProgress) {
+    capturePerson();
+    if (groupEnabled && groupPeople.length < 2) throw new Error("Pridėkite dar vieną žmogų arba pasirinkite QR vienam žmogui.");
+    for (var i = 0; i < groupPeople.length; i++) {
+      var person = groupPeople[i];
+      if (!String(person.form.vardas || "").trim()) throw new Error("Įrašykite vardą: žmogus " + (i + 1) + ".");
+      var birth = person.form.gimimo_data;
+      var death = person.form.mirties_data;
+      if (birth && death && birth > death) throw new Error("Patikrinkite datas: " + AtminimasGroup.name(person, i) + ".");
+    }
+    var result;
+    for (var index = 0; index < groupPeople.length; index++) {
+      var current = groupPeople[index];
+      await readPersonFiles(current);
+      var options = { existingMedia: current.media || [], files: { photos: current.photos || [],
+        video: current.video, captions: current.captions }, layout: current.layout,
+        storyBlocks: current.storyBlocks, onProgress: onProgress,
+        photoItems: Array.isArray(current.library) ? current.library.map(function (item, index) {
+          return Object.assign({}, item, { file: item.file || (item.local ? current.photos[index] : null) });
+        }) : null };
+      var saved = current.id
+        ? await AtminimasApi.updateAtminimas(current.id, current.form, options)
+        : await AtminimasApi.createAtminimas(current.form, options);
+      current.id = saved.identifier;
+      current.media = saved.media;
+      current.library = saved.media.filter(function (item) { return item.type === "image"; })
+        .map(function (media) { return { key: media.path, media: media }; });
+      current.photos = [];
+      if (index === activePerson) { editingMedia = saved.media; adoptSavedPhotos(saved.media); }
+      // Persist each created ID immediately so a retry does not duplicate people.
+      saveDraftNow();
+      if (index === 0) result = saved;
+    }
+    await AtminimasApi.setGroupMembers(result.identifier, groupPeople.slice(1).map(function (person) { return person.id; }));
+    groupWasLinked = groupPeople.length > 1;
+    // Upload responses contain private object paths, so fetch signed previews before
+    // dropping local draft files or switching to another saved person.
+    var refreshed = await AtminimasApi.loadAtminimasBySlug(result.identifier);
+    var savedPeople = [refreshed.atminimas].concat(refreshed.members || []);
+    groupPeople.forEach(function (person) {
+      var savedPerson = savedPeople.find(function (item) { return item.id === person.id; });
+      if (savedPerson) person.media = savedPerson.media_json || [];
+      person.library = person.media.filter(function (item) { return item.type === "image"; })
+        .sort(function (a, b) { return a.order - b.order; }).map(function (media) { return { key: media.path, media: media }; });
+      person.photos = [];
+      person.video = null;
+      person.captions = null;
+      delete person.thumbnail;
+    });
+    processedPhotos = [];
+    savedVideoFile = null;
+    savedCaptionsFile = null;
+    photosInput.value = "";
+    videoInput.value = "";
+    captionsInput.value = "";
+    showExistingMedia(groupPeople[activePerson].media);
+    renderPeople();
+    result.media = groupPeople[0].media;
+    return result;
+  }
   var uploadedPhotos = [];
   var uploadedVideo = null;
   var uploadedCaptions = null;
@@ -878,8 +1315,27 @@
     }
   }
 
+  var renderedStoryStructure = "";
+  var renderedStoryBlocks = [];
   function renderStoryPreview() {
     if (!previewLongText) return;
+    var structure = JSON.stringify([selectedStoryPhotoIndex, storyBlocks.map(function (block) {
+      if (block.type === "text") return Object.assign({}, block, { text: !!String(block.text || "").trim() });
+      return [block, photoUrlAt(Number(block.photoOrder) - 1), storyPhotoAlt(block.photoOrder), storyPhotoCaption(block.photoOrder)];
+    })]);
+    if (structure === renderedStoryStructure && storyBlocks.length === renderedStoryBlocks.length &&
+      storyBlocks.every(function (block, index) { return block === renderedStoryBlocks[index]; })) {
+      // Keep images, focus and the text caret intact while typing. Only the text changed.
+      storyBlocks.forEach(function (block, index) {
+        if (block.type !== "text") return;
+        var text = previewLongText.querySelector("[data-story-preview-index='" + index + "'] [contenteditable='true']");
+        var value = String(block.text || "").trim();
+        if (text && text !== document.activeElement && text.textContent !== value) text.textContent = value;
+      });
+      return;
+    }
+    renderedStoryStructure = structure;
+    renderedStoryBlocks = Array.from(storyBlocks);
     previewLongText.innerHTML = "";
     stage.classList.add("has-story-blocks");
     var visibleBlocks = 0;
@@ -1501,7 +1957,7 @@
       }
       syncLegacyStoryText();
       updateStoryWordCount();
-      renderStoryPreview();
+      // The bubbled form input schedules one preview update for this frame.
       scheduleDraftSave();
     });
 
@@ -1922,8 +2378,9 @@
     });
   }
 
-  function draftFileKey(key) {
-    return DRAFT_FILE_PREFIX + key;
+  function draftFileKey(key, personKey) {
+    var person = personKey || (groupPeople[activePerson] && groupPeople[activePerson].key) || "main";
+    return DRAFT_FILE_PREFIX + (person === "main" ? "" : person + "-") + key;
   }
 
   async function persistDraftFileChanges(changes) {
@@ -2027,19 +2484,19 @@
     }
   }
 
-  async function getDraftFile(key) {
+  async function getDraftFile(key, personKey) {
     var db = await openDraftDb();
     if (!db) return null;
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
       var store = tx.objectStore(DRAFT_STORE);
-      var request = store.get(draftFileKey(key));
+      var request = store.get(draftFileKey(key, personKey));
       request.onsuccess = function () {
         var item = request.result;
         if (!item || !item.file) return resolve(null);
         var retainedAt = Math.max(Number(item.savedAt) || 0, draftSavedAtMs);
         if (!retainedAt || Date.now() - retainedAt > DRAFT_TTL_MS) {
-          store.delete(draftFileKey(key));
+          store.delete(draftFileKey(key, personKey));
           return resolve(null);
         }
         if (item.file instanceof File) return resolve(item.file);
@@ -2058,9 +2515,13 @@
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(DRAFT_STORE, "readwrite");
       var store = tx.objectStore(DRAFT_STORE);
-      for (var i = 0; i < MAX_PHOTOS; i++) store.delete(draftFileKey("photo-" + i));
-      store.delete(draftFileKey("video"));
-      store.delete(draftFileKey("captions"));
+      var cursorRequest = store.openCursor();
+      cursorRequest.onsuccess = function () {
+        var cursor = cursorRequest.result;
+        if (!cursor) return;
+        if (String(cursor.key).indexOf(DRAFT_FILE_PREFIX) === 0) cursor.delete();
+        cursor.continue();
+      };
       tx.oncomplete = function () { resolve(); };
       tx.onerror = function () { reject(tx.error); };
     });
@@ -2076,6 +2537,8 @@
   }
 
   async function discardCurrentDraft() {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
     localStorage.removeItem(DRAFT_KEY);
     draftSavedAtMs = 0;
     await clearDraftFiles();
@@ -2135,6 +2598,7 @@
 
   function editorHistorySnapshot() {
     return {
+      library: Array.isArray(photoLibrary) ? photoLibrary.slice() : null,
       form: draftFormData(),
       storyBlocks: collectStoryBlocks(true),
       storyEmpty: storyEmptyMode,
@@ -2172,6 +2636,11 @@
     historyRestoring = true;
     clearTimeout(historySaveTimer);
     restoreDraftFields(snapshot.form);
+    if (Array.isArray(snapshot.library)) {
+      var libraryChanged = !photoLibrary || snapshot.library.length !== photoLibrary.length || snapshot.library.some(function (item, index) { return !photoLibrary[index] || item.key !== photoLibrary[index].key || item.file !== photoLibrary[index].file; });
+      setPhotoLibrary(snapshot.library);
+      if (libraryChanged) photoSyncPromise = persistPhotoLibrary().catch(groupError);
+    }
     setStoryBlocks(snapshot.storyBlocks, true, snapshot.storyEmpty);
     syncDatePickersFromHidden();
     setBackgroundColor(snapshot.form && snapshot.form.fono_spalva, false);
@@ -2213,6 +2682,8 @@
   }
 
   function saveDraftNow() {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
     if (isRestoringDraft) return false;
     if (photosProcessing) {
       setDraftState("Nuotraukos ruošiamos…", "saving");
@@ -2230,6 +2701,7 @@
       var savedAt = new Date();
       draftSavedAtMs = savedAt.getTime();
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        group: groupDraft(),
         form: draftFormData(),
         storyBlocks: collectStoryBlocks(true),
         storyEmpty: storyEmptyMode,
@@ -2250,9 +2722,11 @@
   }
 
   function scheduleDraftSave() {
+    unsavedChanges = true;
+    updateSaveLocation();
     clearTimeout(draftSaveTimer);
     setDraftState("Saugomi pakeitimai…", "saving");
-    draftSaveTimer = setTimeout(saveDraftNow, 150);
+    draftSaveTimer = setTimeout(saveDraftNow, 500);
     scheduleEditorHistory();
   }
 
@@ -2302,6 +2776,13 @@
   }
 
   function photoUrlAt(index) {
+    if (photoOrderMode === "library" && photoLibrary) {
+      var item = photoLibrary[index];
+      if (!item) return "";
+      if (!item.file) return item.media && item.media.url || "";
+      if (!photoPreviewUrls.has(item.file)) photoPreviewUrls.set(item.file, URL.createObjectURL(item.file));
+      return photoPreviewUrls.get(item.file);
+    }
     if (photoOrderMode === "existing") {
       var existing = orderedExistingImages()[index];
       return existing && existing.url ? existing.url : "";
@@ -2324,12 +2805,9 @@
         if (empty) empty.hidden = false;
         continue;
       }
-      slot.src = url;
+      slot.onload = function () { scheduleStageFit(true); };
+      if (slot.getAttribute("src") !== url) slot.src = url;
       slot.hidden = false;
-      if (photoOrderMode === "files") slot.onload = function () {
-        setFrameToImageRatio(this, this);
-        scheduleStageFit(true);
-      };
       if (empty) empty.hidden = true;
     }
     scheduleStageFit(true);
@@ -2350,7 +2828,7 @@
   }
 
   async function persistProcessedPhotoOrder() {
-    if (photoOrderMode !== "files") {
+    if (photoOrderMode !== "files" && photoOrderMode !== "library") {
       photoDraftPersistenceFailed = false;
       return;
     }
@@ -2387,7 +2865,7 @@
       throw new Error("Ši naršyklė negali saugiai išlaikyti pasirinktų failų. Prisijunkite prieš pasirinkdami failus.");
     }
     var changes = [];
-    if (photoOrderMode === "files") {
+    if (photoOrderMode === "files" || photoOrderMode === "library") {
       for (var i = 0; i < MAX_PHOTOS; i++) {
         changes.push({ key: "photo-" + i, file: processedPhotos[i] || null });
       }
@@ -2408,7 +2886,7 @@
         auxiliaryMediaPersistenceFailed.video = false;
         auxiliaryMediaPersistenceFailed.captions = false;
       } else {
-        if (photoOrderMode === "files") photoDraftPersistenceFailed = true;
+        if (photoOrderMode === "files" || photoOrderMode === "library") photoDraftPersistenceFailed = true;
         auxiliaryMediaPersistenceFailed.video = true;
         auxiliaryMediaPersistenceFailed.captions = true;
         throw err;
@@ -2423,6 +2901,16 @@
       return;
     }
     if (from === to || from < 0 || to < 0 || from >= photoOrderNames.length || to >= photoOrderNames.length) return;
+    if (photoOrderMode === "library") {
+      recordEditorHistory(false);
+      var moved = photoLibrary.splice(from, 1)[0];
+      photoLibrary.splice(to, 0, moved);
+      remapStoryPhotoOrder(from, to);
+      movePhotoFields(from, to);
+      setPhotoLibrary(photoLibrary);
+      photoSyncPromise = persistPhotoLibrary().catch(groupError);
+      return;
+    }
     remapStoryPhotoOrder(from, to);
     var name = photoOrderNames.splice(from, 1)[0];
     photoOrderNames.splice(to, 0, name);
@@ -2507,6 +2995,22 @@
       item.appendChild(preview);
       item.appendChild(copy);
       item.appendChild(controls);
+      var photoActions = document.createElement("div");
+      photoActions.className = "editor-library-actions";
+      [
+        ["portrait", index === 0 ? "★ Pagrindinis portretas" : "Pasirinkti portretu"],
+        ["replace", "Pakeisti"], ["remove", "Pašalinti"]
+      ].forEach(function (action) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.dataset.libraryAction = action[0];
+        button.textContent = action[1];
+        button.disabled = photosProcessing;
+        button.setAttribute("aria-label", action[1] + ": " + (index + 1) + " nuotrauka");
+        if (action[0] === "portrait") button.setAttribute("aria-pressed", String(index === 0));
+        photoActions.appendChild(button);
+      });
+      item.appendChild(photoActions);
       photoOrderEl.appendChild(item);
 
       handle.addEventListener("pointerdown", function (event) {
@@ -2530,6 +3034,15 @@
 
   if (photoOrderEl) {
     photoOrderEl.addEventListener("click", function (event) {
+      var action = event.target.closest("[data-library-action]");
+      if (action) {
+        var index = Number(action.closest("[data-photo-order-index]").dataset.photoOrderIndex);
+        if (photosProcessing || groupBusy) return;
+        if (action.dataset.libraryAction === "remove") removePhoto(index);
+        if (action.dataset.libraryAction === "portrait") choosePortrait(index);
+        if (action.dataset.libraryAction === "replace") { replacingPhotoIndex = index; replacePhotoInput.click(); }
+        return;
+      }
       var button = event.target.closest("[data-photo-move]");
       if (!button) return;
       var item = button.closest("[data-photo-order-index]");
@@ -2539,6 +3052,7 @@
   }
 
   async function restoreDraftMedia() {
+    var savedLibrary = groupPeople[activePerson] && groupPeople[activePerson].library;
     var restoredNames = [];
     for (var i = 0; i < MAX_PHOTOS; i++) {
       var photo = await getDraftFile("photo-" + i);
@@ -2553,7 +3067,7 @@
       slot.hidden = false;
       if (empty) empty.hidden = true;
     }
-    if (restoredNames.some(Boolean) || !editId) {
+    if (!Array.isArray(savedLibrary) && (restoredNames.some(Boolean) || !editId)) {
       photoOrderMode = "files";
       photoOrderNames = restoredNames.filter(Boolean);
       reconcileStoryPhotoBlocks(photoOrderNames.length, false);
@@ -2578,6 +3092,20 @@
     }
     var captions = await getDraftFile("captions");
     if (captions) savedCaptionsFile = captions;
+    if (Array.isArray(savedLibrary)) {
+      setPhotoLibrary(savedLibrary.map(function (item, index) {
+        var file = item.local ? processedPhotos[index] : null;
+        if (item.local && !file) throw new Error("Juodraščio nuotraukos failas nepasiekiamas. Atnaujinkite puslapį.");
+        return Object.assign({}, item, { file: file });
+      }));
+    } else {
+      photoLibrary = null;
+      setPhotoLibrary(libraryFromCurrent());
+    }
+    renderPhotoFileList(photoOrderNames);
+    updatePhotoDescriptionVisibility(photoOrderNames);
+    renderPhotoOrder();
+    refreshOrderedPhotoPreviews();
     scheduleStageFit(true);
   }
 
@@ -2603,6 +3131,31 @@
         return false;
       }
       draftSavedAtMs = savedAt;
+      if (draft.group && Array.isArray(draft.group.people) && draft.group.people.length) {
+        var freshPeople = groupPeople.slice();
+        groupPeople = draft.group.people.slice(0, 8);
+        groupPeople.forEach(function (person) {
+          var fresh = freshPeople.find(function (item) { return item.id && item.id === person.id; });
+          if (!fresh) return;
+          person.media = (person.media || []).map(function (media) {
+            var renewed = (fresh.media || []).find(function (item) { return item.path === media.path; });
+            return renewed ? Object.assign({}, media, { url: renewed.url, unavailable: renewed.unavailable }) : media;
+          });
+          if (Array.isArray(person.library)) person.library.forEach(function (item) {
+            if (!item.media) return;
+            var renewed = (fresh.media || []).find(function (media) { return media.path === item.media.path; });
+            if (renewed) item.media = Object.assign({}, item.media, { url: renewed.url, unavailable: renewed.unavailable });
+          });
+        });
+        groupEnabled = draft.group.enabled === true;
+        activePerson = Math.max(0, Math.min(groupPeople.length - 1, Number(draft.group.active) || 0));
+        for (var personIndex = 0; personIndex < groupPeople.length; personIndex++) {
+          var draftPerson = groupPeople[personIndex];
+          var portrait = await getDraftFile("photo-0", draftPerson.key);
+          if (portrait) draftPerson.thumbnail = URL.createObjectURL(portrait);
+        }
+        showExistingMedia(groupPeople[activePerson].media || []);
+      }
       if (editorSteps.indexOf(draft.step) >= 0) currentEditorStep = draft.step;
       storyBlocks = [];
       storyBlocksLoaded = false;
@@ -2612,19 +3165,15 @@
       }
       applyLayout(draft.layout);
       await restoreDraftMedia();
+      unsavedChanges = true;
+      updateSaveLocation();
       statusEl.textContent = "Atkurta paskutinė neišsaugota versija.";
       setDraftState("Atkurtas ankstesnis juodraštis", "saved");
       return true;
     } catch (err) {
       console.warn("Draft restore failed", err);
-      localStorage.removeItem(DRAFT_KEY);
-      draftSavedAtMs = 0;
-      try {
-        await clearDraftFiles();
-      } catch (cleanupError) {
-        console.warn("Invalid draft cleanup failed", cleanupError);
-      }
-      return false;
+      // A temporary IndexedDB failure must never erase the recoverable draft.
+      throw err;
     } finally {
       isRestoringDraft = false;
     }
@@ -2686,6 +3235,7 @@
     } else {
       setVideoSlotVisible(false);
     }
+    setPhotoLibrary(images.map(function (media) { return { key: media.path, media: media }; }));
     scheduleStageFit(true);
   }
 
@@ -2693,6 +3243,16 @@
     if (!editId) return;
     var loaded = await AtminimasApi.loadAtminimasBySlug(editId);
     var profile = loaded.atminimas || {};
+    accountSaved = true;
+    pageIsPublic = loaded.is_public === true;
+    updateSaveLocation();
+    groupPeople = [profile].concat(loaded.members || []).map(function (person, index) {
+      return { id: person.id, key: index === 0 ? "main" : "saved-" + person.id,
+        form: Object.assign({}, draftFormData(), person, { fono_spalva: person.layout_json && person.layout_json.__stage && person.layout_json.__stage.background || "#ffffff" }),
+        storyBlocks: person.story_blocks_json || [], layout: person.layout_json || {}, media: person.media_json || [] };
+    });
+    groupEnabled = groupPeople.length > 1;
+    groupWasLinked = groupEnabled;
     ["vardas", "pavarde", "gimimo_data", "mirties_data", "epitafija", "tekstas_200"].forEach(function (name) {
       if (form.elements[name]) form.elements[name].value = profile[name] || "";
     });
@@ -2895,66 +3455,51 @@
     scheduleStageFit(true);
   }
 
-  async function syncPhotos() {
+  async function syncPhotos(selectedFiles, replacementIndex) {
     clearTimeout(draftSaveTimer);
-    setDraftState("Nuotraukos ruošiamos…", "saving");
     photoPreparationFailed = false;
     photoDraftPersistenceFailed = false;
     var generation = ++photoProcessingGeneration;
-    var allFiles = Array.prototype.slice.call(photosInput.files || []);
-    var files = allFiles.slice(0, MAX_PHOTOS);
-    var previousPhotoCount = storyPhotoCount();
-    photoOrderMode = "files";
-    photoOrderNames = files.map(function (file) { return file.name; });
-    reconcileStoryPhotoBlocks(
-      photoOrderNames.length,
-      true,
-      previousPhotoCount + 1
-    );
-    photosProcessing = true;
-    processedPhotos = [];
-    var localProcessedPhotos = new Array(files.length);
-    photoSlots.forEach(function (slot) {
-      var wrap = slot.closest(".editor-photo-slot");
-      var empty = wrap ? wrap.querySelector(".editor-empty-photo") : null;
-      slot.hidden = true;
-      slot.removeAttribute("src");
-      if (empty) empty.hidden = false;
-    });
-    var localCropPromises = files.map(function (file, index) {
-      return autoCropBlackBorders(file).catch(function (err) {
-        console.warn("Photo optimization failed", err);
-        return file;
-      }).then(function (cropped) {
-        localProcessedPhotos[index] = cropped;
-        return cropped;
-      });
-    });
-    renderPhotoFileList(files.map(function (file) { return file.name; }));
-    updatePhotoDescriptionVisibility(photoOrderNames);
-    renderPhotoOrder();
-    statusEl.textContent = files.length ? "Nuotraukos optimizuojamos…" : "";
-    await Promise.all(localCropPromises);
-    if (generation !== photoProcessingGeneration) return;
-    processedPhotos = localProcessedPhotos;
-    await autoArrangeNewStoryPhotos(processedPhotos, previousPhotoCount + 1);
-    if (generation !== photoProcessingGeneration) return;
-    try {
-      await persistProcessedPhotoOrder();
-    } catch (err) {
-      console.warn("Processed photo draft persistence failed", err);
-      setDraftState("Nuotraukų juodraščio nepavyko išsaugoti", "error");
+    var previous = libraryFromCurrent();
+    var replacing = Number.isInteger(replacementIndex) && replacementIndex >= 0;
+    var allFiles = Array.prototype.slice.call(selectedFiles || photosInput.files || []);
+    if (!allFiles.length) return;
+    if (replacing && !previous[replacementIndex]) throw new Error("Pasirinkta nuotrauka neberasta.");
+    var capacity = replacing ? 1 : MAX_PHOTOS - previous.length;
+    if (capacity <= 0) { statusEl.textContent = "Jau įkeltos 8 nuotraukos. Pašalinkite arba pakeiskite vieną iš jų."; return; }
+    var files = allFiles.slice(0, capacity);
+    if (files.some(function (file) { return !/^image\//.test(file.type) || file.size > 20 * 1024 * 1024; })) {
+      throw new Error("Pasirinkite nuotraukas iki 20 MB. Geriausiai tinka JPG, PNG arba WebP.");
     }
-    if (generation !== photoProcessingGeneration) return;
-    photosProcessing = false;
+    photosProcessing = true;
+    photosInput.disabled = true;
+    setDraftState("Nuotraukos ruošiamos…", "saving");
+    recordEditorHistory(false);
     renderPhotoOrder();
-    refreshOrderedPhotoPreviews();
-    renderStoryBlockEditor();
-    scheduleStageFit(true);
-    if (!photoDraftPersistenceFailed) scheduleDraftSave();
-    statusEl.textContent = allFiles.length > MAX_PHOTOS
-      ? "Bus išsaugotos tik pirmos " + MAX_PHOTOS + " nuotraukos."
-      : (files.length ? "Paruošta nuotraukų: " + files.length + ". Pradinis dydis ir vieta parinkti automatiškai – juos galite keisti iškart kortelėje." : "");
+    try {
+      var prepared = await Promise.all(files.map(function (file) { return autoCropBlackBorders(file); }));
+      if (generation !== photoProcessingGeneration) return;
+      var incoming = prepared.map(function (file) { return { key: crypto.randomUUID(), file: file }; });
+      if (replacing) previous[replacementIndex] = incoming[0];
+      else previous = previous.concat(incoming);
+      setPhotoLibrary(previous);
+      if (!replacing) {
+        var firstNew = previous.length - incoming.length + 1;
+        reconcileStoryPhotoBlocks(previous.length, true, firstNew);
+        await autoArrangeNewStoryPhotos(processedPhotos, firstNew);
+      }
+      await persistProcessedPhotoOrder();
+      photosInput.value = "";
+      if (replacePhotoInput) replacePhotoInput.value = "";
+    } finally {
+      photosProcessing = false;
+      photosInput.disabled = false;
+      refreshPhotoLibrary();
+    }
+    scheduleDraftSave();
+    statusEl.textContent = replacing ? "Pasirinkta nuotrauka pakeista. Kitos nuotraukos išliko."
+      : "Pridėta nuotraukų: " + files.length + ". Iš viso: " + photoLibrary.length + " iš 8." +
+        (allFiles.length > capacity ? " Likusioms nuotraukoms nebeužteko vietos." : "");
   }
 
   function pct(value, total) {
@@ -3586,10 +4131,15 @@
     return layout;
   }
 
-  form.addEventListener("input", function () {
-    syncPreview();
-    scheduleStageFit(false);
+  form.addEventListener("input", function (event) {
+    if (!event.target.closest("[contenteditable='true']")) schedulePreviewUpdate();
     scheduleDraftSave();
+  });
+  window.addEventListener("pagehide", function () {
+    if (draftSaveTimer !== null) saveDraftNow();
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden" && draftSaveTimer !== null) saveDraftNow();
   });
   form.addEventListener("focusout", function () { scheduleStageFit(true); });
   window.addEventListener("resize", function () { refreshResponsiveStage(true); });
@@ -3603,6 +4153,16 @@
       statusEl.textContent = "Nuotraukų paruošti nepavyko. Bandykite pasirinkti failus dar kartą.";
       setDraftState("Nuotraukų juodraščio nepavyko išsaugoti", "error");
       console.warn("Photo preparation failed", err);
+    });
+  });
+  if (replacePhotoInput) replacePhotoInput.addEventListener("change", function () {
+    var index = replacingPhotoIndex;
+    replacingPhotoIndex = -1;
+    if (!replacePhotoInput.files.length) return;
+    photoSyncPromise = syncPhotos(replacePhotoInput.files, index).catch(function (error) {
+      photoPreparationFailed = true;
+      statusEl.textContent = error.message || "Nuotraukos pakeisti nepavyko. Bandykite dar kartą.";
+      setDraftState("Nuotraukos pakeisti nepavyko", "error");
     });
   });
   videoInput.addEventListener("change", function () {
@@ -3739,6 +4299,7 @@
     var data = formData();
     showSaveProgress(10, "Ruošiamos nuotraukos…");
     submit.disabled = true;
+    form.inert = true;
     resultBox.hidden = true;
     try {
     await photoSyncPromise;
@@ -3773,8 +4334,11 @@
         var fraction = total ? done / total : 1;
         showSaveProgress(28 + fraction * 58, total ? "Įkeliami failai: " + done + " iš " + total + "…" : "Saugomas puslapis…");
       }
-      var result = editId
+      var result = groupEnabled || groupWasLinked || groupPeople.length > 1
+        ? await saveGroup(onUploadProgress)
+        : editId
         ? await AtminimasApi.updateAtminimas(editId, data, {
+            photoItems: photoItemsForSave(),
             existingMedia: editingMedia,
              files: {
                photos: photosUnchanged ? [] : photos,
@@ -3786,12 +4350,15 @@
              onProgress: onUploadProgress
           })
         : await AtminimasApi.createAtminimas(data, {
+             photoItems: photoItemsForSave(),
              files: { photos: photos, video: video, captions: captions },
              layout: collectLayout(),
              storyBlocks: collectStoryBlocks(true),
              onProgress: onUploadProgress
           });
-      editingMedia = result.media || editingMedia;
+      if (!groupEnabled) { editingMedia = result.media || editingMedia; adoptSavedPhotos(editingMedia); }
+      markAccountSaved();
+      if (groupPeople.length) groupPeople[0].id = result.identifier;
       uploadedPhotos = photos.slice();
       uploadedVideo = video;
       uploadedCaptions = captions;
@@ -3826,6 +4393,7 @@
       }
       if (isAdminPrototype) {
         var prototype = await AtminimasApi.publishAdminPrototype(result.identifier);
+        markAccountSaved(true);
         prototypePublishPending = false;
         var prototypePageUrl = prototype.page_url ||
           ("sablonas-viskas.html?slug=" + encodeURIComponent(result.identifier));
@@ -3886,6 +4454,7 @@
       setDraftState("Išsaugoti nepavyko", "error");
     } finally {
       submit.disabled = false;
+      form.inert = false;
       window.setTimeout(hideSaveProgress, 1800);
     }
   });
@@ -3967,9 +4536,19 @@
     bindStretch();
     bindCrop();
     setupEditorHistory();
+    setupGroupEditor();
   }
 
-  initEditor();
+  initEditor().catch(function (error) {
+    console.error("Editor initialization failed", error);
+    statusEl.textContent = "Redaktoriaus įkelti nepavyko. Jūsų juodraštis lieka šiame įrenginyje. Atnaujinkite puslapį ir bandykite dar kartą.";
+    statusEl.dataset.state = "error";
+    submitButton.disabled = true;
+    form.inert = true;
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
+    setDraftState("Redaktoriaus įkelti nepavyko", "error");
+  });
 })();
 
 

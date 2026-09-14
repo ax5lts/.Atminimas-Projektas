@@ -299,7 +299,7 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertIn("++photoProcessingGeneration", sync_photos)
         self.assertIn("generation !== photoProcessingGeneration", sync_photos)
-        self.assertIn("localProcessedPhotos", sync_photos)
+        self.assertIn("var prepared = await Promise.all", sync_photos)
         self.assertIn("await persistProcessedPhotoOrder()", sync_photos)
         self.assertIn("clearTimeout(draftSaveTimer)", sync_photos)
         self.assertIn("photosProcessing", save_draft)
@@ -309,7 +309,7 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertRegex(
             sync_photos,
-            r"previousPhotoCount\s*\+\s*1",
+            r"previous.length\s*-\s*incoming.length\s*\+\s*1",
         )
 
     def test_editor_enforces_the_shared_flattened_text_limit(self):
@@ -618,7 +618,7 @@ class StoryBlocksContractTests(unittest.TestCase):
         self.assertIn("block.widthPct = 86", automatic)
         self.assertIn("block.widthPct = 72", automatic)
         self.assertIn(
-            "await autoArrangeNewStoryPhotos(processedPhotos, previousPhotoCount + 1)",
+            "await autoArrangeNewStoryPhotos(processedPhotos, firstNew)",
             self.editor_js,
         )
 
@@ -690,11 +690,7 @@ class StoryBlocksContractTests(unittest.TestCase):
         )
         self.assertIn("hasDraftMediaPersistenceFailure()", save_draft)
         self.assertIn("photoDraftPersistenceFailed = true", persist_photos)
-        self.assertRegex(
-            sync_photos,
-            r"if\s*\(\s*!photoDraftPersistenceFailed\s*\)\s*"
-            r"scheduleDraftSave\(\)",
-        )
+        self.assertLess(sync_photos.index("await persistProcessedPhotoOrder()"), sync_photos.index("scheduleDraftSave()"))
         self.assertIn("photoPreparationFailed = true", self.editor_js)
         self.assertGreaterEqual(
             self.editor_js.count("if (photoPreparationFailed)"),

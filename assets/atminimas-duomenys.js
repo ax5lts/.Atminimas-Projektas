@@ -260,6 +260,32 @@
     return media;
   }
 
+  async function uploadPhotoItems(identifier, items, onProgress) {
+    var ownerId = global.AtminimasAuth && global.AtminimasAuth.userId();
+    if (!ownerId) throw new Error("Nuotraukoms išsaugoti būtina prisijungti.");
+    if (!Array.isArray(items) || items.length > 8) throw new Error("Galima turėti iki 8 nuotraukų.");
+    var media = [];
+    var total = items.filter(function (item) { return !!item.file; }).length;
+    var done = 0;
+    for (var index = 0; index < items.length; index++) {
+      var item = items[index];
+      var saved;
+      if (item.file) {
+        var path = ownerId + "/" + identifier + "/photo-" + (index + 1) + "-" +
+          global.crypto.randomUUID().replace(/-/g, "") + "." + fileExt(item.file);
+        var url = await uploadOneFile("atminimas", path, item.file, false);
+        saved = { type: "image", path: path, url: url };
+        done += 1;
+        if (onProgress) onProgress(done, total);
+      } else if (item.media && item.media.path) {
+        saved = Object.assign({}, item.media);
+      } else throw new Error("Nuotraukos failas nepasiekiamas. Pasirinkite jį dar kartą.");
+      saved.order = index + 1;
+      media.push(saved);
+    }
+    return media;
+  }
+
   function getPageSlug() {
     var params = new URLSearchParams(global.location.search);
     return (params.get("id") || params.get("slug") || params.get("s") || "demo").trim();
@@ -277,7 +303,7 @@
     if (!res.ok || !data.atminimas) {
       throw new Error("Atminimo puslapio įkelti nepavyko.");
     }
-    return { atminimas: data.atminimas, can_manage: !!data.can_manage };
+    return { atminimas: data.atminimas, members: Array.isArray(data.members) ? data.members : [], can_manage: !!data.can_manage, is_public: data.is_public === true };
   }
 
   async function createAtminimas(input, options) {
@@ -294,7 +320,10 @@
     var layout = options && options.layout ? options.layout : {};
     var storyBlocks = storyBlocksForInput(input, options);
 
-    if (options && options.files) {
+    if (options && Array.isArray(options.photoItems)) {
+      media = await uploadPhotoItems(identifier, options.photoItems, options.onProgress);
+      media = media.concat(await uploadBuilderMedia(identifier, Object.assign({}, options.files, { photos: [] }), false, options.onProgress));
+    } else if (options && options.files) {
       media = await uploadBuilderMedia(identifier, options.files, false, options.onProgress);
     }
 
@@ -367,6 +396,8 @@
     var storyBlocks = storyBlocksForInput(input, options);
     var existing = Array.isArray(options && options.existingMedia) ? options.existingMedia.slice() : [];
     var files = options && options.files ? options.files : {};
+    var photoItems = options && Array.isArray(options.photoItems) ? options.photoItems : null;
+    if (photoItems) files = Object.assign({}, files, { photos: [] });
     var hasPhotos = !!(files.photos && files.photos.length);
     var hasVideo = !!files.video;
     var hasCaptions = !!files.captions;
@@ -374,11 +405,12 @@
       ? await uploadBuilderMedia(identifier, files, true, options && options.onProgress)
       : [];
     var media = existing.filter(function (item) {
-      if (item.type === "image" && hasPhotos) return false;
+      if (item.type === "image" && (hasPhotos || photoItems)) return false;
       if (item.type === "video" && hasVideo) return false;
       if (item.type === "captions" && hasCaptions) return false;
       return true;
     }).concat(uploaded);
+    if (photoItems) media = (await uploadPhotoItems(identifier, photoItems, options.onProgress)).concat(media);
 
     var imageIndex = 0;
     media.forEach(function (item) {
@@ -411,7 +443,12 @@
     return manageProfile({ action: "delete", profile_id: identifier });
   }
 
+  async function setGroupMembers(identifier, members) {
+    return manageProfile({ action: "set_group_members", profile_id: identifier, members: members });
+  }
+
   global.AtminimasApi = {
+    setGroupMembers: setGroupMembers,
     getPageSlug: getPageSlug,
     loadAtminimasBySlug: loadAtminimasBySlug,
     createAtminimas: createAtminimas,

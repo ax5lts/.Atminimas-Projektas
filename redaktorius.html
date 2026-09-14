@@ -46,6 +46,7 @@
             Administratoriaus prototipas: puslapis ir QR bus paskelbti be užsakymo bei mokėjimo.
           </p>
           <span class="editor-draft-state" id="editor-draft-state" role="status">Juodraštis saugomas automatiškai</span>
+          <p id="editor-save-location" class="editor-save-location" role="status" aria-live="polite">Juodraštis šiame įrenginyje · dar neišsaugotas paskyroje</p>
         </div>
       </div>
       <div class="editor-utility-bar" aria-label="Redaktoriaus veiksmai">
@@ -71,6 +72,16 @@
       <p class="editor-step-status" id="editor-step-status" role="status" aria-live="polite">1 žingsnis iš 3: Turinys</p>
       <div class="editor-step-progress" role="progressbar" aria-label="Puslapio kūrimo eiga" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-valuetext="1 žingsnis iš 3: Turinys"><span id="editor-step-progress"></span></div>
       <form id="editor-form" class="editor-form" novalidate aria-describedby="editor-step-status">
+        <section class="editor-group" aria-label="QR kodo tipas">
+          <label for="editor-group-type">Kam skirtas QR kodas?</label>
+          <select id="editor-group-type"><option value="single">Vienam žmogui</option><option value="group">Grupei – keliems žmonėms</option></select>
+          <div id="editor-group-controls" hidden>
+            <p>Vienas QR kodas visiems. Pasirinkite žmogų ir kurkite jo atminimo puslapį. Kortelėje bus rodomas pasirinktas pagrindinis portretas.</p>
+            <div id="editor-people" class="memorial-people" aria-label="Pasirinkite redaguojamą žmogų"></div>
+            <div class="editor-group-actions"><button type="button" id="editor-person-add">+ Pridėti žmogų</button><button type="button" id="editor-person-photo">Įkelti šio žmogaus nuotraukas</button><button type="button" id="editor-person-remove">Pašalinti iš grupės</button></div>
+            <p id="editor-person-status" role="status" aria-live="polite"></p>
+          </div>
+        </section>
         <section class="editor-step is-active" id="editor-section-text" data-editor-step="text" aria-labelledby="editor-step-text-title" aria-hidden="false">
           <header class="editor-step__header">
             <span>1 žingsnis iš 3</span>
@@ -164,10 +175,11 @@
               </ol>
             </details>
             <label class="editor-story-upload">
-              <span><strong>Nuotraukos</strong><small>Iki 8 nuotraukų. Pasirinkus failus, jų kortelės atsiras istorijoje automatiškai.</small></span>
+              <span><strong>Pridėti nuotraukų</strong><small>Iki 8 nuotraukų kiekvienam žmogui. Naujos nuotraukos pridedamos prie esamų. Pažymėkite, kuri bus pagrindinis portretas.</small></span>
               <input type="file" name="photos" id="editor-photos" accept="image/*" multiple>
               <span class="editor-file-help" id="editor-photo-file-list">Nuotraukos dar nepasirinktos.</span>
             </label>
+            <input type="file" id="editor-replace-photo" accept="image/*" hidden aria-label="Pasirinkti nuotrauką pakeitimui">
             <div class="editor-photo-order editor-photo-order--story" id="editor-photo-order" hidden aria-label="Nuotraukų eiliškumas"></div>
             <textarea name="tekstas_200" id="editor-story-legacy" maxlength="10000" hidden aria-hidden="true" tabindex="-1"></textarea>
             <div class="editor-story-blocks" id="editor-story-blocks" data-story-blocks role="list" aria-label="Gyvenimo istorijos turinio blokai"></div>
@@ -186,6 +198,16 @@
             <h2 id="editor-step-colors-title" tabindex="-1">Dizainas</h2>
             <p>Pasirinkite foną. Jei nereikia vaizdo įrašo ar papildomų aprašymų, iškart tęskite į peržiūrą.</p>
           </header>
+          <fieldset class="editor-templates">
+            <legend>Paruoštas išdėstymas</legend>
+            <p>Pasirinkite, kaip išdėstyti šio žmogaus nuotraukas ir istoriją. Visi tekstai ir nuotraukos išliks.</p>
+            <div class="editor-template-options">
+              <button type="button" data-editor-template="portrait"><span class="template-mini template-mini--portrait" aria-hidden="true">▣<i></i><i></i></span><strong>Portretas ir istorija</strong><small>Didelis portretas, po juo – prisiminimai.</small></button>
+              <button type="button" data-editor-template="album"><span class="template-mini template-mini--album" aria-hidden="true">▣ ▣<br>▣ ▣</span><strong>Nuotraukų albumas</strong><small>Nuotraukos iš eilės, tekstai – žemiau.</small></button>
+              <button type="button" data-editor-template="family"><span class="template-mini template-mini--family" aria-hidden="true">▣<i></i>▣<i></i></span><strong>Šeimos atminimas</strong><small>Nuotraukos ir prisiminimai pakaitomis.</small></button>
+            </div>
+            <p id="editor-template-status" role="status" aria-live="polite">Galite pasirinkti išdėstymą arba kurti savaip.</p>
+          </fieldset>
           <fieldset class="editor-color-picker">
             <legend>Puslapio fonas</legend>
             <div class="editor-color-palette" id="editor-color-palette" role="group" aria-label="Natūralios fono spalvos">
@@ -436,6 +458,7 @@
 <script src="assets/product-catalog.js?v=20260724-2"></script>
 <script src="assets/atminimas-duomenys.js?v=20260908-1"></script>
 <script src="assets/plaque-design.js?v=20260908-1"></script>
+<script src="assets/memorial-group.js"></script>
 <script src="assets/redaktorius.js?v=20260908-2"></script>
 <script src="assets/loading.js?v=20260811-2"></script>
 <script src="assets/site-ui.js?v=20260908-1"></script>

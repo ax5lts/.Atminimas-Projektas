@@ -28,7 +28,7 @@ type MediaItem = {
 const PROFILE_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/i;
 const MEDIA_TYPES = new Set(["image", "video", "captions"]);
 const MEDIA_FILE_PATTERNS: Record<string, RegExp> = {
-  image: /^photo-[1-8]\.(?:jpg|jpeg|png|webp)$/,
+  image: /^photo-[1-8](?:-[0-9a-f]{32})?\.(?:jpg|jpeg|png|webp)$/,
   video: /^video\.(?:mp4|mov)$/,
   captions: /^captions\.vtt$/,
 };
@@ -131,7 +131,7 @@ async function adminAccess(client: SupabaseClient, userId: string) {
   return Boolean(data);
 }
 
-Deno.serve(async (request: Request) => {
+export async function handleRequest(request: Request) {
   const options = handleOptions(request);
   if (options) return options;
   if (request.method !== "POST") {
@@ -209,6 +209,32 @@ Deno.serve(async (request: Request) => {
     }
     if (!isOwner && !isAdmin) {
       return json({ error: "Puslapis nerastas" }, 404);
+    }
+
+    if (action === "set_group_members") {
+      const members = body.members;
+      if (!Array.isArray(members) || members.length > 7 ||
+        members.some((id) => typeof id !== "string" || !PROFILE_ID_PATTERN.test(id) || id === profileId) ||
+        new Set(members).size !== members.length) {
+        return json({ error: "Neteisingas grupės žmonių sąrašas" }, 400);
+      }
+      if (members.length) {
+        const { data: children, error } = await client.from("profiliai")
+          .select("id,owner_id,deleted_at,group_members").in("id", members);
+        if (error) throw error;
+        if (!profile.owner_id || children?.length !== members.length || children.some((child) =>
+          child.owner_id !== profile.owner_id || child.deleted_at || child.group_members?.length)) {
+          return json({ error: "Grupei galima priskirti tik to paties savininko atminimo puslapius be pogrupių." }, 400);
+        }
+      }
+      // A member cannot itself become a group root, preventing nested groups/cycles.
+      const { data: parents, error: parentError } = await client.from("profiliai")
+        .select("id").contains("group_members", [profileId]).is("deleted_at", null).limit(1);
+      if (parentError) throw parentError;
+      if (members.length && parents?.length) return json({ error: "Šis žmogus jau priklauso grupei." }, 400);
+      const { error } = await client.from("profiliai").update({ group_members: members }).eq("id", profileId);
+      if (error) throw error;
+      return json({ ok: true });
     }
 
     if (action === "set_access_code") {
@@ -453,4 +479,6 @@ Deno.serve(async (request: Request) => {
     console.error("profile-manage failed", error);
     return json({ error: "Nepavyko pakeisti puslapio" }, 500);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);
