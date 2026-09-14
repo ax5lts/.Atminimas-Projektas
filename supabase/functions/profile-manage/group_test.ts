@@ -12,6 +12,7 @@ Deno.test("group ownership, membership validation, and public/private access", a
   Deno.env.set(keys[0], "https://test.invalid");
   Deno.env.set(keys[1], "test-key");
   let user = owner;
+  let factors: Array<{ status: string }> = [];
   let active = false;
   let childOwner = owner;
   let nested = false;
@@ -20,7 +21,7 @@ Deno.test("group ownership, membership validation, and public/private access", a
   let requestedChildren = 0;
   globalThis.fetch = (input, options) => {
     const url = new URL(String(input));
-    if (url.pathname === "/auth/v1/user") return Promise.resolve(Response.json({ id: user }));
+    if (url.pathname === "/auth/v1/user") return Promise.resolve(Response.json({ id: user, factors }));
     if (url.pathname === "/rest/v1/user_roles") return Promise.resolve(Response.json(null));
     if (options?.method === "PATCH") { writes++; lastWrite = JSON.parse(String(options.body)); return Promise.resolve(new Response(null, { status: 204 })); }
     if (url.searchParams.has("group_members")) return Promise.resolve(Response.json([]));
@@ -36,6 +37,10 @@ Deno.test("group ownership, membership validation, and public/private access", a
   }));
   try {
     assert((await change(["child"], false)).status === 401, "guest cannot link people");
+    factors = [{ status: "verified" }];
+    assert((await change(["child"])).status === 403, "enrolled MFA user needs an aal2 session before writes");
+    assert(writes === 0, "MFA rejection must not write");
+    factors = [];
     user = other;
     assert((await change(["child"])).status === 404, "another account cannot edit the root");
     user = owner;

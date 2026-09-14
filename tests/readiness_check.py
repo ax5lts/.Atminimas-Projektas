@@ -45,8 +45,8 @@ if not app_values.get("PUBLIC_SITE_URL", "").strip():
 analytics_text = ANALYTICS_CONFIG.read_text(encoding="utf-8")
 analytics_match = re.search(r'GA_MEASUREMENT_ID:\s*"([^"]*)"', analytics_text)
 analytics_id = analytics_match.group(1).strip() if analytics_match else ""
-if not re.fullmatch(r"G-[A-Z0-9]+", analytics_id, re.I):
-    missing.append("Google Analytics 4 matavimo ID (G-...)")
+if analytics_id and not re.fullmatch(r"G-[A-Z0-9]+", analytics_id, re.I):
+    missing.append("teisingas Google Analytics 4 matavimo ID (G-...) arba tuščia reikšmė analitikai išjungti")
 
 if missing:
     print("SVETAINĖ DAR NEPARUOŠTA REALIAI PREKYBAI. Trūksta:")
@@ -55,3 +55,5 @@ if missing:
     sys.exit(1)
 
 print("Rekvizitų ir komercinių duomenų patikra: OK")
+if not analytics_id:
+    print("Google Analytics išjungta; analitika neprivaloma prekybai ar indeksavimui.")

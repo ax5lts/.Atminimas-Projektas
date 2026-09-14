@@ -373,6 +373,10 @@
     showPageSkeleton();
     setStatus("Kraunama jūsų kliento zona…", "loading");
     var me = await AtminimasAuth.user();
+    if (AtminimasAuth.needsMfa && AtminimasAuth.needsMfa(me)) {
+      window.location.replace("saugumas.html?next=vartotojas.html");
+      return;
+    }
     if (!me) {
       finishPageSkeleton();
       listEl.innerHTML = "";
@@ -428,7 +432,7 @@
     var rows = await res.json();
     if (!rows.length) {
       finishPageSkeleton();
-      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę galėsite užsakyti už 60 € ir pristatymo kainą.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='parduotuve.html'>Užsakyti QR lentelę</a></div></div>";
+      listEl.innerHTML = "<div class='info-box'><h2>Puslapių dar nėra</h2><p>Sukurkite skaitmeninį atminimo puslapį. Fizinę QR lentelę galėsite užsakyti nuo 50 € ir pristatymo kainą.</p><div class='actions'><a class='button' href='redaktorius.html?product=digital'>Kurti puslapį</a><a class='button button--ghost' href='parduotuve.html'>Užsakyti QR lentelę</a></div></div>";
       scrollToRequestedService();
       return;
     }

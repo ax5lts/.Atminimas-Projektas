@@ -1,4 +1,4 @@
-import { handleOptions, json, requireUser } from "../_shared/core.ts";
+import { handleOptions, json, requireUser, RequestError } from "../_shared/core.ts";
 
 Deno.serve(async (request: Request) => {
   const options = handleOptions(request);
@@ -54,6 +54,7 @@ Deno.serve(async (request: Request) => {
     }
     return Response.redirect(data.signedUrl, 302);
   } catch (error) {
+    if (error instanceof RequestError) return json({ error: error.message }, error.status);
     const message = error instanceof Error ? error.message : "";
     if (/^(Authentication required|Invalid session)$/i.test(message)) {
       return json({ error: "Prisijungimo sesija nebegalioja" }, 401);

@@ -5,6 +5,7 @@ import {
   safeProfileLayout,
   safeStoryBlocks,
 } from "../_shared/core.ts";
+import { verifiedSessionNeedsMfa } from "../_shared/mfa.ts";
 
 // Nauji kodai kuriami mažosiomis raidėmis, tačiau seni įrašai gali turėti
 // didžiųjų raidžių. Juos priimame skaitymui, kad anksčiau pagaminti QR veiktų.
@@ -72,7 +73,7 @@ async function optionalUser(
   const token = authorization.replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const { data, error } = await client.auth.getUser(token);
-  return error ? null : data.user;
+  return error || !data.user || verifiedSessionNeedsMfa(token, data.user) ? null : data.user;
 }
 
 async function isAdmin(client: ReturnType<typeof adminClient>, userId: string) {

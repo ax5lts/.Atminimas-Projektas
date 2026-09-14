@@ -17,65 +17,27 @@ Jei kada nors nuteka „Supabase service role“, duomenų bazės slaptažodis a
 mokėjimo webhook paslaptis, juos taip pat nedelsiant pakeiskite ir patikrinkite
 atitinkamos paslaugos žurnalus.
 
-## Saugus šio pakeitimo diegimo eiliškumas
+## Dabartinis diegimas ir patikros
 
-Failų saugyklos negalima paversti privačia anksčiau, nei svetainė pradeda naudoti
-pasirašytas nuorodas. Diekite tokia tvarka:
+Produkcija: `https://atminimokodas.lt/`. `main` šakos pakeitimus automatiškai publikuoja GitHub–Vercel integracija. Vercel vykdo `scripts/build.mjs`, viešina tik `dist/` ir nustato `vercel.json` saugumo antraštes. GitHub Actions tikrina kodą ir jo surinkimą; GitHub Pages produkcijos neviešina.
 
-1. Susiekite CLI su tinkamu „Supabase“ projektu ir patikrinkite projekto ID.
-   Prieš diegdami `profile-manage`, nustatykite tikslų produkcijos HTTPS adresą
-   Edge Functions paslaptyje `PUBLIC_SITE_URL`, nes serveris pagal jį sukuria
-   užsakymo atminimo puslapio ir QR nuorodas.
-2. Pirmiausia įdiekite visas Edge Functions, kad kartu būtų atnaujinti ir jų
-   bendri saugumo patikrinimai:
+1. Patikrinkite migracijų bei funkcijų suderinamumą su esamu frontend. Prieigos ribojimus įjunkite tik paruošę atitinkamą prisijungimo srautą.
+2. Prieš DB pakeitimus pasirūpinkite atsargine kopija. Pritaikykite tik konkrečiam leidimui reikalingas migracijas ir patikrinkite jas atšaukiamoje testinėje transakcijoje.
+3. Įdiekite pakeistas Edge Functions kartu su visomis jų santykinėmis priklausomybėmis. Bendro failo pakeitimas automatiškai neatnaujina kitų jau įdiegtų funkcijų.
+4. Paleiskite atitinkamus Node, Python, Deno ir naršyklės testus, surinkite svetainę. Po `main` publikavimo palaukite Vercel Production sėkmės ir patikrinkite pagrindinį domeną.
+5. Patikrinkite, kad svečias negali skaityti privačių lentelių, o savininkas negali keisti svetimų įrašų. Failų saugyklos turi likti privačios; viešas atminimo turinys ir trumpalaikės failų nuorodos gaunami per `profile-content`.
+6. QR užsakymai kuriami per `profile-manage`; mokėjimą pradeda `payment-create`, mokėjimo būseną nustato Paysera webhook. Paprasta lentelė kainuoja 50 €, su raštu — 60 €, pristatymas — 3 €. Istorinių užsakymų sumos neperrašomos.
+7. Bandymuose nemokėkite ir nesiųskite tikrų laiškų. Diegimo patikrai naudokite atskirus testus bei tik skaitymo užklausas. Sekite Security Advisor ir produkcijos klaidas.
 
-   ```powershell
-   supabase functions deploy
-   ```
+## MFA įjungimas
 
-3. Patikrinkite, kad `profile-content` grąžina viešą aktyvų puslapį, savininkui
-   leidžia matyti privatų puslapį, o svetimo privataus puslapio negrąžina.
-4. Įdiekite atnaujintą frontend. Jis viešus profilius turi skaityti tik per
-   `profile-content`, teisines formas siųsti tik per `legal-submission`, o
-   rankiniu būdu įkeltas kapaviečių nuotraukas skaityti tik per `grave-photo`.
-   „GitHub Pages“ workflow saugumo laikotarpiu paleidžiamas tik rankiniu būdu:
-   pasirinkite `Deploy website to GitHub Pages` ir pažymėkite
-   `backend_ready` tik kai šiame skyriuje nurodytos Edge Functions jau
-   įdiegtos. Vien kodo įkėlimas į `main` gyvos svetainės automatiškai nekeičia.
-5. Padarykite duomenų bazės kopiją ir tik tada pritaikykite migraciją:
+Paskyros puslapis `saugumas.html` skirtas autentifikavimo programėlei prijungti ir prisijungimui patvirtinti. TOTP slaptas raktas rodomas tik registruojant programėlę ir nesaugomas naršyklės saugyklose. Kodai siunčiami tiesiogiai Supabase Auth.
 
-   ```powershell
-   supabase db push
-   ```
+`private.session_mfa_satisfied()` ir ribojančios RLS politikos reikalauja `aal2` vartotojui užregistravus patvirtintą MFA faktorių. Owner RPC funkcijos ir autentifikuotos Edge Functions taiko tą pačią taisyklę. Service role automatikos srautai nepaverčiami interaktyviais prisijungimais.
 
-   Svarbi migracija:
-   `20260730121821_harden_private_profile_media.sql`.
+Esamų paskyrų MFA registraciją turi užbaigti patys paskyrų valdytojai savo telefonuose. Kol nėra patvirtinto faktoriaus, jų prieiga išlaikoma, kad būtų galima užbaigti registraciją. Todėl vien šio leidimo publikavimas nereiškia, kad abi administratoriaus paskyros jau apsaugotos MFA. Užbaigus abiejų paskyrų registraciją galima atskiru patikrintu pakeitimu padaryti MFA privalomą administratoriaus rolei nepriklausomai nuo turimų faktorių.
 
-   Jei diegimo žurnale matote `SECURITY FOLLOW-UP REQUIRED` apie
-   `supabase_admin` numatytąsias teises, dabartinių objektų apsaugos vis tiek
-   pritaikytos. Persiųskite tikslų perspėjimą „Supabase Support“ ir paprašykite
-   pašalinti senas šios valdomos rolės `public` schemos default ACL teises.
-6. Po migracijos patikrinkite šiuos scenarijus:
-
-   - svečias mato aktyvų puslapį ir jo pasirašytas nuotraukas;
-   - svečias nemato neaktyvaus puslapio, `owner_id` ar tikro failo kelio;
-   - savininkas gali redaguoti bei ištrinti tik savo puslapį ir failus;
-   - vieno naudotojo pateiktas svetimo failo kelias atmetamas;
-   - anoniminė REST užklausa negali tiesiogiai skaityti `profiliai` ar
-     `medijos`, įrašyti teisinių formų arba trinti Storage testų;
-   - juodraščio ar paslėptos kapavietės nuotraukos tiesioginis Storage URL
-     neveikia, o paskelbtos kapavietės nuotrauką grąžina `grave-photo`;
-   - naują užsakymą galima sukurti tik per `profile-manage`, naudojant serverio
-     sugeneruotą atminimo puslapio ir QR URL;
-   - administratorius gali peržiūrėti ir keisti išankstinių užsakymų būsenas;
-   - naujas mokamas QR lentelės užsakymas nesukuriamas per `profile-manage`, o `payment-create` grąžina `409` ir nekuria mokėjimo sesijos;
-   - jau apmokėtų istorinių užsakymų administravimo, gamybos ir pristatymo duomenys tebėra pasiekiami įgaliotiems naudotojams.
-7. „Supabase Dashboard“ paleiskite „Security Advisor“ ir patikrinkite Edge
-   Functions bei Auth žurnalus.
-
-Jei vieši paveikslai po migracijos neatsidaro, neatverkite bucket viešai.
-Pirmiausia tikrinkite `profile-content` diegimą, funkcijos žurnalus ir failo
-kelio formatą.
+Praradus autentifikavimo programėlę reikia tapatybės patikros ir administratoriaus atkūrimo procedūros; nekurkite viešo MFA apėjimo. Nutekėjusių slaptažodžių apsauga įjungiama Supabase Auth nustatymuose, kai turima prieiga ir planas palaiko funkciją.
 
 ## Produkcijos nustatymai
 
@@ -86,9 +48,9 @@ Prieš priimant tikrus klientų duomenis:
   perdavimą registracijos, prisijungimo bei slaptažodžio atkūrimo formose;
   dabartiniame frontende šios integracijos dar nėra, todėl vien Dashboard
   jungiklis sustabdytų šias formas.
-- Administratoriaus paskyrai įjunkite TOTP arba passkey MFA. Kritiniams
-  veiksmams vėliau pridėkite serverinį `aal2` reikalavimą, kai MFA registravimo
-  sąsaja bus paruošta.
+- Administratoriaus paskyrai užbaikite TOTP MFA registraciją. Naujo leidimo
+  serverinė apsauga pradeda reikalauti `aal2`, kai paskyrai patvirtinamas
+  pirmasis MFA faktorius.
 - Nustatykite tikslų `Site URL` ir tik būtinus `Redirect URLs`; nenaudokite
   plačių pakaitos šablonų produkcijoje.
 - Prijunkite nuosavą SMTP, stebėkite nesėkmingus prisijungimus ir nustatykite

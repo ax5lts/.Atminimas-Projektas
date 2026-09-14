@@ -33,7 +33,9 @@
   var next = nextPage();
 
   async function destination() {
-    return !hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next;
+    var me = await AtminimasAuth.user();
+    if (AtminimasAuth.needsMfa(me)) return "saugumas.html" + (hasExplicitNext ? "?next=" + encodeURIComponent(next) : "");
+    return !hasExplicitNext && await AtminimasAuth.isAdmin(me) ? "admin.html" : next;
   }
   document.querySelectorAll("a[href='registruotis.html']").forEach(function (link) {
     if (next !== "vartotojas.html") link.href = "registruotis.html?next=" + encodeURIComponent(next);

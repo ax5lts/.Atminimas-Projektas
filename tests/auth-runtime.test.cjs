@@ -22,6 +22,33 @@ function setup(fetch, session = currentSession(), apiKey = 'legacy-anon') {
   return { auth: context.AtminimasAuth, sessionStorage };
 }
 
+test('MFA verifies challenge and replaces the session only for the current user', async () => {
+  const upgraded = { ...currentSession('mfa'), access_token: 'e30.' + Buffer.from(JSON.stringify({ sub: 'user-1', aal: 'aal2', exp: Math.floor(Date.now()/1000)+3600 })).toString('base64url') + '.valid' };
+  const calls = [];
+  const { auth } = setup(async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body) });
+    return json(url.endsWith('/challenge') ? { id: 'challenge-1' } : upgraded);
+  });
+  assert.equal(auth.needsMfa({ factors: [{ status: 'verified' }] }), true);
+  assert.equal(auth.needsMfa({ factors: [{ status: 'unverified' }] }), false);
+  await auth.verifyMfa('factor-1', '123456');
+  assert.deepEqual(calls[1].body, { challenge_id: 'challenge-1', code: '123456' });
+  assert.equal(auth.assuranceLevel(), 'aal2');
+  assert.equal(auth.needsMfa({ factors: [{ status: 'verified' }] }), false);
+  assert.equal(auth.session().refresh_token, upgraded.refresh_token);
+});
+
+test('MFA cannot resurrect a signed-out session when verification returns late', async () => {
+  const waiting = deferred();
+  const { auth } = setup(async url => url.endsWith('/challenge') ? json({ id: 'c' }) : url.endsWith('/verify') ? waiting.promise : json({}));
+  const pending = auth.verifyMfa('factor-1', '123456');
+  await new Promise(setImmediate);
+  auth.signOut();
+  waiting.resolve(json(currentSession('late')));
+  await assert.rejects(pending, /Sesija pasikeitė/);
+  assert.equal(auth.accessToken(), '');
+});
+
 test('late 401 responses reuse a refreshed token without rotating it again', async () => {
   const a = deferred(), b = deferred();
   let refreshes = 0;

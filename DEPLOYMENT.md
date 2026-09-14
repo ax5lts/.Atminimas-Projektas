@@ -1,5 +1,11 @@
 # Paleidimo kontrolinis sąrašas
 
+## 2026-09-14: audito pataisymai ir MFA
+
+Migracija `20260914190718_audit_mfa_guards_and_indexes.sql` pridėjo trūkstamus indeksus ir MFA ribojimus faktorių patvirtinusioms paskyroms. DB bandymas `tests/mfa_database.sql` vykdomas su ROLLBACK; jis neįregistruoja tikrų telefonų. Backend versijos: profile-manage v19, profile-content v14, grave-photo v6, service-flow v8, payment-create v7, document-download v7, shipping-create v6, production-email v9, ops-assistant v5. Faktiniai laiškai, mokėjimai ar siuntos bandymuose nekuriami.
+
+`saugumas.html` teikia MFA registravimo ir patvirtinimo srautą. Esami administratoriai turi prisijungti ir patys prijungti autentifikavimo programėles. Serverio apsauga įsijungia patvirtinus faktorių; neprijungtos paskyros kol kas neblokuojamos. Nutekėjusių slaptažodžių tikrinimas ir Search Console indeksavimas laukia prieigos prie atitinkamų paskyrų. Atlikti pataisymai bei ribos užrašyti `SITE_AUDIT_2026-09-14.md`.
+
 ## 2026-09-14: grupinis QR ir redaktoriaus patobulinimai
 
 Vienas bendras leidimas apima iki 8 žmonių po vienu QR kodu, atskiras žmonių istorijas ir dizainą, papildomą nuotraukų įkėlimą, vienos nuotraukos pakeitimą / pašalinimą, pagrindinio portreto pasirinkimą, tris paruoštus išdėstymus ir aiškias saugojimo būsenas. Įtraukti redaktoriaus stabilumo bei juodraščio atkūrimo pataisymai.

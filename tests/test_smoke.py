@@ -618,7 +618,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         login = (ROOT / "assets" / "login.js").read_text(encoding="utf-8")
         self.assertIn("function nextPage()", login)
         self.assertRegex(login, r"\^\[a-z0-9-\]\+\\\.html")
-        self.assertIn("AtminimasAuth.isAdmin()", login)
+        self.assertIn("AtminimasAuth.isAdmin(me)", login)
         self.assertIn('"admin.html" : next', login)
 
     def test_service_request_migration_has_rls_and_minimal_grants(self):
@@ -1348,7 +1348,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('assets/checkout.js', checkout_page)
         self.assertIn('id="delivery-form"', checkout_page)
         self.assertIn("hasExplicitNext", login)
-        self.assertIn('!hasExplicitNext && await AtminimasAuth.isAdmin() ? "admin.html" : next', login)
+        self.assertIn('!hasExplicitNext && await AtminimasAuth.isAdmin(me) ? "admin.html" : next', login)
         self.assertIn("matytumėte užsakymo būseną", login_page)
 
         lower_migration = migration.lower()

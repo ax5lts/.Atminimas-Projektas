@@ -368,6 +368,44 @@
     return rows && rows.length > 0;
   }
 
+  function assuranceLevel() {
+    var payload = tokenPayload(accessToken());
+    return payload && payload.aal === "aal2" ? "aal2" : "aal1";
+  }
+
+  function needsMfa(me) {
+    return assuranceLevel() !== "aal2" && !!(me && (me.factors || []).some(function (factor) { return factor.status === "verified"; }));
+  }
+
+  async function enrollMfa() {
+    var me = await user();
+    if (!me) throw new Error("Prisijunkite dar kartą.");
+    for (var factor of (me.factors || [])) {
+      if (factor.status === "unverified" && factor.factor_type === "totp") {
+        await authFetch("/auth/v1/factors/" + encodeURIComponent(factor.id), { method: "DELETE" }, true);
+      }
+    }
+    return authFetch("/auth/v1/factors", { method: "POST", body: JSON.stringify({ factor_type: "totp", friendly_name: "Atminimo kodas " + new Date().toISOString(), issuer: "Atminimo kodas" }) }, true);
+  }
+
+  async function verifyMfa(factorId, code) {
+    if (!/^[0-9]{6}$/.test(code)) throw new Error("Įrašykite šešių skaitmenų kodą.");
+    await ensureFreshSession();
+    var owner = userId();
+    var challenge = await authFetch("/auth/v1/factors/" + encodeURIComponent(factorId) + "/challenge", { method: "POST", body: "{}" }, true);
+    var data = await authFetch("/auth/v1/factors/" + encodeURIComponent(factorId) + "/verify", { method: "POST", body: JSON.stringify({ challenge_id: challenge.id, code: code }) }, true);
+    if (!owner || userId() !== owner || !data.access_token || !data.refresh_token) throw new Error("Sesija pasikeitė. Prisijunkite dar kartą.");
+    var payload = tokenPayload(data.access_token);
+    if (!payload || payload.sub !== owner || payload.aal !== "aal2") throw new Error("Patvirtinimo nepavyko užbaigti.");
+    saveSession(data);
+    return data;
+  }
+
+  async function removeMfa(factorId) {
+    await authFetch("/auth/v1/factors/" + encodeURIComponent(factorId), { method: "DELETE" }, true);
+    await refreshSession(true);
+  }
+
   function signOut() {
     var token = accessToken();
     clearSession();
@@ -426,6 +464,11 @@
   }
 
   global.AtminimasAuth = {
+    assuranceLevel: assuranceLevel,
+    needsMfa: needsMfa,
+    enrollMfa: enrollMfa,
+    verifyMfa: verifyMfa,
+    removeMfa: removeMfa,
     session: session,
     accessToken: accessToken,
     userId: userId,

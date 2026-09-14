@@ -1,3 +1,4 @@
+import { verifiedSessionNeedsMfa } from "../_shared/mfa.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
@@ -59,7 +60,7 @@ async function isAdmin(request: Request): Promise<boolean> {
   });
   if (!userResponse.ok) return false;
   const user = await userResponse.json().catch(() => null);
-  if (!user?.id) return false;
+  if (!user?.id || verifiedSessionNeedsMfa(authorization.replace(/^Bearer\s+/i, ""), user)) return false;
 
   const params = new URLSearchParams({
     select: "role",

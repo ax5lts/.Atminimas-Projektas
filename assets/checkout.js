@@ -438,6 +438,10 @@
       return;
     }
     var me = await AtminimasAuth.user();
+    if (AtminimasAuth.needsMfa && AtminimasAuth.needsMfa(me)) {
+      window.location.replace("saugumas.html?next=" + encodeURIComponent("apmokejimas.html" + window.location.search));
+      return;
+    }
     if (!me) {
       redirectToLogin();
       return;

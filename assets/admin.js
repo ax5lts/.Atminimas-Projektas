@@ -915,6 +915,10 @@
   async function loadAdminData() {
     setStatus("Tikrinamos administratoriaus teisės...");
     var me = await AtminimasAuth.user();
+    if (AtminimasAuth.needsMfa(me)) {
+      window.location.replace("saugumas.html?next=admin.html");
+      return;
+    }
     var ok = me && await AtminimasAuth.isAdmin(me);
     if (!ok) {
       form.hidden = false;

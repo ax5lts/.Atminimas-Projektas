@@ -2,6 +2,7 @@ import {
   createClient,
   type SupabaseClient,
 } from "npm:@supabase/supabase-js@2.110.1";
+import { verifiedSessionNeedsMfa } from "./mfa.ts";
 
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -308,6 +309,7 @@ export async function requireUser(request: Request) {
   const client = adminClient();
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) throw new Error("Invalid session");
+  if (verifiedSessionNeedsMfa(token, data.user)) throw new RequestError("Patvirtinkite prisijungimą autentifikavimo programėlėje.", 403);
   return { client, user: data.user, token };
 }
 
