@@ -48,6 +48,8 @@ test('shop replaces removed product and keeps the latest design when catalog fin
   vm.runInNewContext(source('plaque-design.js'), p.context);
   vm.runInNewContext(source('shop.js'), p.context);
   assert.match(p.get('product-create-link').href, /product=metal/);
+  assert.match(p.get('product-create-link').href, /color=silver/);
+  p.get('product-selector').listeners.change({ target: { name: 'memorial_type', value: 'group' } });
   p.get('product-selector').listeners.change({ target: { name: 'plaque_color', value: 'black' } });
   pending.resolve({ remote: true, metal: { available: true, price_cents: 6000, plain_price_cents: 5000, currency: 'EUR' } });
   await tick();
@@ -55,6 +57,8 @@ test('shop replaces removed product and keeps the latest design when catalog fin
   assert.match(p.get('product-price').textContent, /50,00/);
   assert.match(p.get('product-total').textContent, /53,00/);
   assert.match(p.get('product-create-link').href, /color=black/);
+  assert.match(p.get('product-create-link').href, /memorial=group/);
+  assert.match(p.get('product-selection').textContent, /Keliems žmonėms/);
   assert.equal(p.get('product-image').dataset.color, 'black');
   for (const pattern of ['tree', 'heart', 'wings', 'plain']) {
     p.get('product-selector').listeners.change({ target: { name: 'plaque_pattern', value: pattern } });
@@ -63,7 +67,11 @@ test('shop replaces removed product and keeps the latest design when catalog fin
     assert.match(p.get('product-create-link').textContent, pattern === 'plain' ? /50,00/ : /60,00/);
     assert.equal(p.get('product-image').dataset.pattern, pattern);
     assert.match(p.get('product-create-link').href, new RegExp('pattern=' + pattern));
+    assert.match(p.get('product-create-link').href, /memorial=group/);
   }
+  p.get('product-selector').listeners.change({ target: { name: 'memorial_type', value: 'single' } });
+  assert.match(p.get('product-create-link').href, /memorial=single/);
+  assert.match(p.get('product-price').textContent, /50,00/);
 });
 
 test('shop handles unavailable storage and a rejected catalog without an unhandled error', async () => {

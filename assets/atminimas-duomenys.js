@@ -358,8 +358,8 @@
       action: "create_order",
       profile_id: identifier,
       product_type: "metal",
-      product_color: input && input.product_color || "gold",
-        product_pattern: input && input.product_pattern || "plain"
+      product_color: input && input.product_color || "silver",
+      product_pattern: input && input.product_pattern || "plain"
     });
     return {
       id: row.id,

@@ -73,9 +73,9 @@
     <section class="shop-layout shop-layout--selected" aria-labelledby="product-title">
       <div class="product-gallery product-gallery--single" aria-label="Pasirinkto produkto nuotrauka">
         <div class="product-media">
-          <div id="product-image" class="plaque-preview" data-color="gold" data-pattern="plain" role="img" aria-label="Aukso spalvos plienas · Tik QR kodas"></div>
+          <div id="product-image" class="plaque-preview" data-color="silver" data-pattern="plain" role="img" aria-label="Sidabrinis plienas · Tik QR kodas"></div>
         </div>
-        <p class="product-preview-caption" id="product-preview-caption" aria-live="polite">Aukso spalvos plienas · Tik QR kodas</p>
+        <p class="product-preview-caption" id="product-preview-caption" aria-live="polite">Sidabrinis plienas · Tik QR kodas</p>
         <p class="product-preview-note">Pavyzdinis dizainas. Jūsų lentelėje bus jūsų atminimo puslapio QR kodas.</p>
       </div>
 
@@ -90,21 +90,29 @@
             <fieldset class="plaque-option-group">
               <legend>1. Pasirinkite spalvą</legend>
               <div class="plaque-colors">
-                <label class="plaque-choice"><input type="radio" name="plaque_color" value="gold" checked><span class="plaque-color-swatch plaque-color-swatch--gold" aria-hidden="true"></span><span>Aukso</span></label>
-                <label class="plaque-choice"><input type="radio" name="plaque_color" value="silver"><span class="plaque-color-swatch plaque-color-swatch--silver" aria-hidden="true"></span><span>Sidabro</span></label>
+                <label class="plaque-choice"><input type="radio" name="plaque_color" value="silver" checked><span class="plaque-color-swatch plaque-color-swatch--silver" aria-hidden="true"></span><span>Sidabro</span></label>
+                <label class="plaque-choice"><input type="radio" name="plaque_color" value="gold"><span class="plaque-color-swatch plaque-color-swatch--gold" aria-hidden="true"></span><span>Aukso</span></label>
                 <label class="plaque-choice"><input type="radio" name="plaque_color" value="black"><span class="plaque-color-swatch plaque-color-swatch--black" aria-hidden="true"></span><span>Juoda</span></label>
               </div>
             </fieldset>
             <fieldset class="plaque-option-group">
               <legend>2. Pasirinkite raštą</legend>
               <div class="plaque-patterns">
-                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="plain" checked><span class="plaque-preview" data-pattern-preview="plain" data-color="gold" data-pattern="plain" aria-hidden="true"></span><span><small>Variantas 1 · 50 €</small>Tik QR kodas</span></label>
-                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="tree"><span class="plaque-preview" data-pattern-preview="tree" data-color="gold" data-pattern="tree" aria-hidden="true"></span><span><small>Variantas 2 · 60 €</small>Gyvybės medis</span></label>
-                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="heart"><span class="plaque-preview" data-pattern-preview="heart" data-color="gold" data-pattern="heart" aria-hidden="true"></span><span><small>Variantas 3 · 60 €</small>Širdis ir žvakė</span></label>
-                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="wings"><span class="plaque-preview" data-pattern-preview="wings" data-color="gold" data-pattern="wings" aria-hidden="true"></span><span><small>Variantas 4 · 60 €</small>Angelo sparnai</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="plain" checked><span class="plaque-preview" data-pattern-preview="plain" data-color="silver" data-pattern="plain" aria-hidden="true"></span><span><small>Variantas 1 · 50 €</small>Tik QR kodas</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="tree"><span class="plaque-preview" data-pattern-preview="tree" data-color="silver" data-pattern="tree" aria-hidden="true"></span><span><small>Variantas 2 · 60 €</small>Gyvybės medis</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="heart"><span class="plaque-preview" data-pattern-preview="heart" data-color="silver" data-pattern="heart" aria-hidden="true"></span><span><small>Variantas 3 · 60 €</small>Širdis ir žvakė</span></label>
+                <label class="plaque-choice plaque-choice--pattern"><input type="radio" name="plaque_pattern" value="wings"><span class="plaque-preview" data-pattern-preview="wings" data-color="silver" data-pattern="wings" aria-hidden="true"></span><span><small>Variantas 4 · 60 €</small>Angelo sparnai</span></label>
               </div>
             </fieldset>
-            <p class="plaque-selection" role="status">Jūsų pasirinkimas: <strong id="product-selection">Aukso spalvos plienas · Tik QR kodas</strong></p>
+            <fieldset class="plaque-option-group" aria-describedby="product-memorial-note">
+              <legend>3. Kam skirtas QR kodas?</legend>
+              <div class="plaque-memorial-types">
+                <label class="plaque-choice"><input type="radio" name="memorial_type" value="single" checked><span><strong>Vienam žmogui</strong><small>Asmeninis atminimo puslapis</small></span></label>
+                <label class="plaque-choice"><input type="radio" name="memorial_type" value="group"><span><strong>Keliems žmonėms</strong><small>Vienas QR kodas visai grupei</small></span></label>
+              </div>
+              <p class="plaque-memorial-note" id="product-memorial-note">Iki 8 žmonių su vienu QR kodu. Kaina ta pati – papildomo mokesčio už žmonių skaičių nėra.</p>
+            </fieldset>
+            <p class="plaque-selection" role="status">Jūsų pasirinkimas: <strong id="product-selection">Sidabrinis plienas · Tik QR kodas · Vienam žmogui</strong></p>
           </div>
           <ul class="product-highlights" aria-label="Svarbiausia produkto informacija">
             <li><span>Matmenys</span><strong id="product-dimensions">5 × 5 cm</strong></li>
@@ -120,7 +128,7 @@
             <div><span>Apmokėjimas</span><strong>Per Paysera</strong></div>
           </div>
           <div class="actions">
-            <a class="button" id="product-create-link" href="redaktorius.html?product=metal">Kurti puslapį ir užsakyti</a>
+            <a class="button" id="product-create-link" href="redaktorius.html?product=metal&amp;color=silver&amp;pattern=plain&amp;memorial=single">Kurti puslapį ir užsakyti</a>
           </div>
           <p class="product-action-note"><strong>Saugus apmokėjimas per Paysera.</strong> Prieš mokėjimą matysite produkto, pristatymo ir visą užsakymo sumą.</p>
         </article>

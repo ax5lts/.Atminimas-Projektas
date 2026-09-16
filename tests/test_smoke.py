@@ -774,7 +774,7 @@ class AtminimasSmokeTests(unittest.TestCase):
         self.assertIn('<a class="button" href="parduotuve.html">Pasirinkti QR lentelę</a>', home)
         self.assertIn('href="parduotuve.html?product=metal">Užsakyti QR lentelę</a>', home)
         self.assertIn('{ href: "parduotuve.html", label: "Užsakyti"', site_ui)
-        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal">Kurti puslapį ir užsakyti</a>', shop)
+        self.assertIn('id="product-create-link" href="redaktorius.html?product=metal&amp;color=silver&amp;pattern=plain&amp;memorial=single">Kurti puslapį ir užsakyti</a>', shop)
 
     def test_shop_explains_qr_flow_without_external_video(self):
         html = (ROOT / "parduotuve.html").read_text(encoding="utf-8")

@@ -621,7 +621,7 @@
       : "metal";
   }
 
-  var selectedPlaqueDesign = window.AtminimasPlaqueDesign ? AtminimasPlaqueDesign.read() : { color: "gold", pattern: "plain" };
+  var selectedPlaqueDesign = window.AtminimasPlaqueDesign ? AtminimasPlaqueDesign.read() : { color: "silver", pattern: "plain" };
   var requestedProductType = requestedProduct();
   var productType = "metal";
 
@@ -4510,6 +4510,15 @@
     await loadProfileForEditing();
     syncDatePickersFromHidden();
     var restoredDraft = await restoreDraft();
+    var requestedMemorial = editorParams.get("memorial");
+    var applyShopChoice = !editId && (requestedMemorial === "group" || requestedMemorial === "single");
+    if (applyShopChoice) {
+      // A shop choice can enable a group, but must never hide people in an existing draft.
+      groupEnabled = requestedMemorial === "group" || groupPeople.length > 1;
+      if (requestedMemorial === "single" && groupPeople.length > 1) {
+        statusEl.textContent = "Atkurtas kelių žmonių juodraštis. Norėdami kurti vienam žmogui, pirmiausia pašalinkite papildomus žmones iš grupės.";
+      }
+    }
     syncDatePickersFromHidden();
     if (!editId && resumeSave && isSignedIn()) {
       currentEditorStep = "preview";
@@ -4537,6 +4546,12 @@
     bindCrop();
     setupEditorHistory();
     setupGroupEditor();
+    if (applyShopChoice && saveDraftNow()) {
+      // Consume the choice after saving so reloads respect subsequent editor changes.
+      var editorUrl = new URL(window.location.href);
+      editorUrl.searchParams.delete("memorial");
+      window.history.replaceState(window.history.state, "", editorUrl.href);
+    }
   }
 
   initEditor().catch(function (error) {

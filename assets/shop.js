@@ -3,6 +3,10 @@
   if (!selector) return;
 
   var selectedKey = "atminimas.selected-product.v1";
+  var memorialKey = "atminimas.memorial-type.v1";
+  var storedMemorial = "";
+  try { storedMemorial = sessionStorage.getItem(memorialKey) || ""; } catch (_error) {}
+  var selectedMemorial = (new URLSearchParams(window.location.search).get("memorial") || storedMemorial) === "group" ? "group" : "single";
   var business = window.ATMINIMAS_BUSINESS || {};
   var products = {
     metal: {
@@ -52,26 +56,30 @@
     fields.title.textContent = product.title;
     renderDesign();
     fields.price.textContent = product.price;
-    fields.copy.textContent = product.copy;
+    fields.copy.textContent = selectedMemorial === "group"
+      ? "Vienas QR kodas atidaro iki 8 žmonių atminimo puslapius. Nuskenavę kodą lankytojai pasirenka žmogų, kurio istoriją nori peržiūrėti."
+      : product.copy;
     fields.material.textContent = product.material;
     fields.dimensions.textContent = product.dimensions;
     fields.mounting.textContent = product.mounting;
-    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType) + "&" + designApi.query(selectedDesign);
-    createLink.textContent = product.available ? "Kurti puslapį ir užsakyti · " + product.price : "Kaina tikrinama";
+    createLink.href = "redaktorius.html?product=" + encodeURIComponent(safeType) + "&" + designApi.query(selectedDesign) + "&memorial=" + selectedMemorial;
+    createLink.textContent = product.available ? (selectedMemorial === "group" ? "Kurti grupę ir užsakyti · " : "Kurti puslapį ir užsakyti · ") + product.price : "Kaina tikrinama";
     createLink.setAttribute("aria-disabled", product.available ? "false" : "true");
     try { sessionStorage.setItem(selectedKey, safeType); } catch (_error) {}
+    try { sessionStorage.setItem(memorialKey, selectedMemorial); } catch (_error) {}
   }
 
   function renderDesign() {
     designApi.save(selectedDesign);
     designApi.render(fields.image, selectedDesign);
-    document.getElementById("product-selection").textContent = designApi.label(selectedDesign);
+    document.getElementById("product-selection").textContent = designApi.label(selectedDesign) + " · " + (selectedMemorial === "group" ? "Keliems žmonėms" : "Vienam žmogui");
     document.getElementById("product-preview-caption").textContent = designApi.label(selectedDesign);
     selector.querySelectorAll("[data-pattern-preview]").forEach(function (preview) {
       designApi.render(preview, { color: selectedDesign.color, pattern: preview.dataset.patternPreview });
     });
     selector.querySelectorAll("input[name='plaque_color']").forEach(function (input) { input.checked = input.value === selectedDesign.color; });
     selector.querySelectorAll("input[name='plaque_pattern']").forEach(function (input) { input.checked = input.value === selectedDesign.pattern; });
+    selector.querySelectorAll("input[name='memorial_type']").forEach(function (input) { input.checked = input.value === selectedMemorial; });
   }
 
   function setCatalogStatus(message, canRetry) {
@@ -129,15 +137,20 @@
   createLink.addEventListener("click", function (event) { if (!products[selectedType].available) event.preventDefault(); });
 
   selector.addEventListener("change", function (event) {
-    if (event.target.name === "plaque_color" || event.target.name === "plaque_pattern") {
-      selectedDesign[event.target.name === "plaque_color" ? "color" : "pattern"] = event.target.value;
-      selectedDesign = designApi.normalize(selectedDesign);
+    if (event.target.name === "plaque_color" || event.target.name === "plaque_pattern" || event.target.name === "memorial_type") {
+      if (event.target.name === "memorial_type") {
+        selectedMemorial = event.target.value === "group" ? "group" : "single";
+      } else {
+        selectedDesign[event.target.name === "plaque_color" ? "color" : "pattern"] = event.target.value;
+        selectedDesign = designApi.normalize(selectedDesign);
+      }
       selectProduct("metal");
       if (window.history && window.history.replaceState) {
         var params = new URLSearchParams(window.location.search);
         params.set("product", "metal");
         params.set("color", selectedDesign.color);
         params.set("pattern", selectedDesign.pattern);
+        params.set("memorial", selectedMemorial);
         window.history.replaceState(window.history.state, "", window.location.pathname + "?" + params.toString());
       }
     }

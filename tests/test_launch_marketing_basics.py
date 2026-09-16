@@ -85,7 +85,7 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
              entry.findtext("sitemap:lastmod", namespaces=namespaces)
              for entry in entries if entry.find("sitemap:lastmod", namespaces) is not None},
             {CANONICAL_HOME: SEO_STABILITY_LASTMOD,
-             CANONICAL_HOME + "parduotuve.html": "2026-09-09",
+             CANONICAL_HOME + "parduotuve.html": "2026-09-16",
              CANONICAL_HOME + "privatumas.html": "2026-09-14"},
         )
         self.assertEqual(

@@ -30,10 +30,12 @@ test('explicit link wins over saved choice, invalid and malformed values use def
   assert.equal(api.read().color, 'silver');
   assert.equal(api.read().pattern, 'plain');
   const invalid = setup('?color=__proto__&pattern=constructor', 'broken').api.read();
-  assert.equal(invalid.color, 'gold');
+  assert.equal(invalid.color, 'silver');
   assert.equal(invalid.pattern, 'plain');
   const persisted = setup('', '{"color":"black","pattern":"heart"}').api.read();
   assert.equal(persisted.pattern, 'heart');
+  assert.equal(setup().api.read().color, 'silver');
+  assert.equal(setup('', '{"color":"gold","pattern":"plain"}').api.read().color, 'gold');
 });
 
 test('old fourth-choice links select plain QR while historical order labels remain truthful', () => {

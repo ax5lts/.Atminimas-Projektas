@@ -5,7 +5,7 @@
   function normalize(value) {
     value = value || {};
     return {
-      color: Object.prototype.hasOwnProperty.call(colors, value.color) ? value.color : "gold",
+      color: Object.prototype.hasOwnProperty.call(colors, value.color) ? value.color : "silver",
       pattern: value.pattern === "star" ? "plain" : (Object.prototype.hasOwnProperty.call(patterns, value.pattern) ? value.pattern : "plain")
     };
   }
