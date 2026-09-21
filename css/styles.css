@@ -10050,6 +10050,8 @@ body:not(.editor-page):not(.memorial-page) .site-shell :where(input[type="checkb
 .editor-page .editor-group { background: #3b4149; border-color: #727c83; }
 .editor-page .editor-group, .editor-page .editor-group p, .editor-page .editor-group > label { color: #f5f5f2; }
 .editor-page .editor-group p { line-height: 1.6; }
+.editor-page #editor-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); overflow: visible; scroll-snap-type: none; }
+.editor-page #editor-people .memorial-person { min-width: 0; }
 .editor-page .editor-group-actions button { font: inherit; }
 .editor-page #editor-person-status { font-size: .9rem; }
 .editor-page #editor-form[aria-busy="true"] { cursor: progress; }
