@@ -7617,6 +7617,11 @@ body[data-loading]::after {
   place-items: center;
 }
 
+.editor-preview-readonly :is(.editor-resize-handle, .editor-stretch-handle, .editor-crop-handle) { display: none !important; }
+.editor-preview-readonly .editor-preview-surface :is(.is-selected, .editor-piece) { outline: none; cursor: default; }
+.editor-preview-readonly :is(.editor-story-photo-select, .editor-story-text-select) { cursor: auto; }
+.editor-page :is(.editor-file-help, .editor-field-help) { color: #d6ddd8; }
+
 .editor-story-builder {
   display: grid;
   gap: 12px;

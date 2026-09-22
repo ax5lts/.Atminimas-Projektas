@@ -52,6 +52,7 @@
   var editorCanvas = document.querySelector(".editor-canvas");
   var previewSurface = document.getElementById("editor-preview-surface");
   var openPreviewDialog = null;
+  var previewReadOnly = false;
   var productCard = document.querySelector(".editor-product-card");
   var backgroundInput = document.getElementById("editor-background");
   var backgroundValue = document.getElementById("editor-background-value");
@@ -1319,7 +1320,7 @@
   var renderedStoryBlocks = [];
   function renderStoryPreview() {
     if (!previewLongText) return;
-    var structure = JSON.stringify([selectedStoryPhotoIndex, storyBlocks.map(function (block) {
+    var structure = JSON.stringify([previewReadOnly, selectedStoryPhotoIndex, storyBlocks.map(function (block) {
       if (block.type === "text") return Object.assign({}, block, { text: !!String(block.text || "").trim() });
       return [block, photoUrlAt(Number(block.photoOrder) - 1), storyPhotoAlt(block.photoOrder), storyPhotoCaption(block.photoOrder)];
     })]);
@@ -1355,13 +1356,15 @@
         applyStoryTextAppearance(text, block);
         var textSelectButton = document.createElement("span");
         textSelectButton.className = "editor-story-text-select";
-        textSelectButton.dataset.storyItemSelect = String(index);
-        textSelectButton.tabIndex = 0;
-        textSelectButton.contentEditable = "true";
-        textSelectButton.spellcheck = true;
-        textSelectButton.setAttribute("role", "textbox");
-        textSelectButton.setAttribute("aria-multiline", "true");
-        textSelectButton.setAttribute("aria-label", "Redaguoti šią gyvenimo istorijos dalį");
+        if (!previewReadOnly) {
+          textSelectButton.dataset.storyItemSelect = String(index);
+          textSelectButton.tabIndex = 0;
+          textSelectButton.contentEditable = "true";
+          textSelectButton.spellcheck = true;
+          textSelectButton.setAttribute("role", "textbox");
+          textSelectButton.setAttribute("aria-multiline", "true");
+          textSelectButton.setAttribute("aria-label", "Redaguoti šią gyvenimo istorijos dalį");
+        }
         textSelectButton.textContent = value;
         textSelectButton.addEventListener("focus", function () {
           if (!stage.classList.contains("is-simple-layout")) selectStoryPhoto(index, false);
@@ -1391,8 +1394,10 @@
           scheduleDraftSave();
         });
         text.appendChild(textSelectButton);
-        text.appendChild(storyLayoutHandle(index, "teksto"));
-        text.appendChild(storyResizeHandle(index, "teksto"));
+        if (!previewReadOnly) {
+          text.appendChild(storyLayoutHandle(index, "teksto"));
+          text.appendChild(storyResizeHandle(index, "teksto"));
+        }
         previewLongText.appendChild(text);
         visibleBlocks += 1;
         return;
@@ -1411,19 +1416,18 @@
       figure.style.setProperty("--story-offset-x", position.offsetX + "%");
       figure.style.setProperty("--story-offset-y", position.offsetY + "px");
       applyStoryPhotoAppearance(figure, block);
-      var selectButton = document.createElement("button");
-      selectButton.type = "button";
+      var selectButton = document.createElement(previewReadOnly ? "div" : "button");
       selectButton.className = "editor-story-photo-select";
-      selectButton.dataset.storyPhotoSelect = String(index);
-      selectButton.dataset.storyItemSelect = String(index);
-      selectButton.setAttribute(
-        "aria-label",
-        "Koreguoti " + Number(block.photoOrder) + " nuotraukos dydį ir rodymą"
-      );
-      selectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
-      selectButton.addEventListener("click", function (event) {
-        selectStoryPhoto(index, event.detail === 0);
-      });
+      if (!previewReadOnly) {
+        selectButton.type = "button";
+        selectButton.dataset.storyPhotoSelect = String(index);
+        selectButton.dataset.storyItemSelect = String(index);
+        selectButton.setAttribute("aria-label", "Koreguoti " + Number(block.photoOrder) + " nuotraukos dydį ir rodymą");
+        selectButton.setAttribute("aria-pressed", String(index === selectedStoryPhotoIndex));
+        selectButton.addEventListener("click", function (event) {
+          selectStoryPhoto(index, event.detail === 0);
+        });
+      }
       var image = document.createElement("img");
       image.alt = storyPhotoAlt(block.photoOrder);
       image.decoding = "async";
@@ -1439,8 +1443,10 @@
         caption.textContent = captionValue;
         figure.appendChild(caption);
       }
-      figure.appendChild(storyLayoutHandle(index, "nuotraukos"));
-      figure.appendChild(storyResizeHandle(index, "nuotraukos"));
+      if (!previewReadOnly) {
+        figure.appendChild(storyLayoutHandle(index, "nuotraukos"));
+        figure.appendChild(storyResizeHandle(index, "nuotraukos"));
+      }
       previewLongText.appendChild(figure);
       visibleBlocks += 1;
     });
@@ -2673,6 +2679,7 @@
     if (undoButton) undoButton.addEventListener("click", undoEditorChange);
     if (redoButton) redoButton.addEventListener("click", redoEditorChange);
     document.addEventListener("keydown", function (event) {
+      if (previewReadOnly) return;
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z") return;
       if (event.target.closest("input, textarea, select, [contenteditable='true']")) return;
       event.preventDefault();
@@ -3850,9 +3857,23 @@
     var close = document.querySelector("[data-editor-preview-close]");
     var canvas = document.querySelector(".editor-canvas");
     var previewOpener = null;
+    var backgroundState = [];
+    var title = document.getElementById("canvas-title");
+    var originalTitle = title ? title.textContent : "";
     function openPreview(opener) {
+      if (document.body.classList.contains("editor-preview-open")) return;
       previewOpener = opener && opener.currentTarget ? opener.currentTarget : opener;
+      previewReadOnly = !(previewOpener && previewOpener.matches("[data-editor-preview-mode='edit'], [data-story-edit-preview]"));
+      clearStoryPhotoSelection();
       document.body.classList.add("editor-preview-open");
+      document.body.classList.toggle("editor-preview-readonly", previewReadOnly);
+      if (title) title.textContent = previewReadOnly ? "Puslapio peržiūra" : "Išdėstymo koregavimas";
+      renderStoryPreview();
+      backgroundState = Array.from(document.querySelectorAll(".editor-topbar, .editor-panel, .editor-db-panel, .skip-link")).map(function (element) {
+        var state = { element: element, inert: element.inert };
+        element.inert = true;
+        return state;
+      });
       if (canvas) {
         canvas.scrollTop = 0;
         canvas.setAttribute("role", "dialog");
@@ -3863,20 +3884,42 @@
     }
     openPreviewDialog = openPreview;
     function closePreview() {
+      if (!document.body.classList.contains("editor-preview-open")) return;
       document.body.classList.remove("editor-preview-open");
+      document.body.classList.remove("editor-preview-readonly");
+      previewReadOnly = false;
       clearStoryPhotoSelection();
+      renderStoryPreview();
+      if (title) title.textContent = originalTitle;
+      backgroundState.forEach(function (state) { state.element.inert = state.inert; });
+      backgroundState = [];
       if (canvas) {
         canvas.removeAttribute("role");
         canvas.removeAttribute("aria-modal");
       }
       if (previewOpener && document.contains(previewOpener)) previewOpener.focus();
+      window.requestAnimationFrame(function () { refreshResponsiveStage(true); });
     }
     document.querySelectorAll("[data-editor-preview-open]").forEach(function (button) {
       button.addEventListener("click", openPreview);
     });
     if (close) close.addEventListener("click", closePreview);
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && document.body.classList.contains("editor-preview-open")) closePreview();
+      if (!document.body.classList.contains("editor-preview-open")) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePreview();
+      } else if (event.key === "Tab" && canvas) {
+        var controls = Array.from(canvas.querySelectorAll("button, a[href], input, select, textarea, [tabindex], [contenteditable='true']")).filter(function (element) {
+          return !element.disabled && element.tabIndex >= 0 && element.getClientRects().length && getComputedStyle(element).visibility !== "hidden";
+        });
+        var first = controls[0];
+        var last = controls[controls.length - 1];
+        if (first && (event.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+        }
+      }
     });
   }
 
@@ -3915,6 +3958,7 @@
   function bindDrag() {
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       piece.addEventListener("pointerdown", function (event) {
+        if (previewReadOnly) return;
         if (piece === previewLongText && stage.classList.contains("has-story-blocks")) return;
         if (event.target.closest("input, textarea, button, a")) return;
         if (event.target.closest(".editor-resize-handle, .editor-stretch-handle, .editor-crop-handle")) return;
