@@ -3648,6 +3648,7 @@
 
   function refreshResponsiveStage(allowShrink) {
     var width = stageWidth();
+    fitName();
     stage.querySelectorAll(".editor-piece").forEach(function (piece) {
       setPieceTopPct(piece, pieceTopPct(piece), width);
       if (piece.dataset.heightPct) setPieceHeightPct(piece, parseFloat(piece.dataset.heightPct || "20"));
