@@ -1,0 +1,159 @@
+.search-content {
+  margin-block: 48px;
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--panel, #fffaf0);
+}
+
+.search-content h2 {
+  margin: 0 0 18px;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.search-content p,
+.guide-page p,
+.guide-page li {
+  line-height: 1.75;
+}
+
+.search-content > p {
+  max-width: 76ch;
+}
+
+.search-content .faq-list {
+  margin-top: 24px;
+}
+
+.search-content a:not(.button),
+.guide-page a:not(.button) {
+  color: var(--teal-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.shop-search-intro {
+  max-width: 70ch;
+  margin: 12px 0 0;
+  line-height: 1.65;
+}
+
+.shop-search-intro a {
+  color: var(--teal-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.guide-page {
+  padding-bottom: 72px;
+}
+
+.guide-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.6fr);
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+  margin-top: 24px;
+  padding: clamp(24px, 5vw, 56px);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(145deg, #fffaf0, #eef4ef);
+}
+
+.guide-hero h1 {
+  margin: 8px 0 20px;
+  font-size: clamp(2.25rem, 4.5vw, 4rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.guide-hero figure {
+  margin: 0;
+  text-align: center;
+}
+
+.guide-hero img {
+  display: block;
+  width: min(100%, 260px);
+  height: auto;
+  margin: 0 auto;
+  border-radius: 16px;
+}
+
+.guide-hero figcaption {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.guide-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: clamp(24px, 4vw, 56px);
+  margin-top: 48px;
+}
+
+.guide-body {
+  min-width: 0;
+  max-width: 76ch;
+}
+
+.guide-body section + section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+.guide-body h2 {
+  margin: 0 0 16px;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  scroll-margin-top: 100px;
+}
+
+.guide-body li + li {
+  margin-top: 10px;
+}
+
+.guide-toc {
+  align-self: start;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fffaf0;
+}
+
+.guide-toc ol {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.guide-toc li + li {
+  margin-top: 12px;
+}
+
+.guide-next {
+  margin-top: 40px;
+  padding: 24px;
+  border-radius: 20px;
+  background: #eaf1ec;
+}
+
+@media (max-width: 760px) {
+  .guide-hero,
+  .guide-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .guide-hero img {
+    width: min(100%, 180px);
+  }
+
+  .guide-toc {
+    grid-row: 1;
+  }
+}

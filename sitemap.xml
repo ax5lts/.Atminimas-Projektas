@@ -3,14 +3,15 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://atminimokodas.lt/</loc>
-    <lastmod>2026-09-04</lastmod>
+    <lastmod>2026-10-03</lastmod>
     <image:image>
       <image:loc>https://atminimokodas.lt/assets/qr-plienas.webp</image:loc>
     </image:image>
   </url>
-  <url><loc>https://atminimokodas.lt/parduotuve.html</loc><lastmod>2026-09-16</lastmod></url>
-  <url><loc>https://atminimokodas.lt/kapu-ieskojimas.html</loc></url>
-  <url><loc>https://atminimokodas.lt/kapu-prieziura.html</loc></url>
+  <url><loc>https://atminimokodas.lt/parduotuve.html</loc><lastmod>2026-10-03</lastmod></url>
+  <url><loc>https://atminimokodas.lt/kapu-ieskojimas.html</loc><lastmod>2026-10-03</lastmod></url>
+  <url><loc>https://atminimokodas.lt/kapu-prieziura.html</loc><lastmod>2026-10-03</lastmod></url>
+  <url><loc>https://atminimokodas.lt/qr-kodas-ant-kapo.html</loc><lastmod>2026-10-03</lastmod></url>
   <url><loc>https://atminimokodas.lt/rekvizitai.html</loc></url>
   <url><loc>https://atminimokodas.lt/taisykles.html</loc></url>
   <url><loc>https://atminimokodas.lt/privatumas.html</loc><lastmod>2026-09-14</lastmod></url>

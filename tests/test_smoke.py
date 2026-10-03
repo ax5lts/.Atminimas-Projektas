@@ -928,7 +928,7 @@ class AtminimasSmokeTests(unittest.TestCase):
                 html,
                 page.name,
             )
-        self.assertEqual(pages_with_cards, 11)
+        self.assertEqual(pages_with_cards, 12)
         schema = (ROOT / "assets" / "site-seo.js").read_text(encoding="utf-8")
         self.assertIn('logo: new URL("assets/atminimas-icon.png", baseUrl).href', schema)
         self.assertIn('image: new URL("assets/atminimo-kodas-preview.jpg", baseUrl).href', schema)

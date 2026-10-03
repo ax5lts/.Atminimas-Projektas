@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_HOME = "https://atminimokodas.lt/"
-SEO_STABILITY_LASTMOD = "2026-09-04"
+SEO_CONTENT_LASTMOD = "2026-10-03"
 
 
 class LaunchMarketingBasicsTests(unittest.TestCase):
@@ -84,8 +84,11 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
             {entry.findtext("sitemap:loc", namespaces=namespaces):
              entry.findtext("sitemap:lastmod", namespaces=namespaces)
              for entry in entries if entry.find("sitemap:lastmod", namespaces) is not None},
-            {CANONICAL_HOME: SEO_STABILITY_LASTMOD,
-             CANONICAL_HOME + "parduotuve.html": "2026-09-16",
+            {CANONICAL_HOME: SEO_CONTENT_LASTMOD,
+             CANONICAL_HOME + "parduotuve.html": SEO_CONTENT_LASTMOD,
+             CANONICAL_HOME + "kapu-ieskojimas.html": SEO_CONTENT_LASTMOD,
+             CANONICAL_HOME + "kapu-prieziura.html": SEO_CONTENT_LASTMOD,
+             CANONICAL_HOME + "qr-kodas-ant-kapo.html": SEO_CONTENT_LASTMOD,
              CANONICAL_HOME + "privatumas.html": "2026-09-14"},
         )
         self.assertEqual(
@@ -263,6 +266,52 @@ class LaunchMarketingBasicsTests(unittest.TestCase):
             self.home,
         )
         self.assertIn('loading="eager" decoding="async" fetchpriority="high"', self.home)
+
+    def test_public_service_metadata_and_breadcrumbs_are_available_without_javascript(self):
+        for filename in (
+            "parduotuve.html", "kapu-prieziura.html",
+            "kapu-ieskojimas.html", "qr-kodas-ant-kapo.html",
+        ):
+            with self.subTest(page=filename):
+                markup = (ROOT / filename).read_text(encoding="utf-8")
+                location = CANONICAL_HOME + filename
+                title = re.search(r"<title>(.*?)</title>", markup).group(1)
+                description = re.search(r'<meta name="description" content="([^"]+)">', markup).group(1)
+                schemas = re.findall(
+                    r'<script type="application/ld\+json" data-site-module="site-seo">\s*([\s\S]*?)\s*</script>',
+                    markup,
+                )
+                self.assertEqual(len(schemas), 1)
+                graph = {item["@type"]: item for item in json.loads(schemas[0])["@graph"]}
+                webpage = graph["WebPage"]
+                self.assertEqual(webpage["url"], location)
+                self.assertEqual(webpage["name"], title)
+                self.assertEqual(webpage["description"], description)
+                self.assertIn('property="og:title" content="{}"'.format(title), markup)
+                self.assertIn('name="twitter:title" content="{}"'.format(title), markup)
+                self.assertIn('property="og:description" content="{}"'.format(description), markup)
+                breadcrumbs = graph["BreadcrumbList"]
+                self.assertEqual(webpage["breadcrumb"]["@id"], breadcrumbs["@id"])
+                self.assertEqual(
+                    [item["position"] for item in breadcrumbs["itemListElement"]], [1, 2],
+                )
+                self.assertEqual(breadcrumbs["itemListElement"][0]["item"], CANONICAL_HOME)
+                self.assertEqual(breadcrumbs["itemListElement"][-1]["item"], location)
+                visible = re.search(r'<nav class="breadcrumbs"[^>]*>([\s\S]*?)</nav>', markup).group(1)
+                for item in breadcrumbs["itemListElement"]:
+                    self.assertIn(item["name"], visible)
+                self.assertEqual(len(re.findall(r"<h1\b", markup)), 1)
+
+    def test_qr_guide_can_be_discovered_from_home_and_shop(self):
+        filename = "qr-kodas-ant-kapo.html"
+        for parent in ("index.html", "parduotuve.html"):
+            markup = (ROOT / parent).read_text(encoding="utf-8")
+            self.assertIn('href="{}"'.format(filename), markup, parent)
+        guide = (ROOT / filename).read_text(encoding="utf-8")
+        for anchor in re.findall(r'href="#([^"]+)"', guide):
+            self.assertIn('id="{}"'.format(anchor), guide)
+        for destination in ("parduotuve.html", "kapu-ieskojimas.html", "kapu-prieziura.html"):
+            self.assertIn('href="{}"'.format(destination), guide)
 
     def test_local_business_schema_uses_real_config_only(self):
         self.assertIn('"LocalBusiness"', self.seo)
