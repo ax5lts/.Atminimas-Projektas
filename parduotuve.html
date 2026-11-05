@@ -57,7 +57,7 @@
 <link rel="stylesheet" href="css/shop-ux.css?v=20260908-2">
 <link rel="stylesheet" href="css/plaque-design.css?v=20260908-1">
 </head>
-<body data-loading>
+<body class="shop-page" data-loading>
 <div class="site-shell">
   <header class="site-header">
     <div class="site-header__inner">
@@ -81,16 +81,14 @@
     <header class="shop-heading">
       <p class="eyebrow">QR atminimo lentelės</p>
       <h1>Pasirinkite QR lentelę</h1>
-      <p class="shop-search-intro">QR lentelės kapams atveria artimojo atminimo puslapį su istorija ir nuotraukomis. Pirmą kartą renkatės? Skaitykite, <a href="qr-kodas-ant-kapo.html">kaip veikia QR kodas ant kapo ir kaip pasirinkti lentelę</a>.</p>
+      <p class="shop-search-intro">Plieninė lentelė ir artimojo atminimo puslapis. Pasirinkite dizainą ir pradėkite kurti be paskyros.</p>
     </header>
 
 
-    <p class="shop-flow-label">Fizinės QR lentelės eiga</p>
-
-    <ol class="shop-journey shop-journey--preorder" aria-label="Užsakymo eiga">
-      <li class="is-current" aria-current="step"><span>1</span><strong>Pasirinkite lentelę</strong><small>Esate čia</small></li>
-      <li><span>2</span><strong>Kurkite puslapį</strong><small>Paruoškite atminimą</small></li>
-      <li><span>3</span><strong>Apmokėkite</strong><small id="shop-payment-price">50 € + 3 € pristatymas</small></li>
+    <ol class="shop-journey shop-journey--preorder" aria-label="Fizinės QR lentelės eiga">
+      <li class="is-current" aria-current="step"><span>1</span><strong>Lentelė</strong></li>
+      <li><span>2</span><strong>Puslapis</strong></li>
+      <li><span>3</span><strong>Apmokėjimas</strong><small id="shop-payment-price">50 € + 3 € pristatymas</small></li>
     </ol>
 
     <input type="hidden" name="product_type" value="metal">
@@ -105,7 +103,7 @@
           <div id="product-image" class="plaque-preview" data-color="silver" data-pattern="plain" role="img" aria-label="Sidabrinis plienas · Tik QR kodas"></div>
         </div>
         <p class="product-preview-caption" id="product-preview-caption" aria-live="polite">Sidabrinis plienas · Tik QR kodas</p>
-        <p class="product-preview-note">Pavyzdinis dizainas. Jūsų lentelėje bus jūsų atminimo puslapio QR kodas.</p>
+        <p class="product-preview-note">Jūsų lentelės QR kodas bus susietas su jūsų sukurtu atminimo puslapiu.</p>
       </div>
 
       <div class="shop-side">
@@ -113,7 +111,8 @@
           <p class="eyebrow" id="product-kind">Plieninis variantas</p>
           <h2 id="product-title">Plieninė QR lentelė</h2>
           <p class="product-price" id="product-price">–</p>
-          <p class="product-preorder-price-note">Vieneto kaina · pristatymas papildomai 3 €.</p>
+          <p class="product-preorder-price-note">Lentelė ir atminimo puslapis · pristatymas 3 €.</p>
+          <p class="product-hosting-note">Puslapis veiks tol, kol veiks „Atminimas“ svetainė. <a href="#talpinimas">Talpinimo sąlygos</a>.</p>
 
           <div class="plaque-options" id="product-selector">
             <fieldset class="plaque-option-group">
@@ -143,15 +142,7 @@
             </fieldset>
             <p class="plaque-selection" role="status">Jūsų pasirinkimas: <strong id="product-selection">Sidabrinis plienas · Tik QR kodas · Vienam žmogui</strong></p>
           </div>
-          <ul class="product-highlights" aria-label="Svarbiausia produkto informacija">
-            <li><span>Matmenys</span><strong id="product-dimensions">5 × 5 cm</strong></li>
-            <li><span>Medžiaga</span><strong id="product-material">Plienas</strong></li>
-            <li><span>Tvirtinimas</span><strong id="product-mounting">Klijais</strong></li>
-            <li><span>Gamyba</span><strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong></li>
-            <li><span>Pristatymas</span><strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong></li>
-          </ul>
-          <p class="product-copy" id="product-copy">QR kodas atidaro asmeninį atminimo puslapį.</p>
-
+          <div class="product-order-actions" aria-label="Tęsti pasirinktą užsakymą">
           <div class="product-order-summary" aria-label="Kas bus toliau">
             <div><span>Su pristatymu</span><strong id="product-total">53 EUR</strong></div>
             <div><span>Apmokėjimas</span><strong>Per Paysera</strong></div>
@@ -159,6 +150,19 @@
           <div class="actions">
             <a class="button" id="product-create-link" href="redaktorius.html?product=metal&amp;color=silver&amp;pattern=plain&amp;memorial=single">Kurti puslapį ir užsakyti</a>
           </div>
+          </div>
+          <p class="product-start-note">Kurti galite be paskyros. Mokėjimas – tik paruošus puslapį.</p>
+          <details class="product-details">
+            <summary>Matmenys, gamyba ir pristatymas</summary>
+            <ul class="product-highlights" aria-label="Svarbiausia produkto informacija">
+              <li><span>Matmenys</span><strong id="product-dimensions">5 × 5 cm</strong></li>
+              <li><span>Medžiaga</span><strong id="product-material">Plienas</strong></li>
+              <li><span>Tvirtinimas</span><strong id="product-mounting">Klijais</strong></li>
+              <li><span>Gamyba</span><strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong></li>
+              <li><span>Pristatymas</span><strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong></li>
+            </ul>
+            <p class="product-copy" id="product-copy">QR kodas atidaro asmeninį atminimo puslapį.</p>
+          </details>
           <p class="product-action-note"><strong>Saugus apmokėjimas per Paysera.</strong> Prieš mokėjimą matysite produkto, pristatymo ir visą užsakymo sumą.</p>
         </article>
       </div>
@@ -170,6 +174,7 @@
           <p class="eyebrow">Trys paprasti žingsniai</p>
           <h2 id="how-it-works-title">Kaip tai veikia?</h2>
           <p>Telefono kamera nuskenuokite QR kodą ant paminklo ir peržiūrėkite informaciją apie velionį: biografiją, nuotraukas ir vaizdo įrašus.</p>
+          <p><a href="qr-kodas-ant-kapo.html">Daugiau apie QR lentelę ir jos tvirtinimą</a></p>
         </div>
       </div>
 
@@ -233,7 +238,13 @@
     <section class="info-grid info-grid--single" aria-label="Papildoma informacija">
       <div class="info-box">
         <h2>Užsakymo informacija</h2>
-        <p>Tik QR kodas: <strong>50 EUR</strong>, su raštu: <strong>60 EUR</strong>. Pristatymas: <strong>3 EUR</strong>, visa suma: <strong>53 € arba 63 €</strong>. Preliminari gamyba – <strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong>, pristatymas – <strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong>. Pristatymo teritorija: <span data-business="shippingTerritory">Lietuva</span>. Pristatymo kaina ir galutinė suma patvirtinamos prieš mokėjimą. Talpinimas: <span data-business="hostingPeriod">kol paslauga aktyvi; tikslų laikotarpį patvirtinsime prieš užsakymą</span>.</p><p><a href="taisykles.html">Pirkimo ir naudojimo sąlygos</a></p>
+        <p>Tik QR kodas: <strong>50 EUR</strong>, su raštu: <strong>60 EUR</strong>. Pristatymas: <strong>3 EUR</strong>, visa suma: <strong>53 € arba 63 €</strong>. Preliminari gamyba – <strong data-business="productionTime">1–2 savaitės po galutinio maketo patvirtinimo</strong>, pristatymas – <strong data-business="deliveryTime">1–3 darbo dienos po pagaminimo</strong>. Pristatymo teritorija: <span data-business="shippingTerritory">Lietuva</span>. Pristatymo kaina ir galutinė suma patvirtinamos prieš mokėjimą.</p>
+      </div>
+      <div class="info-box" id="talpinimas">
+        <h2>Atminimo puslapio talpinimas</h2>
+        <p>Atminimo puslapio talpinimas įskaičiuotas į lentelės kainą. Talpinimo trukmė: <span data-business="hostingPeriod">tol, kol veikia „Atminimas“ svetainė. Fiksuotas metų skaičius nenustatytas</span>.</p>
+        <p>QR kodas atveria puslapį mūsų svetainėje. Puslapiui pasiekti reikia interneto ryšio ir veikiančios „Atminimas“ svetainės.</p>
+        <p><a href="taisykles.html">Pirkimo ir naudojimo sąlygos</a></p>
       </div>
     </section>
   </main>

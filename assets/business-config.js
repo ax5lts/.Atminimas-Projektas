@@ -18,7 +18,7 @@ window.ATMINIMAS_BUSINESS = Object.freeze({
   paymentProvider: "Paysera",
   emailProvider: "Resend (užsakymų ir paslaugų laiškai)",
   hostingProvider: "Vercel (svetainė), Supabase (duomenų bazė ir failų saugykla)",
-  hostingPeriod: "kol paslauga aktyvi; tikslų laikotarpį patvirtinsime prieš užsakymą",
+  hostingPeriod: "tol, kol veikia „Atminimas“ svetainė. Fiksuotas metų skaičius nenustatytas",
   preorderDeadline: "2026 m. spalio 31 d.",
   responseTime: "per 1 darbo dieną",
   manufacturer: "WRYEDGE, UAB",

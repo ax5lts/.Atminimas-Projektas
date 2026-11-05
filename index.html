@@ -106,6 +106,7 @@
 *,*::before,*::after{box-sizing:border-box}html{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;color:#26231f;background:#f8f4eb}body{margin:0}img{max-width:100%;height:auto}[hidden]{display:none!important}
 </style>
 <link rel="stylesheet" href="css/styles.css?v=20260903-3">
+<link rel="stylesheet" href="css/home-product.css">
 </head>
 <body class="home-page">
 <div class="site-shell">
@@ -117,7 +118,7 @@
       </a>
       <nav class="site-nav" aria-label="Pagrindinė navigacija" data-auth-navigation>
         <a href="#kaip-veikia">Kaip veikia</a>
-        <a href="kapu-ieskojimas.html">Kapų paieška</a>
+        <a href="parduotuve.html">Kaina ir dizainai</a>
         <a href="prisijungti.html" data-auth-guest>Prisijungti</a>
         <a class="button site-nav__cta" href="parduotuve.html" data-auth-guest>QR lentelės</a>
         <a href="vartotojas.html" data-auth-user hidden>Mano paskyra</a>
@@ -128,52 +129,24 @@
 
   <main class="site-main home-main">
     <section class="landing-intro" id="pradzia" aria-labelledby="landing-title">
-      <div class="landing-intro__glow" aria-hidden="true"></div>
-      <picture class="landing-intro__product">
-        <source media="(max-width: 560px)" type="image/webp" srcset="assets/qr-plienas-480.webp">
-        <img src="assets/qr-plienas.webp" alt="Graviruota plieno QR atminimo lentelė artimojo atminimo puslapiui" width="1086" height="1448" loading="eager" decoding="async" fetchpriority="high">
-      </picture>
       <div class="landing-intro__content">
-        <p class="landing-wordmark" aria-label="Atminimas">
-          <span style="--letter-index: 0">A</span><span style="--letter-index: 1">t</span><span style="--letter-index: 2">m</span><span style="--letter-index: 3">i</span><span style="--letter-index: 4">n</span><span style="--letter-index: 5">i</span><span style="--letter-index: 6">m</span><span style="--letter-index: 7">a</span><span style="--letter-index: 8">s</span>
-        </p>
-        <p class="eyebrow landing-intro__eyebrow">Prisiminimas, kuris išlieka</p>
+        <p class="eyebrow landing-intro__eyebrow">QR lentelė ir atminimo puslapis</p>
         <h1 class="landing-title" id="landing-title">Atminimo kodas – QR lentelė artimojo istorijai išsaugoti</h1>
         <p class="landing-intro__lead">Atminimo kodas – tai ant kapavietės tvirtinama QR lentelė, kuri atveria asmeninį artimojo atminimo puslapį su gyvenimo istorija, nuotraukomis ir prisiminimais.</p>
+        <p class="landing-offer"><strong>Nuo 50 €</strong> + 3 € pristatymas<span>Plieninė 5 × 5 cm lentelė ir jūsų kuriamas atminimo puslapis.</span></p>
         <div class="actions landing-intro__actions">
           <a class="button" href="parduotuve.html">Pasirinkti QR lentelę</a>
           <a class="button button--ghost" href="#kaip-veikia">Kaip tai veikia</a>
         </div>
+        <p class="landing-start-note">Pradėti kurti galite be paskyros. Apmokėsite paruošę puslapį.</p>
       </div>
-      <a class="landing-scroll" href="#pasirinkite" aria-label="Rodyti pasirinkimus">
-        <span aria-hidden="true"></span>
-      </a>
+      <picture class="landing-intro__product">
+        <source media="(max-width: 560px)" type="image/webp" srcset="assets/qr-plienas-480.webp">
+        <img src="assets/qr-plienas.webp" alt="Graviruota plieno QR atminimo lentelė artimojo atminimo puslapiui" width="1086" height="1448" loading="eager" decoding="async" fetchpriority="high">
+      </picture>
     </section>
 
-    <section class="home-paths" id="pasirinkite" aria-labelledby="home-paths-title">
-      <header class="home-paths__header">
-        <p class="eyebrow">Nuo ko norite pradėti?</p>
-        <h2 id="home-paths-title">Pasirinkite jums tinkamą kelią</h2>
-        <p>Pasirinkite QR atminimo lentelę arba kapavietės priežiūros paslaugą.</p>
-      </header>
-      <div class="home-paths__grid">
-        <a class="home-path home-path--primary" href="parduotuve.html?product=metal">
-          <span class="home-path__badge">Nuo 50 € + 3 € pristatymas</span>
-          <span class="home-path__number" aria-hidden="true">01</span>
-          <strong>Fizinė QR lentelė</strong>
-          <small>Sukurkite puslapį ir užsakykite lentelę</small>
-          <span class="home-path__action">Užsakyti QR lentelę <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="home-path" href="kapu-prieziura.html">
-          <span class="home-path__badge">Atsakome per 1 darbo dieną</span>
-          <span class="home-path__number" aria-hidden="true">02</span>
-          <strong>Kapavietės priežiūra</strong>
-          <small>Žvakės, gėlės ir kapavietės sutvarkymas</small>
-          <span class="home-path__action">Pateikti užklausą <span aria-hidden="true">→</span></span>
-        </a>
-      </div>
-    </section>
-
+    <section class="home-paths" id="pasirinkite" aria-label="QR lentelės užsakymo eiga">
     <ul class="landing-proof" aria-label="Kodėl pradėti paprasta">
       <li>
         <span aria-hidden="true">01</span>
@@ -188,26 +161,19 @@
         <div><strong>Apmokėkite per Paysera</strong><small>Su pristatymu į paštomatą – 53 € arba 63 €.</small></div>
       </li>
     </ul>
+    </section>
 
     <section class="home-section home-section--qr" id="kaip-veikia" aria-labelledby="qr-title">
-      <div class="home-hero">
-        <div class="home-hero__content">
-          <p class="eyebrow">QR atminimo ženklai ir skaitmeniniai puslapiai</p>
+      <div class="home-product-details">
+        <header class="home-section__header">
+          <p class="eyebrow">Lentelė kapavietėje, prisiminimai telefone</p>
           <h2 id="qr-title">Kaip veikia QR atminimo lentelė?</h2>
-          <p>
-            Sukurkite ramų, tvarkingą atminimo puslapį su nuotraukomis, vaizdo įrašu,
-            gimimo ir mirties datomis bei epitafija. Graviruota plieno QR atminimo lentelė ant kapavietės leidžia artimiesiems
-            pasiekti istoriją telefonu.
-          </p>
+          <p>Pritvirtinkite lentelę prie kapavietės. Artimiesiems nukreipus telefono kamerą į QR kodą, naršyklėje atsivers jūsų paruošta istorija ir nuotraukos. Atskiros programėlės nereikia.</p>
+        </header>
           <div class="actions">
             <a class="button" href="parduotuve.html?product=metal">Užsakyti QR lentelę</a>
             <a class="button button--ghost" href="qr-kodas-ant-kapo.html">QR kodas ant kapo: ką verta žinoti</a>
           </div>
-        </div>
-        <div class="home-hero__media">
-          <img src="assets/qr-plienas-480.webp" srcset="assets/qr-plienas-480.webp 480w, assets/qr-plienas.webp 1086w" sizes="(max-width: 760px) 88vw, 420px" width="1086" height="1448" loading="lazy" decoding="async" alt="Graviruotos plieno QR atminimo lentelės pavyzdys">
-        </div>
-      </div>
 
       <div class="info-grid" aria-label="QR paslaugos dalys">
         <div class="info-box">
@@ -219,9 +185,43 @@
           <p>Nuotraukos, gyvenimo istorija ir svarbiausi prisiminimai vienoje ramioje erdvėje.</p>
         </div>
       </div>
+      </div>
     </section>
 
-    <section class="home-section home-support" id="kitos-paslaugos" aria-labelledby="services-title">
+
+
+    <section class="home-section home-faq" id="duk" aria-labelledby="faq-title">
+      <header class="home-section__header">
+        <p class="eyebrow">Dažniausiai užduodami klausimai</p>
+        <h2 id="faq-title">Trumpi atsakymai prieš pradedant</h2>
+        <p>Jei atsakymo čia nėra, parašykite mums – atsakome <span data-business="responseTime">per 1 darbo dieną</span>.</p>
+      </header>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Kaip veikia QR atminimo lentelė?</summary>
+          <p>Nuskenavus ant lentelės išgraviruotą QR kodą telefonu atidaromas konkretus atminimo puslapis su jūsų parinktu tekstu, nuotraukomis ir kitais prisiminimais.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kaip apmokėti QR lentelės užsakymą?</summary>
+          <p>Pasirinkite lentelę ir pradėkite kurti puslapį be paskyros. Prisijungti reikės tik išsaugant. Nurodę pristatymo duomenis, apmokėsite per Paysera. Lentelė tik su QR kodu kainuoja 50 €, su raštu – 60 €. Pristatymas – 3 €, iš viso – 53 € arba 63 €.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Ar informaciją galėsiu pakeisti vėliau?</summary>
+          <p>Taip. Puslapio savininkas kliento zonoje gali redaguoti tekstus, nuotraukas ir puslapio matomumą.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kur rasti kainą ir pristatymo informaciją?</summary>
+          <p>Paprastas QR variantas kainuoja 50 €, trys variantai su raštais – po 60 €. Spalva kainos nekeičia. Pristatymas į „Omniva“, „LP Express“ arba DPD paštomatą Lietuvoje kainuoja 3 €. Galutinę 53 € arba 63 € sumą matysite prieš mokėjimą.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Kiek laiko veiks atminimo puslapis?</summary>
+          <p>Atminimo puslapio talpinimas įskaičiuotas į lentelės kainą ir teikiamas tol, kol veikia „Atminimas“ svetainė. Fiksuotas metų skaičius nenustatytas. Puslapiui atidaryti telefonu reikia interneto ryšio. <a href="taisykles.html">Skaityti pirkimo ir naudojimo sąlygas</a>.</p>
+        </details>
+      </div>
+    </section>
+    <details class="home-other-services" id="kitos-paslaugos">
+      <summary>Ieškote kapavietės arba jos priežiūros?</summary>
+    <section class="home-support" aria-labelledby="services-title">
       <header class="home-section__header">
         <p class="eyebrow">Papildoma pagalba</p>
         <h2 id="services-title">Raskite kapavietę arba užsakykite kapavietės priežiūrą</h2>
@@ -258,42 +258,14 @@
         </article>
       </div>
     </section>
-
-    <section class="home-section home-faq" id="duk" aria-labelledby="faq-title">
-      <header class="home-section__header">
-        <p class="eyebrow">Dažniausiai užduodami klausimai</p>
-        <h2 id="faq-title">Trumpi atsakymai prieš pradedant</h2>
-        <p>Jei atsakymo čia nėra, parašykite mums – atsakome <span data-business="responseTime">per 1 darbo dieną</span>.</p>
-      </header>
-      <div class="faq-list">
-        <details class="faq-item">
-          <summary>Kaip veikia QR atminimo lentelė?</summary>
-          <p>Nuskenavus ant lentelės išgraviruotą QR kodą telefonu atidaromas konkretus atminimo puslapis su jūsų parinktu tekstu, nuotraukomis ir kitais prisiminimais.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Kaip apmokėti QR lentelės užsakymą?</summary>
-          <p>Pasirinkite lentelę, prisijunkite ir sukurkite atminimo puslapį. Išsaugoję pristatymo duomenis, apmokėsite per Paysera. Lentelė tik su QR kodu kainuoja 50 €, su raštu – 60 €. Pristatymas – 3 €, iš viso – 53 € arba 63 €.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Ar informaciją galėsiu pakeisti vėliau?</summary>
-          <p>Taip. Puslapio savininkas kliento zonoje gali redaguoti tekstus, nuotraukas ir puslapio matomumą.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Kur rasti kainą ir pristatymo informaciją?</summary>
-          <p>Paprastas QR variantas kainuoja 50 €, trys variantai su raštais – po 60 €. Spalva kainos nekeičia. Pristatymas į „Omniva“, „LP Express“ arba DPD paštomatą Lietuvoje kainuoja 3 €. Galutinę 53 € arba 63 € sumą matysite prieš mokėjimą.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Kaip užsakyti kapavietės priežiūrą?</summary>
-          <p><a href="kapu-prieziura.html">Atidarykite kapavietės priežiūros užklausą</a>, pasirinkite priežiūros darbus ir nurodykite vietą. Įprastai atsakome <span data-business="responseTime">per 1 darbo dieną</span>; pati užklausa dar nėra apmokamas užsakymas.</p>
-        </details>
-      </div>
-    </section>
+    </details>
   </main>
 
   <footer class="site-footer">
     <div class="site-footer__inner">
       <span>Atminimas</span>
       <span class="site-footer__support">Jei puslapis neveikia arba reikia pagalbos, susisiekite su mumis.</span>
+      <nav class="home-secondary-links" aria-label="Kitos paslaugos"><a href="kapu-ieskojimas.html">Kapų paieška</a><a href="kapu-prieziura.html">Kapavietės priežiūra</a></nav>
       <nav class="legal-links" aria-label="Teisinė informacija"><a href="rekvizitai.html">Rekvizitai</a><a href="taisykles.html">Taisyklės</a><a href="privatumas.html">Privatumas</a><a href="grazinimas.html">Atsisakyti sutarties</a><a href="pranesti.html">Pranešti apie turinį</a><a href="prieinamumas.html">Prieinamumas</a></nav>
     </div>
   </footer>
