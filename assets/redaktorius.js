@@ -1,3 +1,9 @@
+/**
+ * Puslapis: redaktorius.html. Čia valdoma jo DOM būsena, žingsniai ir peržiūra.
+ * Apima tekstą, mediją, grupę, vietinį juodraštį ir išsaugojimo eigą.
+ * Duomenų operacijos deleguojamos AtminimasApi; viešą skriptų tvarką nustato HTML.
+ * Orientyras ir susiję testai: docs/FRONTEND.md.
+ */
 (function () {
   var form = document.getElementById("editor-form");
   var statusEl = document.getElementById("editor-status");

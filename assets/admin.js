@@ -1,3 +1,9 @@
+/**
+ * Puslapis: admin.html. Valdo administravimo skyrius ir duomenų atvaizdavimą.
+ * Prieš skaitymą tikrina naudotoją, jo tikrą rolę ir MFA; serveris tikrina atskirai.
+ * atminimas:admin-ready praneša papildomiems administravimo skriptams apie parengtį.
+ * Sąsajos ir testai: docs/FRONTEND.md; serverio ribos: docs/BACKEND.md.
+ */
 (function () {
   var form = document.getElementById("admin-auth-form");
   var loginStatusEl = document.getElementById("admin-status");

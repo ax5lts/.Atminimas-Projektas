@@ -1,3 +1,8 @@
+/**
+ * Paskirtis: Auth sesija, atnaujinamos užklausos ir MFA adapteris.
+ * Sąsaja: window.AtminimasAuth; konfigūraciją pateikia supabase-config.js.
+ * Vartotojai ir prisijungimo eiga: docs/FRONTEND.md. Serverio teisės: docs/BACKEND.md.
+ */
 (function (global) {
   var SESSION_KEY = "atminimas.auth.session.v1";
   var CONFIRMATION_STATE_KEY = "atminimas.auth.confirmation-state.v1";

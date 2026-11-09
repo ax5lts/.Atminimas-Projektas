@@ -1,20 +1,23 @@
-# Supabase pakeitimai
+# Supabase backend
 
-`migrations/` yra duomenų bazės pakeitimų šaltinis. Prieš produkcinį diegimą palyginkite nuotolinę migracijų istoriją ir pritaikykite tik dar neįdiegtus failus. Kadangi pradinis projektas buvo sukurtas dar prieš migracijų istoriją, naujam visiškai tuščiam projektui pirmiausia vieną kartą taikykite `schema.sql`, tada visus failus iš `migrations` pagal pavadinimo tvarką.
+Naujam pokalbiui pradėti skaitykite [bendras instrukcijas](../AGENTS.md), [backend žemėlapį](../docs/BACKEND.md) ir [paskutinę patikrintą būseną](../docs/PROJECT_STATE.md). Tikslūs vietiniai importai bei gateway nustatymai yra [generuojamame žemėlapyje](../docs/GENERATED_MAP.md).
 
-Repozitorijoje taip pat laikomas visų produkcijoje veikiančių Edge Functions šaltinis, įskaitant `qr-code` ir `parcel-lockers`. Funkcijų paslaptys turi būti saugomos tik Supabase Secrets, ne šiame aplanke.
+## Šaltiniai ir atkūrimo ribos
 
-Svarbiausi saugumo principai:
+`migrations/` yra vietinių DB pakeitimų šaltinis. `schema.sql` yra ankstyvas bazinis schemos aprašas, o ne dabartinės produkcijos dump. Repozitorija turi žinomų neatitikimų su produkcija: prieigos kodų bei dalies automatizavimo kūrimo SQL ir kelių produkcijos funkcijų vietinių šaltinių trūksta. Jų nebuvimas nėra įrodymas, kad produkcijoje jie neveikia.
 
-- naujas profilis pagal nutylėjimą yra neviešas;
-- profilį paskelbti ar paslėpti gali jo savininkas;
-- užsakymus mato tik savininkas ir administratorius;
-- failus galima kelti tik į prisijungusio vartotojo UUID aplanką;
-- sutarties atsisakymai ir turinio pranešimai leidžiami pateikti viešai, bet juos skaityti ir administruoti gali tik administratorius;
-- išankstiniai užsakymai priimami tik per tikrinamą ir ribojamą `preorder` Edge Function; lentelė viešai neskaitoma ir tiesioginis `anon` įterpimas draudžiamas;
-- naujų mokamų QR lentelių užsakymų kūrimas išjungtas: `profile-manage` veiksmas `create_order` ir `payment-create` grąžina `409`; senos lentelės paliktos istoriniams bei jau apmokėtiems užsakymams vykdyti;
-- gavėjo ir siuntos duomenys keičiami tik per patikrintas funkcijas bei RLS taisykles.
+Prieš naujos aplinkos atkūrimą, migracijų perleidimą ar produkcijos pakeitimą palyginkite tikrą nuotolinę istoriją ir reikiamus objektus. Vien `schema.sql` ir visų vietinių failų paleidimas nėra patikrinta pilno atkūrimo procedūra. Jau įdiegtų migracijų neperrašykite kaip naujų pakeitimų.
 
-Po kiekvieno schemos pakeitimo paleiskite „Supabase Security Advisor“ ir testus.
+## Dabartinės sutartys
 
-Kapavietės priežiūros pasiūlymų „Paysera“ integracijos konfigūracija ir patikros: [PAYSERA_SETUP.md](PAYSERA_SETUP.md).
+- Naujas atminimo profilis pagal nutylėjimą neviešas; paskelbimą valdo savininkas.
+- Privatus turinys ir failų nuorodos gaunami per tikrinamą `profile-content`; prieigos kodas ir grupės neturi apeiti privatumo.
+- Užsakymų / pasiūlymų duomenys ribojami savininkui bei administratoriui; administratoriui būtinas MFA `aal2`.
+- Įkėlimai tikrinami pagal vartotojo UUID ir kelią. Saugyklos privačios, failų kiekį ir talpą riboja atominė DB apskaita.
+- Mokamų QR lentelių kelias yra `profile-manage` → `payment-create` → Paysera webhook; autoritetingos sumos ir būsena nustatomos serveryje.
+- Senas išankstinių užsakymų `preorder` endpoint uždarytas (410). Jis nėra dabartinis mokamų užsakymų kelias.
+- Viešos teisinės ir turinio užklausos priimamos tik per tikrinamus galinius taškus; jų skaitymo ir administravimo teisės ribotos.
+
+Pakeitus bendrą `_shared` failą reikia atskirai įdiegti visas susijusias funkcijas su jų priklausomybėmis. `config.toml` yra vietinė konfigūracija: redagavimas savaime nepakeičia produkcijos Auth ar gateway.
+
+Procedūros: [DEPLOYMENT.md](../DEPLOYMENT.md), [SECURITY.md](../SECURITY.md), [Paysera konfigūracija](PAYSERA_SETUP.md), [automatika](AUTOMATION_SETUP.md). SQL testų ir izoliuotų scenarijų eiga aprašyta [BACKEND.md](../docs/BACKEND.md).

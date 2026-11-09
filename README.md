@@ -1,65 +1,63 @@
 # Atminimas
 
-„Atminimas“ yra statinis HTML/CSS/JS projektas su Supabase PostgreSQL, Auth, Storage ir Edge Functions. `app.py` suteikia vietinį Flask API, o produkcinis frontend paruošiamas į `dist/` ir diegiamas per Vercel.
+Lietuviška QR atminimo puslapių, lentelių užsakymo ir kapaviečių priežiūros svetainė. Frontendas yra paprastas HTML, CSS ir JavaScript; backendą teikia Supabase PostgreSQL, Auth, Storage ir Deno Edge Functions. Viešą `dist/` rinkinį publikuoja Vercel.
 
-## Vietinė peržiūra ir viešinimo failai
+## Pradžia naujame pokalbyje
 
-`python serve.py` paleidžia redaguojamus šaltinius adresu `http://localhost:5000`. Viešinimui naudojamas Node.js 22 ar naujesnis ir `pnpm` 11.19.0:
+Pirmiausia skaitykite [AGENTS.md](AGENTS.md). Ten yra projekto taisyklės ir trumpas darbo pradžios kelias. Ankstesnių pokalbių žinoti nereikia.
 
-```bash
+| Ką norite suprasti | Kur skaityti |
+| --- | --- |
+| Kaip dalys susijusios ir kur redaguoti | [Architektūra](docs/ARCHITECTURE.md) |
+| Puslapiai, bendri objektai, redaktorius ir užsakymo eiga | [Frontendas](docs/FRONTEND.md) |
+| Funkcijos, duomenys, teisės ir migracijos | [Backendas](docs/BACKEND.md) |
+| Tikslūs puslapių skriptai ir bendrų failų priklausomybės | [Generuojamas kodo žemėlapis](docs/GENERATED_MAP.md) |
+| Paskutinė patikrinta produkcijos būsena ir žinomi ribojimai | [Projekto būsena](docs/PROJECT_STATE.md) |
+| Saugumo principai | [SECURITY.md](SECURITY.md) |
+| Diegimo procedūros ir ankstesni leidimai | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| Kapaviečių paieškos ir seno importo detalės | [Paieškos aprašas](docs/CEMETERY_SEARCH.md) |
+
+## Paleidimas
+
+Reikia Node.js 22+ ir Python 3. Standartinei HTML peržiūrai Python paketų nereikia.
+
+```sh
+python serve.py
+```
+
+Atverkite `http://127.0.0.1:5000`. Tai vietinis statinių šaltinių serveris. Su produkcijos Supabase konfigūracija naršyklės užklausos pasiekia tikrą backendą; vietinė peržiūra savaime nesukuria izoliuotos DB.
+
+```sh
 pnpm install --frozen-lockfile
 pnpm test
 pnpm build
+node --test tests/verify-build.cjs
 ```
 
-`scripts/build.mjs` sukuria tik viešus failus kataloge `dist/`, sumažina JavaScript ir CSS, išlaiko skriptų vykdymo tvarką ir pagal turinį atnaujina jų versijas HTML bei dinamiškai įkeliamuose skriptuose. `.env`, serverio kodas, testai ir įrankių failai į viešinimo katalogą nepatenka. Šaltinius keiskite `assets/`, `css/` ir šakniniuose HTML failuose; `dist/` sugeneruojamas iš naujo. Vercel šią komandą vykdo automatiškai pagal `vercel.json`.
+`package.json` ir `vercel.json` nurodo naudojamą pnpm versiją. [pnpm-workspace.yaml](pnpm-workspace.yaml) `hoisted` režimas palaiko Windows exFAT diską be simbolinių nuorodų. Redaguokite šakninius HTML, `assets/` ir `css/`; `dist/` yra generuojamas rezultatas.
 
-`pnpm-workspace.yaml` parinktas `hoisted` režimas leidžia priklausomybes įdiegti ir Windows exFAT diske, nepalaikančiame simbolinių nuorodų.
+`app.py` yra papildomas vietinis Flask serveris ir paieškos API. Jam reikia `flask`, `python-dotenv` ir vietinės Supabase konfigūracijos. Jis nėra Vercel produkcijos serveris.
 
-## Oficiali kapaviečių paieška
+## Patikros
 
-Paieška naudoja Valstybės duomenų agentūros rinkinį [Savivaldybių kapinių registro duomenys](https://data.gov.lt/datasets/2779/?resource_version=1619), licencija [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
-Oficialūs duomenys Supabase duomenų bazėje nebesaugomi. Viešas frontend kviečia `cemetery-search` Edge Function. Funkcija pirmiausia tikrina greitą viešą CEMETY paiešką, o jei ji neatsako arba negrąžina rezultatų, naudoja `https://get.data.gov.lt/datasets/gov/kapines/registras`. Funkcija:
-
-- pati aptinka visus `velioniai` savivaldybių modelius ir sąrašą laiko atminties podėlyje 6 valandas;
-- riboja vienu metu vykdomų oficialaus API užklausų skaičių;
-- palaiko dalinę vardo ir pavardės paiešką, metus, savivaldybę, kapines bei puslapiavimą;
-- į naršyklę grąžina tik rezultatui parodyti reikalingus laukus;
-- naudoja dokumentuotus `contains(...)`, AND / OR, `limit(...)` ir puslapiavimo veiksmus.
-
-Kapavietės žemėlapio peržiūra naudoja OpenStreetMap plyteles, o neveikiant plytelėms pateikia tiesioginę nuorodą į OpenStreetMap.
-
-`assets/official-grave-search.js` pirmiausia naudoja neprivalomą `CEMETERY_SEARCH_API_URL`; jei jis nenustatytas, kviečia esamo Supabase projekto `/functions/v1/cemetery-search` adresą. Vietinis Flask atitikmuo yra `GET /api/deceased/search`.
-
-## Autorizacija ir užklausos
-
-Atvirų duomenų skaitymui per `https://get.data.gov.lt/` autorizacija ir API raktas nereikalingi. Autorizacija reikalinga duomenų tiekėjams, kurie per `https://put.data.gov.lt/` kuria, keičia arba šalina duomenis. Ši paieškos funkcija atlieka tik skaitymo veiksmus.
-
-Oficiali dokumentacija:
-
-- [autorizacija](https://docs.data.gov.lt/projects/atviriduomenys/latest/api/index.html#autorizacija);
-- [veiksmai](https://docs.data.gov.lt/projects/atviriduomenys/latest/api/index.html#veiksmai);
-- [duomenų užklausos](https://docs.data.gov.lt/projects/atviriduomenys/latest/api/index.html#duomenu-uzklausos).
-
-Portalas šiuo metu netaiko užklausų skaičiaus kvotos. Funkcijoje esantys vienalaikių užklausų, atsakymo laukimo ir puslapio dydžio apribojimai yra tik mūsų paslaugos stabilumo saugikliai.
-
-Vietiniam alternatyviam API adresui galima naudoti:
-
-```text
-CEMETERY_SEARCH_API_URL=https://jusu-serveris.example/api/deceased/search
-```
-
-## Ankstesnio importo atsarginė kopija
-
-Importo kodas ir vietiniai CSV palikti kaip techninė atsarginė kopija. `data-imports/` yra ignoruojamas Git ir į produkciją nekeliamas. Savaitinis GitHub Actions importas išjungtas, todėl oficialūs duomenys į Supabase daugiau automatiškai nebus rašomi.
-
-## Testai
-
-```bash
-python -m unittest discover -s tests -v
+```sh
+python -m unittest discover -s tests -p 'test_*.py' -q
 node --test tests/*.test.cjs
-deno test --no-lock --node-modules-dir=none --allow-env supabase/functions
+pnpm dlx deno@2.9.6 test --node-modules-dir=none --allow-env --allow-net supabase/functions
+node scripts/build.mjs
+node --test tests/verify-build.cjs
+pnpm docs:check
 ```
 
-Prieš produkcinį pakeitimą patikrinkite paiešką su viena savivaldybe ir be savivaldybės filtro, Edge Function žurnalus bei Supabase Security Advisor.
+Node testai tikrina naršyklės logiką su imitatoriais; atskiri `*.browser.cjs` scenarijai naudoja Playwright. SQL testus vykdykite pagal [backend aprašą](docs/BACKEND.md), o ne kaip įprastas produkcijos migracijas. Mokėjimo ir laiškų srautus bandykite su imitatoriais.
+
+## Dokumentacijos atnaujinimas
+
+Pakeitus puslapių skriptus, Edge importus ar lokalią gateway konfigūraciją:
+
+```sh
+pnpm docs:map
+pnpm docs:check
+```
+
+Žemėlapis skaitomas tik iš vietinių šaltinių ir nekeičia produkcijos. Architektūros pasikeitimus papildykite `docs/ARCHITECTURE.md`, tikrą diegimo rezultatą su data — `docs/PROJECT_STATE.md`. Datuoti auditai ir planai išlaikomi kaip istorija, ne kaip dabartinio elgesio garantija.

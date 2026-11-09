@@ -1,3 +1,9 @@
+/**
+ * Paskirtis: redaktoriaus ir atminimo duomenų API adapteris.
+ * Sąsaja: window.AtminimasApi; naudoja ATMINIMAS_CONFIG ir AtminimasAuth.
+ * Puslapiai valdo UI, šis failas jungia juos su DB, Storage ir Edge Functions.
+ * Srautai ir sutartys: docs/FRONTEND.md bei docs/BACKEND.md.
+ */
 (function (global) {
   function getConfig() {
     var cfg = global.ATMINIMAS_CONFIG;

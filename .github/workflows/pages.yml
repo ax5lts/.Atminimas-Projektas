@@ -31,6 +31,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Check repository documentation map
+        run: node scripts/project-map.mjs --check
+
       - name: Run tests
         run: python -m unittest discover -s tests -p "test_*.py" -v
 

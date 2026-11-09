@@ -1,5 +1,8 @@
 # Saugumo diegimas ir priežiūra
 
+Naujam pokalbiui: [architektūra](docs/ARCHITECTURE.md) ir [paskutinė patikrinta būsena](docs/PROJECT_STATE.md). Žemiau datuoti leidimų aprašai yra istorija; ankstesnio leidimo būsena nepakeičia naujesnės patikros.
+
+
 2026-11-09 saugumo pataisos įdiegtos produkcijoje, frontend publikuotas per Vercel. Privalomas administratorių MFA veikia DB ir Edge lygiu; produkcijos TOTP registravimas ir tikrinimas patvirtinti laikina pašalinta testine paskyra. Nutekėjusių slaptažodžių apsauga neprieinama esamame Supabase Free plane (reikia Pro). Visa būsena, versijos ir testai: [galutinė saugumo ataskaita](SECURITY_FIXES_2026-11-09.md).
 
 
