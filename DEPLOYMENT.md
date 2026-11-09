@@ -1,5 +1,8 @@
 # Paleidimo kontrolinis sąrašas
 
+2026-11-09 saugumo pataisos įdiegtos produkcijoje, frontend publikuotas per Vercel. Privalomas administratorių MFA veikia DB ir Edge lygiu; produkcijos TOTP registravimas ir tikrinimas patvirtinti laikina pašalinta testine paskyra. Nutekėjusių slaptažodžių apsauga neprieinama esamame Supabase Free plane (reikia Pro). Visa būsena, versijos ir testai: [galutinė saugumo ataskaita](SECURITY_FIXES_2026-11-09.md).
+
+
 ## 2026-09-14: audito pataisymai ir MFA
 
 Migracija `20260914190718_audit_mfa_guards_and_indexes.sql` pridėjo trūkstamus indeksus ir MFA ribojimus faktorių patvirtinusioms paskyroms. DB bandymas `tests/mfa_database.sql` vykdomas su ROLLBACK; jis neįregistruoja tikrų telefonų. Backend versijos: profile-manage v19, profile-content v14, grave-photo v6, service-flow v8, payment-create v7, document-download v7, shipping-create v6, production-email v9, ops-assistant v5. Faktiniai laiškai, mokėjimai ar siuntos bandymuose nekuriami.

@@ -1,5 +1,8 @@
 # Saugumo diegimas ir priežiūra
 
+2026-11-09 saugumo pataisos įdiegtos produkcijoje, frontend publikuotas per Vercel. Privalomas administratorių MFA veikia DB ir Edge lygiu; produkcijos TOTP registravimas ir tikrinimas patvirtinti laikina pašalinta testine paskyra. Nutekėjusių slaptažodžių apsauga neprieinama esamame Supabase Free plane (reikia Pro). Visa būsena, versijos ir testai: [galutinė saugumo ataskaita](SECURITY_FIXES_2026-11-09.md).
+
+
 Šio projekto saugumas remiasi keliomis nepriklausomomis apsaugomis: mažiausiomis
 duomenų bazės teisėmis, RLS taisyklėmis, privačia failų saugykla, serveriniu
 įvesties tikrinimu, trumpalaikėmis failų nuorodomis ir naršyklės saugumo
@@ -33,9 +36,9 @@ Produkcija: `https://atminimokodas.lt/`. `main` šakos pakeitimus automatiškai 
 
 Paskyros puslapis `saugumas.html` skirtas autentifikavimo programėlei prijungti ir prisijungimui patvirtinti. TOTP slaptas raktas rodomas tik registruojant programėlę ir nesaugomas naršyklės saugyklose. Kodai siunčiami tiesiogiai Supabase Auth.
 
-`private.session_mfa_satisfied()` ir ribojančios RLS politikos reikalauja `aal2` vartotojui užregistravus patvirtintą MFA faktorių. Owner RPC funkcijos ir autentifikuotos Edge Functions taiko tą pačią taisyklę. Service role automatikos srautai nepaverčiami interaktyviais prisijungimais.
+`private.session_mfa_satisfied()` ir ribojančios RLS politikos reikalauja `aal2` visiems administratoriams bei kitiems vartotojams, turintiems patvirtintą MFA faktorių. Owner RPC funkcijos ir autentifikuotos Edge Functions taiko tą pačią taisyklę. Service role automatikos srautai nepaverčiami interaktyviais prisijungimais.
 
-Esamų paskyrų MFA registraciją turi užbaigti patys paskyrų valdytojai savo telefonuose. Kol nėra patvirtinto faktoriaus, jų prieiga išlaikoma, kad būtų galima užbaigti registraciją. Todėl vien šio leidimo publikavimas nereiškia, kad abi administratoriaus paskyros jau apsaugotos MFA. Užbaigus abiejų paskyrų registraciją galima atskiru patikrintu pakeitimu padaryti MFA privalomą administratoriaus rolei nepriklausomai nuo turimų faktorių.
+Esamų paskyrų MFA registraciją turi užbaigti patys paskyrų valdytojai savo telefonuose. Administratoriams jautrūs veiksmai blokuojami iki `aal2` patvirtinimo, net jei pirmasis faktorius dar neužregistruotas. Auth registravimo ir patvirtinimo eiga lieka prieinama; paprasto naudotojo prieiga be MFA išlaikoma iki faktoriaus patvirtinimo.
 
 Praradus autentifikavimo programėlę reikia tapatybės patikros ir administratoriaus atkūrimo procedūros; nekurkite viešo MFA apėjimo. Nutekėjusių slaptažodžių apsauga įjungiama Supabase Auth nustatymuose, kai turima prieiga ir planas palaiko funkciją.
 
@@ -49,8 +52,8 @@ Prieš priimant tikrus klientų duomenis:
   dabartiniame frontende šios integracijos dar nėra, todėl vien Dashboard
   jungiklis sustabdytų šias formas.
 - Administratoriaus paskyrai užbaikite TOTP MFA registraciją. Naujo leidimo
-  serverinė apsauga pradeda reikalauti `aal2`, kai paskyrai patvirtinamas
-  pirmasis MFA faktorius.
+  serverinė apsauga reikalauja `aal2` administratoriui net prieš patvirtinant
+  pirmąjį MFA faktorių.
 - Nustatykite tikslų `Site URL` ir tik būtinus `Redirect URLs`; nenaudokite
   plačių pakaitos šablonų produkcijoje.
 - Prijunkite nuosavą SMTP, stebėkite nesėkmingus prisijungimus ir nustatykite
