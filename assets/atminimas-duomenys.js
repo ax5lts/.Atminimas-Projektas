@@ -291,19 +291,28 @@
     return (params.get("id") || params.get("slug") || params.get("s") || "demo").trim();
   }
 
-  async function loadAtminimasBySlug(identifier) {
+  async function loadAtminimasBySlug(identifier, accessCode) {
+    var unlock = typeof accessCode === "string";
     var res = await apiFetch(
-      functionUrl("profile-content") + "?profile_id=" + encodeURIComponent(identifier),
-      { headers: headers(), cache: "no-store" }
+      functionUrl("profile-content") + (unlock ? "" : "?profile_id=" + encodeURIComponent(identifier)),
+      unlock ? {
+        method: "POST",
+        headers: Object.assign({}, headers(), { "Content-Type": "application/json" }),
+        cache: "no-store",
+        body: JSON.stringify({ profile_id: identifier, access_code: accessCode })
+      } : { headers: headers(), cache: "no-store" }
     );
     var data = await res.json().catch(function () { return {}; });
     if (res.status === 404) {
       throw new Error("Atminimo puslapis nerastas.");
     }
     if (!res.ok || !data.atminimas) {
-      throw new Error("Atminimo puslapio įkelti nepavyko.");
+      var error = new Error(data.error || "Atminimo puslapio įkelti nepavyko.");
+      error.code = data.code || "";
+      error.status = res.status;
+      throw error;
     }
-    return { atminimas: data.atminimas, members: Array.isArray(data.members) ? data.members : [], can_manage: !!data.can_manage, is_public: data.is_public === true };
+    return { atminimas: data.atminimas, members: Array.isArray(data.members) ? data.members : [], can_manage: !!data.can_manage, is_public: data.is_public === true, access_code_protected: data.access_code_protected === true };
   }
 
   async function createAtminimas(input, options) {

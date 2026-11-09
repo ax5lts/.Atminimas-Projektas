@@ -3031,6 +3031,30 @@ video {
   background-color: var(--memorial-page-background, #f2ede4);
 }
 
+.memorial-access {
+  width: min(100% - 32px, 440px);
+  margin: 32px auto;
+  padding: 24px;
+  border: 1px solid rgba(61, 83, 72, 0.24);
+  border-radius: 16px;
+  background: #fffdf8;
+  color: #213a32;
+}
+
+.memorial-access h1 { font-size: 1.6rem; line-height: 1.2; }
+.memorial-access form, .memorial-access label { display: grid; gap: 12px; }
+.memorial-access input {
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid #88988d;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 16px;
+}
+.memorial-access .button { min-height: 48px; width: 100%; }
+
 .kraunama,
 .klaida {
   max-width: 560px;

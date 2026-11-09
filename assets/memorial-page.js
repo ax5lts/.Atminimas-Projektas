@@ -565,7 +565,7 @@
       function choose(index) {
         AtminimasGroup.render(strip, people, index, choose);
         // Reactions and management links belong to the shared QR/root page.
-        renderPage({ atminimas: Object.assign({}, people[index], { id: atminimas.id }) }, message);
+        renderPage({ atminimas: Object.assign({}, people[index], { id: atminimas.id }), access_code_protected: payload.access_code_protected }, message);
         var url = new URL(window.location.href);
         if (index) url.searchParams.set("person", people[index].id);
         else url.searchParams.delete("person");
@@ -611,7 +611,7 @@
       if (builderTitle) fitBuilderName(builderTitle);
       applyResponsiveBuilderHeights(builderView);
     }
-    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas);
+    if (window.AtminimasMemorialActions) AtminimasMemorialActions.init(atminimas, { community: payload.access_code_protected !== true });
   }
 
   function fillGallery(images) {
@@ -755,11 +755,40 @@
       return;
     }
 
+    var accessPanel = document.getElementById("memorial-access");
+    var accessForm = document.getElementById("memorial-access-form");
+    var accessStatus = document.getElementById("memorial-access-status");
+    accessForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var button = accessForm.querySelector("button[type='submit']");
+      if (button.disabled || !accessForm.reportValidity()) return;
+      button.disabled = true;
+      accessStatus.textContent = "Tikrinamas prieigos kodas…";
+      var codeInput = accessForm.elements.access_code;
+      try {
+        var payload = await AtminimasApi.loadAtminimasBySlug(identifier, codeInput.value.trim());
+        codeInput.value = "";
+        accessPanel.hidden = true;
+        renderPage(payload, "");
+      } catch (error) {
+        codeInput.value = "";
+        accessStatus.textContent = error.message || "Puslapio atidaryti nepavyko. Bandykite dar kartą.";
+        codeInput.focus();
+      } finally {
+        button.disabled = false;
+      }
+    });
+
     try {
       var payload = await AtminimasApi.loadAtminimasBySlug(identifier);
       renderPage(payload, "");
-    } catch {
+    } catch (error) {
       document.getElementById("kraunama").hidden = true;
+      if (error.code === "access_code_required") {
+        accessPanel.hidden = false;
+        accessForm.elements.access_code.focus();
+        return;
+      }
       document.getElementById("klaida").textContent = "Atminimo puslapio nepavyko rasti.";
       document.getElementById("klaida").hidden = false;
     }

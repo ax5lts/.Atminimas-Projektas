@@ -139,3 +139,10 @@ test('non-JSON auth errors keep HTTP status and show a readable message', async 
   const { auth } = setup(async () => new Response('<html>Bad gateway</html>', { status: 502 }), null);
   await assert.rejects(auth.signIn('test@example.com', 'password'), error => error.status === 502 && /laikinai nepasiekiama/.test(error.message));
 });
+
+test('administrator enrollment is required before entering protected pages', () => {
+  const { auth } = setup(async () => json({}));
+  assert.equal(auth.needsMfa({ id: 'user-1', factors: [] }, true), true);
+  assert.equal(auth.needsMfa({ id: 'user-1', factors: [] }, false), false);
+  assert.equal(auth.needsMfa(null, true), false);
+});

@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.110.1";
-import { signedMedia } from "./index.ts";
+import { handleRequest, signedMedia } from "./index.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -202,5 +202,254 @@ Deno.test("profile media handles a batch failure without exposing paths to visit
         item && "unavailable" in item && item.unavailable
       ),
     "managers should retain repairable entries",
+  );
+});
+
+function contentFixture(options: {
+  protectedPage?: boolean;
+  decision?: string;
+  children?: Record<string, unknown>[];
+  user?: boolean;
+} = {}) {
+  const calls: Array<{ url: URL; body: Record<string, unknown> }> = [];
+  const profile = {
+    id: profileId,
+    owner_id: ownerId,
+    vardas: "Privatus vardas",
+    aktyvus: true,
+    deleted_at: null,
+    media_json: media,
+    access_code_protected: options.protectedPage === true,
+    group_members: (options.children || []).map((child) => child.id),
+  };
+  const client = createClient("https://test.invalid", "test-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: async (rawUrl, init) => {
+        const url = new URL(String(rawUrl));
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        calls.push({ url, body });
+        if (url.pathname === "/auth/v1/user") {
+          return Response.json({ id: ownerId, factors: [] });
+        }
+        if (url.pathname === "/rest/v1/user_roles") {
+          return Response.json([]);
+        }
+        if (url.pathname === "/rest/v1/profiliai") {
+          return Response.json(
+            url.searchParams.get("id")?.startsWith("in.")
+              ? options.children || []
+              : profile,
+          );
+        }
+        if (
+          url.pathname === "/rest/v1/rpc/verify_memorial_access_code"
+        ) return Response.json(options.decision || "invalid");
+        if (url.pathname === "/storage/v1/object/sign/atminimas") {
+          return Response.json(
+            (body.paths as string[]).map((path) => ({
+              path,
+              error: null,
+              signedURL: `/object/sign/atminimas/${path}?token=test`,
+            })),
+          );
+        }
+        throw new Error(`Unexpected fixture request: ${url.pathname}`);
+      },
+    },
+  });
+  const request = (
+    code?: string,
+    headers: Record<string, string> = { "cf-connecting-ip": "198.51.100.2" },
+  ) =>
+    new Request(
+      `https://edge.invalid/profile-content${
+        code === undefined ? `?profile_id=${profileId}` : ""
+      }`,
+      {
+        method: code === undefined ? "GET" : "POST",
+        headers: {
+          ...(options.user ? { authorization: "Bearer verified-owner" } : {}),
+          ...headers,
+        },
+        ...(code === undefined ? {} : {
+          body: JSON.stringify({ profile_id: profileId, access_code: code }),
+        }),
+      },
+    );
+  return { client, calls, request };
+}
+
+Deno.test("protected profile GET reveals no content or signed media, including codes in URLs", async () => {
+  const fixture = contentFixture({ protectedPage: true });
+  const response = await handleRequest(
+    new Request(
+      `https://edge.invalid/profile-content?profile_id=${profileId}&access_code=58371`,
+    ),
+    fixture.client,
+  );
+  assert(response.status === 403, "a code in a URL must never unlock content");
+  const result = await response.json();
+  assert(
+    result.code === "access_code_required" && !result.atminimas &&
+      !result.members,
+    "locked response must contain no profile or group metadata",
+  );
+  assert(
+    fixture.calls.length === 1,
+    "locked response must not query children, verify URL codes, or sign files",
+  );
+});
+
+Deno.test("only a granted server decision unlocks a protected profile", async () => {
+  for (
+    const [decision, status] of [
+      ["invalid", 403],
+      ["rate_limited", 429],
+      ["not_protected", 403],
+      ["not_found", 403],
+      ["granted", 200],
+    ] as const
+  ) {
+    const fixture = contentFixture({ protectedPage: true, decision });
+    const response = await handleRequest(
+      fixture.request("58371"),
+      fixture.client,
+    );
+    assert(response.status === status, `unexpected status for ${decision}`);
+    const verification = fixture.calls.find((call) =>
+      call.url.pathname.endsWith("/verify_memorial_access_code")
+    );
+    assert(
+      verification?.body.p_profile_id === profileId &&
+        verification?.body.p_access_code === "58371",
+      "verification must use the server-only RPC",
+    );
+    assert(
+      /^[a-f0-9]{64}$/.test(String(verification?.body.p_attempt_key)),
+      "limiter key must be a stable hash",
+    );
+    const storageCalls = fixture.calls.filter((call) =>
+      call.url.pathname.startsWith("/storage/")
+    );
+    assert(
+      storageCalls.length === (decision === "granted" ? 1 : 0),
+      "denied requests must never sign private files",
+    );
+    if (decision === "rate_limited") {
+      assert(
+        response.headers.get("retry-after") === "900",
+        "lockout should explain the retry interval",
+      );
+    }
+    if (decision === "granted") {
+      const result = await response.json();
+      assert(
+        result.atminimas.vardas === "Privatus vardas" &&
+          result.access_code_protected,
+        "successful unlock must preserve the protection flag",
+      );
+      assert(
+        !JSON.stringify(result).includes("58371"),
+        "responses must not echo access codes",
+      );
+    }
+  }
+});
+
+Deno.test("code verification fails closed without a trusted client address", async () => {
+  const fixture = contentFixture({ protectedPage: true, decision: "granted" });
+  const response = await handleRequest(
+    fixture.request("58371", {
+      "x-forwarded-for": "198.51.100.9",
+      "x-real-ip": "198.51.100.8",
+    }),
+    fixture.client,
+  );
+  assert(
+    response.status === 503,
+    "untrusted forwarding headers must not create limiter identities",
+  );
+  assert(
+    fixture.calls.length === 1,
+    "verification and signing must not run without a trusted address",
+  );
+});
+
+Deno.test("group responses omit separately protected children without removing normal unpublished members", async () => {
+  const children = [
+    {
+      id: "child-public",
+      owner_id: ownerId,
+      vardas: "Visible child",
+      aktyvus: false,
+      access_code_protected: false,
+      media_json: [{
+        type: "image",
+        path: `${ownerId}/child-public/photo-1.jpg`,
+      }],
+    },
+    {
+      id: "child-private",
+      owner_id: ownerId,
+      vardas: "Hidden child",
+      access_code_protected: true,
+      media_json: [{
+        type: "image",
+        path: `${ownerId}/child-private/photo-1.jpg`,
+      }],
+    },
+  ];
+  const fixture = contentFixture({ children });
+  const response = await handleRequest(fixture.request(), fixture.client);
+  const result = await response.json();
+  assert(
+    response.status === 200 && result.members.length === 1 &&
+      result.members[0].id === "child-public",
+    "group membership must not bypass a child's own access code",
+  );
+  assert(
+    !JSON.stringify(result).includes("Hidden child"),
+    "protected child metadata must be omitted",
+  );
+  assert(
+    !fixture.calls.some((call) =>
+      JSON.stringify(call.body.paths || []).includes("child-private")
+    ),
+    "protected child files must never be signed",
+  );
+});
+
+Deno.test("verified owners retain access to protected profiles without submitting a code", async () => {
+  const fixture = contentFixture({ protectedPage: true, user: true });
+  const response = await handleRequest(fixture.request(), fixture.client);
+  const result = await response.json();
+  assert(
+    response.status === 200 && result.can_manage,
+    "owners must retain their editing access",
+  );
+  assert(
+    !fixture.calls.some((call) =>
+      call.url.pathname.endsWith("/verify_memorial_access_code")
+    ),
+    "owners must not consume public code attempts",
+  );
+});
+
+Deno.test("access-code POST bodies are bounded before database access", async () => {
+  const fixture = contentFixture({ protectedPage: true });
+  const response = await handleRequest(
+    new Request("https://edge.invalid/profile-content", {
+      method: "POST",
+      body: JSON.stringify({
+        profile_id: profileId,
+        access_code: "5".repeat(3000),
+      }),
+    }),
+    fixture.client,
+  );
+  assert(
+    response.status === 413 && fixture.calls.length === 0,
+    "oversized code requests must be rejected before database access",
   );
 });

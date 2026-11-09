@@ -22,6 +22,7 @@ async function mocked(scenario: Record<string, any>, action: (calls: {path:strin
     calls.push({path,body});
     const json=(value:unknown,status=200) => new Response(JSON.stringify(value), {status,headers:{"content-type":"application/json"}});
     if(path === "/auth/v1/user") return json({id,is_anonymous: !!scenario.anonymous});
+    if(path === "/rest/v1/user_roles") return json([]);
     if(path.endsWith("/get_paysera_checkout_credentials")) return json({client_id:"unit-test",client_secret:secret,project_id:project});
     if(path.includes("/openid-connect/token")) return json({access_token:"unit-test"});
     if(path.endsWith("/begin_product_paysera_payment")) return json({attempt:{id,order_id:orderId,project_id:project,amount_cents:5300,currency:"EUR",provider_order_id:scenario.hasOrder ? provider : null,checkout_url:scenario.reuse ? checkout : null,expires_at:new Date(Date.now()+3600000).toISOString()},claim_token:scenario.noClaim ? null : id});

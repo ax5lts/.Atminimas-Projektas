@@ -60,7 +60,7 @@ async function isAdmin(request: Request): Promise<boolean> {
   });
   if (!userResponse.ok) return false;
   const user = await userResponse.json().catch(() => null);
-  if (!user?.id || verifiedSessionNeedsMfa(authorization.replace(/^Bearer\s+/i, ""), user)) return false;
+  if (!user?.id || verifiedSessionNeedsMfa(authorization.replace(/^Bearer\s+/i, ""), user, true)) return false;
 
   const params = new URLSearchParams({
     select: "role",

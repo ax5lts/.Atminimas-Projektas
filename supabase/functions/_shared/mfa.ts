@@ -3,8 +3,9 @@
 export function verifiedSessionNeedsMfa(
   token: string,
   user: { factors?: Array<{ status?: string }> },
+  adminRequired = false,
 ): boolean {
-  if (!user.factors?.some((factor) => factor.status === "verified")) return false;
+  if (!adminRequired && !user.factors?.some((factor) => factor.status === "verified")) return false;
   try {
     const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const claims = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, "=")));

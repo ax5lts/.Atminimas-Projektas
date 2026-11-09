@@ -22,6 +22,8 @@
   async function load() {
     var me = await auth.user();
     if (!me) { location.replace("prisijungti.html?next=" + encodeURIComponent("saugumas.html" + (next ? "?next=" + encodeURIComponent(next) : ""))); return; }
+    var admin = await auth.isAdmin(me);
+    var needsMfa = auth.needsMfa(me, admin);
     var all = me.factors || [];
     var verified = all.filter(function (f) { return f.status === "verified"; });
     var totp = verified.filter(function (f) { return f.factor_type === "totp"; });
@@ -32,10 +34,10 @@
     form.hidden = !totp.length;
     document.getElementById("mfa-code-entry").hidden = auth.assuranceLevel() === "aal2";
     document.getElementById("mfa-remove").hidden = !totp.length || auth.assuranceLevel() !== "aal2";
-    continueLink.hidden = auth.needsMfa(me);
-    continueLink.href = next || (await auth.isAdmin(me) ? "admin.html" : "vartotojas.html");
+    continueLink.hidden = needsMfa;
+    continueLink.href = next || (admin ? "admin.html" : "vartotojas.html");
     enroll.hidden = verified.length > 0 && auth.assuranceLevel() !== "aal2";
-    status.textContent = verified.length ? (auth.needsMfa(me) ? "Įrašykite kodą iš autentifikavimo programėlės." : "Dviejų žingsnių patvirtinimas įjungtas. Ši sesija patvirtinta.") : "Dviejų žingsnių patvirtinimas dar neįjungtas. Prijunkite autentifikavimo programėlę telefone.";
+    status.textContent = verified.length ? (needsMfa ? "Įrašykite kodą iš autentifikavimo programėlės." : "Dviejų žingsnių patvirtinimas įjungtas. Ši sesija patvirtinta.") : (admin ? "Administratoriaus veiksmams būtinas dviejų žingsnių patvirtinimas. Prijunkite autentifikavimo programėlę telefone ir patvirtinkite kodą." : "Dviejų žingsnių patvirtinimas dar neįjungtas. Prijunkite autentifikavimo programėlę telefone.");
     if (verified.length && !totp.length) status.textContent = "Paskyra naudoja kitą patvirtinimo būdą. Dėl prieigos kreipkitės į administratorių.";
   }
   enroll.addEventListener("click", function () { run(async function () {

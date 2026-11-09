@@ -2,10 +2,13 @@ import {
   adminClient,
   handleOptions,
   json,
+  readJson,
+  RequestError,
   safeProfileLayout,
   safeStoryBlocks,
+  sessionNeedsMfa,
 } from "../_shared/core.ts";
-import { verifiedSessionNeedsMfa } from "../_shared/mfa.ts";
+import { trustedClientIp } from "../_shared/request-ip.ts";
 
 // Nauji kodai kuriami mažosiomis raidėmis, tačiau seni įrašai gali turėti
 // didžiųjų raidžių. Juos priimame skaitymui, kad anksčiau pagaminti QR veiktų.
@@ -73,7 +76,24 @@ async function optionalUser(
   const token = authorization.replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const { data, error } = await client.auth.getUser(token);
-  return error || !data.user || verifiedSessionNeedsMfa(token, data.user) ? null : data.user;
+  return error || !data.user || await sessionNeedsMfa(client, token, data.user)
+    ? null
+    : data.user;
+}
+
+async function accessAttemptKey(request: Request, profileId: string) {
+  const address = trustedClientIp(request);
+  if (!address) return null;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(
+      `memorial-access|${profileId}|${address}`,
+    ),
+  );
+  return Array.from(
+    new Uint8Array(digest),
+    (part) => part.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 async function isAdmin(client: ReturnType<typeof adminClient>, userId: string) {
@@ -150,27 +170,35 @@ export async function signedMedia(
   return signed.filter(Boolean);
 }
 
-export async function handleRequest(request: Request) {
+export async function handleRequest(
+  request: Request,
+  providedClient?: ReturnType<typeof adminClient>,
+) {
   const options = handleOptions(request);
   if (options) return options;
-  if (request.method !== "GET") {
+  if (!["GET", "POST"].includes(request.method)) {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  const profileId = cleanText(
-    new URL(request.url).searchParams.get("profile_id"),
-    100,
-  );
-  if (!PROFILE_ID_PATTERN.test(profileId)) {
-    return json({ error: "Atminimo puslapis nerastas" }, 404);
-  }
-
   try {
-    const client = adminClient();
+    // Codes are accepted only in a bounded JSON body, never in a shareable URL.
+    const body = request.method === "POST"
+      ? await readJson(request, 2_000)
+      : {};
+    const profileId = cleanText(
+      request.method === "POST"
+        ? body.profile_id
+        : new URL(request.url).searchParams.get("profile_id"),
+      100,
+    );
+    if (!PROFILE_ID_PATTERN.test(profileId)) {
+      return json({ error: "Atminimo puslapis nerastas" }, 404);
+    }
+    const client = providedClient || adminClient();
     const { data: profile, error } = await client
       .from("profiliai")
       .select(
-        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at,group_members",
+        "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,aktyvus,deleted_at,group_members,access_code_protected",
       )
       .eq("id", profileId)
       .maybeSingle();
@@ -188,6 +216,56 @@ export async function handleRequest(request: Request) {
       return json({ error: "Atminimo puslapis nerastas" }, 404);
     }
 
+    if (profile.access_code_protected && !canManage) {
+      const accessCode = typeof body.access_code === "string"
+        ? body.access_code
+        : "";
+      if (request.method !== "POST" || !accessCode) {
+        return json({
+          error: "Šis atminimo puslapis apsaugotas prieigos kodu.",
+          code: "access_code_required",
+        }, 403);
+      }
+      if (!/^[0-9]{5,6}$/.test(accessCode)) {
+        return json({
+          error: "Neteisingas prieigos kodas.",
+          code: "access_code_invalid",
+        }, 403);
+      }
+      const attemptKey = await accessAttemptKey(request, profileId);
+      if (!attemptKey) {
+        return json({
+          error: "Šiuo metu kodo patikrinti nepavyko. Bandykite vėliau.",
+          code: "access_code_unavailable",
+        }, 503);
+      }
+      const { data: decision, error: verificationError } = await client.rpc(
+        "verify_memorial_access_code",
+        {
+          p_profile_id: profileId,
+          p_access_code: accessCode,
+          p_attempt_key: attemptKey,
+        },
+      );
+      if (verificationError) throw verificationError;
+      if (decision === "rate_limited") {
+        return json(
+          {
+            error: "Per daug bandymų. Bandykite po 15 minučių.",
+            code: "access_code_rate_limited",
+          },
+          429,
+          { "Retry-After": "900" },
+        );
+      }
+      if (decision !== "granted") {
+        return json({
+          error: "Neteisingas arba nebegaliojantis prieigos kodas.",
+          code: "access_code_invalid",
+        }, 403);
+      }
+    }
+
     const media = await signedMedia(
       client,
       profile.media_json,
@@ -196,27 +274,49 @@ export async function handleRequest(request: Request) {
       canManage,
     );
     const members: Record<string, unknown>[] = [];
-    if (Array.isArray(profile.group_members) && profile.group_members.length && ownerId) {
-      const { data: children, error: childrenError } = await client.from("profiliai")
-        .select("id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,deleted_at")
-        .in("id", profile.group_members.slice(0, 7)).eq("owner_id", ownerId).is("deleted_at", null);
+    if (
+      Array.isArray(profile.group_members) && profile.group_members.length &&
+      ownerId
+    ) {
+      const { data: children, error: childrenError } = await client.from(
+        "profiliai",
+      )
+        .select(
+          "id,owner_id,vardas,pavarde,gimimo_data,mirties_data,epitafija,tekstas_200,story_blocks_json,layout_json,media_json,deleted_at,access_code_protected",
+        )
+        .in("id", profile.group_members.slice(0, 7)).eq("owner_id", ownerId).is(
+          "deleted_at",
+          null,
+        );
       if (childrenError) throw childrenError;
       for (const id of profile.group_members.slice(0, 7)) {
         const child = children?.find((item) => item.id === id);
-        if (!child) continue;
+        // A group does not override an individual member's separate code.
+        if (!child || (child.access_code_protected && !canManage)) continue;
         members.push({
-          id: child.id, vardas: child.vardas, pavarde: child.pavarde,
-          gimimo_data: child.gimimo_data, mirties_data: child.mirties_data,
-          epitafija: child.epitafija, tekstas_200: child.tekstas_200,
+          id: child.id,
+          vardas: child.vardas,
+          pavarde: child.pavarde,
+          gimimo_data: child.gimimo_data,
+          mirties_data: child.mirties_data,
+          epitafija: child.epitafija,
+          tekstas_200: child.tekstas_200,
           story_blocks_json: safeStoryBlocks(child.story_blocks_json),
           layout_json: safeProfileLayout(child.layout_json),
-          media_json: await signedMedia(client, child.media_json, ownerId, child.id, canManage),
+          media_json: await signedMedia(
+            client,
+            child.media_json,
+            ownerId,
+            child.id,
+            canManage,
+          ),
         });
       }
     }
     return json({
       members,
       is_public: profile.aktyvus === true,
+      access_code_protected: profile.access_code_protected === true,
       atminimas: {
         id: profile.id,
         vardas: profile.vardas,
@@ -232,9 +332,12 @@ export async function handleRequest(request: Request) {
       can_manage: canManage,
     });
   } catch (error) {
+    if (error instanceof RequestError) {
+      return json({ error: error.message }, error.status);
+    }
     console.error("profile-content failed", error);
     return json({ error: "Atminimo puslapio įkelti nepavyko" }, 500);
   }
 }
 
-if (import.meta.main) Deno.serve(handleRequest);
+if (import.meta.main) Deno.serve((request) => handleRequest(request));

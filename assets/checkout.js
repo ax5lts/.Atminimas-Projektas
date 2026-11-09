@@ -438,7 +438,7 @@
       return;
     }
     var me = await AtminimasAuth.user();
-    if (AtminimasAuth.needsMfa && AtminimasAuth.needsMfa(me)) {
+    if (AtminimasAuth.needsMfa && AtminimasAuth.needsMfa(me, me && await AtminimasAuth.isAdmin(me))) {
       window.location.replace("saugumas.html?next=" + encodeURIComponent("apmokejimas.html" + window.location.search));
       return;
     }

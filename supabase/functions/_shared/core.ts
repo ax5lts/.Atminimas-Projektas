@@ -302,6 +302,19 @@ export function storyBlocksText(value: unknown) {
     .slice(0, MAX_STORY_TEXT_LENGTH);
 }
 
+// Call only after Auth.getUser(token); roles are read with the service client,
+// never from editable user_metadata or client-supplied claims.
+export async function sessionNeedsMfa(
+  client: SupabaseClient,
+  token: string,
+  user: { id: string; factors?: Array<{ status?: string }> },
+): Promise<boolean> {
+  const { data: role, error } = await client.from("user_roles").select("role")
+    .eq("user_id", user.id).eq("role", "admin").maybeSingle();
+  if (error) throw error;
+  return verifiedSessionNeedsMfa(token, user, role?.role === "admin");
+}
+
 export async function requireUser(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "");
@@ -309,7 +322,7 @@ export async function requireUser(request: Request) {
   const client = adminClient();
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) throw new Error("Invalid session");
-  if (verifiedSessionNeedsMfa(token, data.user)) throw new RequestError("Patvirtinkite prisijungimą autentifikavimo programėlėje.", 403);
+  if (await sessionNeedsMfa(client, token, data.user)) throw new RequestError("Patvirtinkite prisijungimą autentifikavimo programėlėje.", 403);
   return { client, user: data.user, token };
 }
 

@@ -278,13 +278,14 @@
     profile = nextProfile;
     document.getElementById("memorial-action-bar").hidden = false;
     var demo = !!(options && options.demo);
-    document.getElementById("memorial-community").hidden = demo;
+    var hideCommunity = demo || !!(options && options.community === false);
+    document.getElementById("memorial-community").hidden = hideCommunity;
     updateSaveButton();
     if (!initialized) {
       initialized = true;
       setupActions();
     }
-    if (demo) return;
+    if (hideCommunity) return;
     loadEngagement().catch(function () {
       document.getElementById("memorial-engagement-status").textContent = "Virtualios žvakės ir prisiminimai laikinai nepasiekiami.";
     });

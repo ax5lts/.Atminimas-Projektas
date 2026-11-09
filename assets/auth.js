@@ -373,8 +373,8 @@
     return payload && payload.aal === "aal2" ? "aal2" : "aal1";
   }
 
-  function needsMfa(me) {
-    return assuranceLevel() !== "aal2" && !!(me && (me.factors || []).some(function (factor) { return factor.status === "verified"; }));
+  function needsMfa(me, adminRequired) {
+    return assuranceLevel() !== "aal2" && !!(me && (adminRequired || (me.factors || []).some(function (factor) { return factor.status === "verified"; })));
   }
 
   async function enrollMfa() {

@@ -41,6 +41,9 @@ jobs:
       - name: Check browser behavior
         run: node --test tests/*.test.cjs
 
+      - name: Check Edge security and payment behavior
+        run: npx --yes deno@2.9.6 test --node-modules-dir=none --allow-env --allow-net supabase/functions
+
       - name: Build optimized static site
         run: |
           npx --yes pnpm@11.19.0 install --frozen-lockfile

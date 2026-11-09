@@ -215,6 +215,7 @@ async function mocked(
           email: "test@example.test",
         });
       }
+      if (path === "/rest/v1/user_roles") return json([]);
       if (path.endsWith("/get_paysera_checkout_credentials")) {
         return json(configJson);
       }

@@ -34,22 +34,14 @@
 
   async function destination() {
     var me = await AtminimasAuth.user();
-    if (AtminimasAuth.needsMfa(me)) return "saugumas.html" + (hasExplicitNext ? "?next=" + encodeURIComponent(next) : "");
-    return !hasExplicitNext && await AtminimasAuth.isAdmin(me) ? "admin.html" : next;
+    if (!me) throw new Error("Sesija nebegalioja. Prisijunkite dar kartą.");
+    var admin = await AtminimasAuth.isAdmin(me);
+    if (AtminimasAuth.needsMfa(me, admin)) return "saugumas.html" + (hasExplicitNext ? "?next=" + encodeURIComponent(next) : "");
+    return !hasExplicitNext && admin ? "admin.html" : next;
   }
   document.querySelectorAll("a[href='registruotis.html']").forEach(function (link) {
     if (next !== "vartotojas.html") link.href = "registruotis.html?next=" + encodeURIComponent(next);
   });
-
-  if (AtminimasAuth.accessToken()) {
-    destination().then(function (page) {
-      window.location.replace(page);
-    }).catch(function () {
-      AtminimasAuth.signOut();
-      setStatus("Sesija nebegalioja. Prisijunkite dar kartą.", "error");
-    });
-    return;
-  }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -66,4 +58,15 @@
       setBusy(false);
     }
   });
+
+  if (AtminimasAuth.accessToken()) {
+    setBusy(true);
+    destination().then(function (page) {
+      window.location.replace(page);
+    }).catch(function () {
+      AtminimasAuth.signOut();
+      setStatus("Sesija nebegalioja. Prisijunkite dar kartą.", "error");
+      setBusy(false);
+    });
+  }
 })();
