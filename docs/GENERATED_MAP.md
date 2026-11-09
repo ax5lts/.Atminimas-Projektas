@@ -37,7 +37,7 @@ Eilutėje išlaikyta tikra HTML įkėlimo tvarka. Užklausų versijų žymos pra
 
 ## Bendri naršyklės objektai
 
-Statiniu būdu aptiktos vardinių `window` / `global` objektų priskyrimo vietos. Tai nėra visų įvykių ar funkcijų iškvietimų grafas.
+Statiniu būdu aptiktos vardinių `window`, `global`, `globalThis` ir `root` objektų priskyrimo vietos. Tai nėra visų įvykių ar funkcijų iškvietimų grafas.
 
 | Failas | Eksportuojami vardai |
 | --- | --- |
@@ -49,6 +49,7 @@ Statiniu būdu aptiktos vardinių `window` / `global` objektų priskyrimo vietos
 | [form-validation.js](../assets/form-validation.js) | `AtminimasForms` |
 | [loading.js](../assets/loading.js) | `AtminimasLoading` |
 | [memorial-actions.js](../assets/memorial-actions.js) | `AtminimasMemorialActions` |
+| [memorial-group.js](../assets/memorial-group.js) | `AtminimasGroup` |
 | [plaque-design.js](../assets/plaque-design.js) | `AtminimasPlaqueDesign` |
 | [product-catalog.js](../assets/product-catalog.js) | `AtminimasProductCatalog` |
 | [service-prices.js](../assets/service-prices.js) | `ATMINIMAS_SERVICE_PRICES` |

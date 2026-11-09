@@ -1,5 +1,5 @@
 // Repository orientation only: reads source files, never env values or services.
-import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,11 +45,11 @@ for (const page of pages) {
 }
 
 lines.push('', '## Bendri naršyklės objektai', '',
-  'Statiniu būdu aptiktos vardinių `window` / `global` objektų priskyrimo vietos. Tai nėra visų įvykių ar funkcijų iškvietimų grafas.', '',
+  'Statiniu būdu aptiktos vardinių `window`, `global`, `globalThis` ir `root` objektų priskyrimo vietos. Tai nėra visų įvykių ar funkcijų iškvietimų grafas.', '',
   '| Failas | Eksportuojami vardai |', '| --- | --- |');
 for (const name of (await readdir(path.join(root, 'assets'))).filter(name => name.endsWith('.js') && !name.includes('.example.')).sort()) {
   const content = await read(`assets/${name}`);
-  const exports = [...new Set([...content.matchAll(/\b(?:window|global)\.([A-Z][\w]*)\s*=/g)].map(match => match[1]))].sort();
+  const exports = [...new Set([...content.matchAll(/\b(?:window|global|globalThis|root)\.([A-Z][\w]*)\s*=/g)].map(match => match[1]))].sort();
   if (exports.length) lines.push(`| ${link(name, `assets/${name}`)} | ${exports.map(name => '`' + name + '`').join(', ')} |`);
 }
 
@@ -83,8 +83,16 @@ lines.push('', '## Vietinės Edge Functions ir jų priklausomybės', '',
   '`verify_jwt` nurodomas tik iš vietinio config.toml. `false` nereiškia, kad funkcija neturi vidinės autorizacijos; nenustatytas laukas nepatvirtina produkcijos nustatymo. Įdiegta funkcija gali turėti kitą versiją — tikrinkite paslaugą.', '',
   '| Funkcija | Vietinis verify_jwt | Santykinės priklausomybės, įskaitant netiesiogines |', '| --- | --- | --- |');
 const reverse = new Map();
-const endpoints = (await readdir(functionRoot, { withFileTypes: true }))
-  .filter(entry => entry.isDirectory() && !entry.name.startsWith('_')).map(entry => entry.name).sort();
+const endpoints = [];
+for (const entry of await readdir(functionRoot, { withFileTypes: true })) {
+  if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+  const index = await stat(path.join(functionRoot, entry.name, 'index.ts')).catch(error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (index?.isFile()) endpoints.push(entry.name);
+}
+endpoints.sort();
 for (const name of endpoints) {
   const entrypoint = `${name}/index.ts`;
   const deps = [...await dependencies(entrypoint)].filter(relative => relative !== entrypoint).sort();
