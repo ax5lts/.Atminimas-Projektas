@@ -1,6 +1,13 @@
 # Paskutinė patikrinta projekto būsena
 
-**Patikros data: 2026-11-09.** Tai užfiksuoti faktai, ne automatinis produkcijos stebėjimas. Prieš vėlesnį diegimą tikrinkite Git istoriją ir realias paslaugų versijas.
+**Frontend patikros data: 2026-11-11; saugumo ir backend patikros data: 2026-11-09.** Tai užfiksuoti faktai, ne automatinis produkcijos stebėjimas. Prieš vėlesnį diegimą tikrinkite Git istoriją ir realias paslaugų versijas.
+
+## 2026-11-11: QR užsakymas iš kapaviečių paieškos
+
+- Įdiegta į produkciją: commit `9eb18beafe9b65c109b1473850b28b8e22ad8af1`, GitHub `main`. [GitHub CI](https://github.com/ax5lts/.Atminimas-Projektas/actions/runs/43029857347) ir [Vercel publikavimas](https://vercel.com/ax5lts-projects/atminimokodas/DA64j8nEk9bhDxedYGT9346ZCxfr) sėkmingi.
+- Abiejų paieškos puslapių rezultatuose yra „Sukurti ir užsisakyti QR kodą“. Naujam juodraščiui redaktorius perkelia vardą ir turimas tikslias datas; ankstesnis juodraštis išlieka, kol naudotojas patvirtina pradėjimą iš naujo.
+- Produkcinio domeno `official-grave-search.js?v=1245e9162257`, `redaktorius.js?v=e54a3d4a942b` ir `styles.css?v=389496c72e14` baitai sutampa su vietiniu `dist/` rinkiniu.
+- Praėjo 208 Python, 38 Node ir 3 build testai, izoliuota Chrome patikra 320 / 390 / 1440 px. Produkciniame domene 390 px naršyklėje patikrintas mygtukas ir duomenų perkėlimas, imituojant tik paieškos atsakymus. Tikri profiliai, mokėjimai ir užsakymai nekurti. Backend ir DB šiame leidime nekeisti.
 
 ## Produkcija ir diegimas
 
