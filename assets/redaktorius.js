@@ -4510,6 +4510,43 @@
     }
   });
 
+  function prefillFromGraveSearch(restoredDraft) {
+    if (editId || prototypeRequested || resumeSave || editorParams.get("from") !== "grave-search") return;
+    var name = (editorParams.get("graveName") || "").trim().slice(0, 220);
+    if (!name) return;
+    if (restoredDraft) {
+      statusEl.textContent = "Atkurtas ankstesnis jūsų juodraštis. Norėdami kurti atminimą žmogui „" + name + "“, pasirinkite „Pradėti iš naujo“. Ankstesnio juodraščio duomenys bus pašalinti tik jums patvirtinus.";
+      var notice = document.createElement("aside");
+      notice.className = "grave-memorial-order";
+      var message = document.createElement("p");
+      message.textContent = statusEl.textContent;
+      var startNew = document.createElement("button");
+      startNew.type = "button";
+      startNew.className = "button button--ghost";
+      startNew.dataset.graveStartNew = "";
+      startNew.textContent = "Pradėti iš naujo";
+      startNew.addEventListener("click", function () { clearDraftButton.click(); });
+      notice.appendChild(message);
+      notice.appendChild(startNew);
+      form.prepend(notice);
+      return;
+    }
+    var firstName = (editorParams.get("graveFirstName") || "").trim().slice(0, 220);
+    var lastName = (editorParams.get("graveLastName") || "").trim().slice(0, 220);
+    // Keep an unstructured name intact rather than guessing its components.
+    form.elements.vardas.value = firstName || name;
+    form.elements.pavarde.value = firstName ? lastName : "";
+    [["graveBirthDate", "gimimo_data"], ["graveDeathDate", "mirties_data"]].forEach(function (pair) {
+      var value = editorParams.get(pair[0]) || "";
+      var parsed = new Date(value + "T00:00:00Z");
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value && parsed.getTime() <= Date.now()) {
+        form.elements[pair[1]].value = value;
+      }
+    });
+    statusEl.textContent = "Perkelti duomenys iš kapavietės paieškos. Patikrinkite vardą bei datas, pridėkite prisiminimų ir tęskite QR lentelės užsakymą.";
+    return true;
+  }
+
   async function initEditor() {
     if (prototypeRequested && !isSignedIn()) {
       statusEl.textContent = "Prisijunkite administratoriaus paskyra, tada grįšite kurti prototipo.";
@@ -4561,6 +4598,7 @@
     await loadProfileForEditing();
     syncDatePickersFromHidden();
     var restoredDraft = await restoreDraft();
+    var prefilledFromSearch = prefillFromGraveSearch(restoredDraft);
     var requestedMemorial = editorParams.get("memorial");
     var applyShopChoice = !editId && (requestedMemorial === "group" || requestedMemorial === "single");
     if (applyShopChoice) {
@@ -4597,10 +4635,15 @@
     bindCrop();
     setupEditorHistory();
     setupGroupEditor();
-    if (applyShopChoice && saveDraftNow()) {
+    if ((applyShopChoice || prefilledFromSearch) && saveDraftNow()) {
       // Consume the choice after saving so reloads respect subsequent editor changes.
       var editorUrl = new URL(window.location.href);
       editorUrl.searchParams.delete("memorial");
+      if (prefilledFromSearch) {
+        ["from", "graveName", "graveFirstName", "graveLastName", "graveBirthDate", "graveDeathDate"].forEach(function (key) {
+          editorUrl.searchParams.delete(key);
+        });
+      }
       window.history.replaceState(window.history.state, "", editorUrl.href);
     }
   }

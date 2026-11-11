@@ -293,6 +293,17 @@
       "<button class='button button--ghost' type='button' data-add-grave-photo>Pridėti kapavietės nuotrauką</button></div>" +
       "</figure>";
   }
+  function memorialOrder(row, rawName) {
+    var params = new URLSearchParams({ product: "metal", order: "1", from: "grave-search", graveName: rawName });
+    if (row.first_name) params.set("graveFirstName", row.first_name);
+    if (row.last_name) params.set("graveLastName", row.last_name);
+    if (row.birth_date) params.set("graveBirthDate", row.birth_date);
+    if (row.death_date) params.set("graveDeathDate", row.death_date);
+    return "<div class='grave-memorial-order'><strong>Išsaugokite artimojo prisiminimus</strong>" +
+      "<span>Sukurkite atminimo puslapį su nuotraukomis bei istorija ir užsisakykite QR lentelę kapavietei.</span>" +
+      "<a class='button' data-grave-memorial-order href='" + html("redaktorius.html?" + params.toString()) + "'>Sukurti ir užsisakyti QR kodą" +
+      "<span class='visually-hidden'> – " + html(rawName) + "</span></a></div>";
+  }
   function render(row, rich) {
     var rawName = row.full_name || [row.first_name, row.last_name].filter(Boolean).join(" ");
     var name = html(rawName);
@@ -327,6 +338,7 @@
       (coordinates ? "<p><span>Koordinatės</span><strong>" + html(coordinates) + "</strong></p>" : "") +
       (grave ? "<p class='grave-list-item__location'>" + grave + "</p>" : "") +
       photoBlock(row, rawName, rich) +
+      memorialOrder(row, rawName) +
       mapPreviewHtml +
       (map || sourceUrl ? "<div class='grave-result-actions'" + actionData + ">" +
         (map ? "<a class='button' target='_blank' rel='noopener' href='" + html(directionsUrl(row)) + "'>" + (point ? "Rodyti maršrutą" : "Rodyti maršrutą į kapines") + "<span class='visually-hidden'> naujame skirtuke</span></a>" :

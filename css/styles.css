@@ -8825,6 +8825,30 @@ img[data-story-photo-preview],
   font-size: 0.7rem;
 }
 
+.grave-memorial-order {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(26, 102, 95, 0.2);
+  border-radius: 13px;
+  background: rgba(164, 212, 197, 0.17);
+}
+
+.grave-memorial-order > span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.grave-memorial-order .button {
+  justify-self: start;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
 .grave-result-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -8912,6 +8936,11 @@ img[data-story-photo-preview],
 }
 
 @media (max-width: 620px) {
+  .grave-memorial-order .button {
+    justify-self: stretch;
+    width: 100%;
+  }
+
   .grave-search-tools,
   .grave-result-actions {
     align-items: stretch;

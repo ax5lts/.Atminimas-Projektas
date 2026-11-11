@@ -97,6 +97,8 @@ Juodraščio tekstas ir išdėstymas saugomi `localStorage`: naujam puslapiui na
 
 `official-grave-search.js` naudoja `cemetery-search`, rodo žemėlapio išklotinę, saugo pasirinktus kapus šiame įrenginyje ir pateikia prisijungusių naudotojų nuotraukas. `grave-photo` pateikia leidžiamas viešas nuotraukas; naujas nuotraukas peržiūri administratorius.
 
+Abiejų paieškos puslapių rezultatuose yra „Sukurti ir užsisakyti QR kodą“ nuoroda į redaktorių (`product=metal&order=1&from=grave-search`). Ji perduoda žmogaus vardą ir turimas tikslias gimimo / mirties datas. Naujam juodraščiui redaktorius užpildo šiuos laukus; jau atkurtas juodraštis išlieka su paaiškinimu, kaip pradėti kitą atminimą. Vien metų duomenys nepaverčiami išgalvotomis pilnomis datomis. Kapavietės nuotrauka automatiškai neperkeliama į asmeninį atminimą.
+
 `home.js` kapų priežiūros puslapyje per `service-flow` gauna įvertį ir pateikia užklausą. Paskyros `user.js` per tą pačią funkciją tvarko pasiūlymo priėmimą ir mokėjimo pradžią. `assets/service-prices.js` turi tik senų puslapių suderinamumo reikšmes; jo nereikia laikyti dabartiniu kainodaros šaltiniu.
 
 ## Kas įkeliama dinamiškai
